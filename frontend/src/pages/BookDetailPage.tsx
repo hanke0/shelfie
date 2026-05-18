@@ -8,12 +8,13 @@ import {
   useDeleteBook,
   getGetBookQueryKey,
 } from "@/api/generated/books/books";
-import { getGetHomeQueryKey } from "@/api/generated/home/home";
 import { fetchCoverBlob } from "@/lib/custom-fetch";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
 import { FileInput } from "@/components/ui/FileInput";
 import { updateCoverMultipart } from "@/lib/upload";
-import { confirmTwice } from "@/lib/confirm";
+import { useConfirmTwice } from "@/context/ConfirmContext";
+import { displayLanguageValue } from "@/data/iso639-1";
+import { LanguageCombobox } from "@/components/ui/LanguageCombobox";
 import { downloadBookFile } from "@/lib/download";
 import styles from "./BookDetailPage.module.css";
 
@@ -25,6 +26,7 @@ export function BookDetailPage() {
   const updateBook = useUpdateBook();
   const updateProgress = useUpdateProgress();
   const deleteBook = useDeleteBook();
+  const confirmTwice = useConfirmTwice();
 
   const [coverSrc, setCoverSrc] = useState<string | null>(null);
   const [metaForm, setMetaForm] = useState(book?.metadata);
@@ -66,7 +68,7 @@ export function BookDetailPage() {
   const saveMetadata = async () => {
     await updateBook.mutateAsync({ id, data: { metadata: metaForm } });
     qc.invalidateQueries({ queryKey: getGetBookQueryKey(id) });
-    qc.invalidateQueries({ queryKey: getGetHomeQueryKey() });
+    qc.invalidateQueries({ queryKey: ["/home"] });
   };
 
   const saveProgress = async () => {
@@ -80,19 +82,22 @@ export function BookDetailPage() {
       },
     });
     qc.invalidateQueries({ queryKey: getGetBookQueryKey(id) });
-    qc.invalidateQueries({ queryKey: getGetHomeQueryKey() });
+    qc.invalidateQueries({ queryKey: ["/home"] });
   };
 
   const handleDelete = async () => {
     if (
-      !confirmTwice(
+      !(await confirmTwice(
         `确定删除《${metaForm.title}》？`,
         "再次确认：删除后图书文件与记录将无法恢复，确定继续吗？",
-      )
+      ))
     ) {
       return;
     }
     await deleteBook.mutateAsync({ id });
+    qc.removeQueries({ queryKey: getGetBookQueryKey(id) });
+    await qc.invalidateQueries({ queryKey: ["/home"] });
+    await qc.invalidateQueries({ queryKey: ["/books"] });
     navigate("/");
   };
 
@@ -109,7 +114,6 @@ export function BookDetailPage() {
   const fields: { key: keyof typeof metaForm; label: string }[] = [
     { key: "title", label: "书名" },
     { key: "author", label: "作者" },
-    { key: "language", label: "语言" },
     { key: "translator", label: "译者" },
     { key: "publisher", label: "出版社" },
     { key: "isbn", label: "ISBN" },
@@ -155,7 +159,41 @@ export function BookDetailPage() {
 
           <table className={styles.table}>
             <tbody>
-              {fields.map(({ key, label }) => (
+              {fields.slice(0, 2).map(({ key, label }) => (
+                <tr key={key}>
+                  <th>{label}</th>
+                  <td>
+                    {canEdit ? (
+                      <input
+                        value={String(metaForm[key] ?? "")}
+                        onChange={(e) =>
+                          setMetaForm({ ...metaForm, [key]: e.target.value })
+                        }
+                      />
+                    ) : (
+                      String(metaForm[key] ?? "—")
+                    )}
+                  </td>
+                </tr>
+              ))}
+              <tr>
+                <th>语言 (ISO 639-1)</th>
+                <td>
+                  {canEdit ? (
+                    <div className={styles.languageField}>
+                      <LanguageCombobox
+                        value={metaForm.language ?? ""}
+                        onChange={(code) =>
+                          setMetaForm({ ...metaForm, language: code })
+                        }
+                      />
+                    </div>
+                  ) : (
+                    displayLanguageValue(metaForm.language)
+                  )}
+                </td>
+              </tr>
+              {fields.slice(2).map(({ key, label }) => (
                 <tr key={key}>
                   <th>{label}</th>
                   <td>

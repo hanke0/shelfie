@@ -78,13 +78,6 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
         {error && <p className={styles.error}>{error}</p>}
 
         <div className={styles.body}>
-          <MetadataFormFields
-            metadata={metadata}
-            onChange={setMetadata}
-            category={category}
-            onCategoryChange={setCategory}
-          />
-
           <div className={styles.fileSection}>
             <label>
               <FieldLabel required>图书文件 (PDF / EPUB / MOBI)</FieldLabel>
@@ -109,6 +102,15 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                 未上传时由前端根据书名{metadata.author?.trim() ? "与作者" : ""}生成展示封面（不保存到服务器）
               </span>
             </label>
+          </div>
+
+          <div className={styles.metadataSection}>
+            <MetadataFormFields
+              metadata={metadata}
+              onChange={setMetadata}
+              category={category}
+              onCategoryChange={setCategory}
+            />
           </div>
         </div>
 

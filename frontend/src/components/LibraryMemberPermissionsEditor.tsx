@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRemoveMember } from "@/api/generated/libraries/libraries";
 import { EditMemberPermissionsModal } from "@/components/EditMemberPermissionsModal";
-import { confirmTwice } from "@/lib/confirm";
+import { useConfirmTwice } from "@/context/ConfirmContext";
 import styles from "@/pages/AdminPage.module.css";
 
 export type MemberPermState = {
@@ -38,6 +38,7 @@ export function LibraryMemberPermissionsEditor({
 }) {
   const qc = useQueryClient();
   const removeMember = useRemoveMember();
+  const confirmTwice = useConfirmTwice();
   const [editOpen, setEditOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,10 +46,10 @@ export function LibraryMemberPermissionsEditor({
   const handleRemove = async () => {
     const who = username ? `「${username}」` : "该用户";
     if (
-      !confirmTwice(
+      !(await confirmTwice(
         `确定将${who}移出本图书馆？`,
         "再次确认：移出后该用户将无法访问本馆图书，确定继续吗？",
-      )
+      ))
     ) {
       return;
     }

@@ -12,7 +12,7 @@ import { AddMemberModal } from "@/components/AddMemberModal";
 import { LibraryMemberPermissionsEditor } from "@/components/LibraryMemberPermissionsEditor";
 import { getUser } from "@/lib/auth";
 import { useLibrary } from "@/context/LibraryContext";
-import { confirmTwice } from "@/lib/confirm";
+import { useConfirmTwice } from "@/context/ConfirmContext";
 import styles from "./AdminPage.module.css";
 
 export function AdminLibrariesPage() {
@@ -23,6 +23,7 @@ export function AdminLibrariesPage() {
   const { data: libraries } = useListLibraries();
   const refreshLibrary = useRefreshLibrary();
   const deleteLibrary = useDeleteLibrary();
+  const confirmTwice = useConfirmTwice();
 
   const [selectedLib, setSelectedLib] = useState<string>(contextLibraryId ?? "");
   const { data: members } = useListMembers(selectedLib, {
@@ -45,10 +46,10 @@ export function AdminLibrariesPage() {
   const handleDeleteLibrary = async () => {
     if (!selectedLib || !selectedLibrary) return;
     if (
-      !confirmTwice(
+      !(await confirmTwice(
         `确定删除图书馆「${selectedLibrary.name}」？\n仅当该馆目录下没有任何文件时才能删除（数据库记录与成员将一并清除）。`,
         `再次确认：确定删除「${selectedLibrary.name}」吗？`,
-      )
+      ))
     ) {
       return;
     }

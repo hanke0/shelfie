@@ -159,7 +159,15 @@ pub async fn ensure_default_admin(state: &AppState) -> AppResult<()> {
         .await?;
     if count.0 == 0 {
         register_user(&state.db, "admin", "admin123", "system_admin").await?;
-        tracing::info!("Created default admin user: admin / admin123");
+        eprintln!();
+        eprintln!("================================================================");
+        eprintln!("  Shelfie 首次启动：已创建默认系统管理员");
+        eprintln!("  用户名: admin");
+        eprintln!("  密码:   admin123");
+        eprintln!("  请登录后尽快修改密码。");
+        eprintln!("================================================================");
+        eprintln!();
+        tracing::warn!("首次启动：已创建默认系统管理员（凭据见上方控制台输出）");
     }
     Ok(())
 }

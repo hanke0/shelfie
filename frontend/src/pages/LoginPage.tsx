@@ -9,8 +9,8 @@ import styles from "./LoginPage.module.css";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const login = useLogin();
   const toast = useToast();
@@ -56,8 +56,6 @@ export function LoginPage() {
         <button type="submit" className="btn" disabled={login.isPending}>
           {login.isPending ? "登录中…" : "登录"}
         </button>
-
-        <p className={styles.hint}>默认管理员：admin / admin123</p>
       </form>
     </div>
   );

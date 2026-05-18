@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRemoveMember } from "@/api/generated/libraries/libraries";
 import { EditMemberPermissionsModal } from "@/components/EditMemberPermissionsModal";
 import { useConfirmTwice } from "@/context/ConfirmContext";
+import { useApiAction } from "@/hooks/useApiAction";
 import styles from "@/pages/AdminPage.module.css";
 
 export type MemberPermState = {
@@ -39,6 +40,7 @@ export function LibraryMemberPermissionsEditor({
   const qc = useQueryClient();
   const removeMember = useRemoveMember();
   const confirmTwice = useConfirmTwice();
+  const run = useApiAction();
   const [editOpen, setEditOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,16 +57,16 @@ export function LibraryMemberPermissionsEditor({
     }
     setRemoving(true);
     setError(null);
-    try {
-      await removeMember.mutateAsync({ id: libraryId, userId });
-      await qc.invalidateQueries({ queryKey: [`/libraries/${libraryId}/members`] });
-      await qc.invalidateQueries({ queryKey: [`/users/${userId}/memberships`] });
-      onSaved?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "移除失败");
-    } finally {
-      setRemoving(false);
-    }
+    await run(
+      async () => {
+        await removeMember.mutateAsync({ id: libraryId, userId });
+        await qc.invalidateQueries({ queryKey: [`/libraries/${libraryId}/members`] });
+        await qc.invalidateQueries({ queryKey: [`/users/${userId}/memberships`] });
+        onSaved?.();
+      },
+      { successMessage: "已移出成员", errorMessage: "移除失败" },
+    );
+    setRemoving(false);
   };
 
   return (

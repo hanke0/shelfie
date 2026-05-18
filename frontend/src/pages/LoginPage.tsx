@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLogin } from "@/api/generated/auth/auth";
 import { setAuth } from "@/lib/auth";
+import { formatApiError } from "@/lib/api-error";
+import { useToast } from "@/context/ToastContext";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import styles from "./LoginPage.module.css";
 
@@ -9,16 +11,21 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("admin123");
+  const [error, setError] = useState<string | null>(null);
   const login = useLogin();
+  const toast = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     try {
       const res = await login.mutateAsync({ data: { username, password } });
       setAuth(res.token, res.user);
       navigate("/");
-    } catch {
-      /* error shown below */
+    } catch (err) {
+      const msg = formatApiError(err, "登录失败，请检查凭据");
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -44,7 +51,7 @@ export function LoginPage() {
           />
         </label>
 
-        {login.isError && <p className={styles.error}>登录失败，请检查凭据</p>}
+        {error && <p className={styles.error}>{error}</p>}
 
         <button type="submit" className="btn" disabled={login.isPending}>
           {login.isPending ? "登录中…" : "登录"}

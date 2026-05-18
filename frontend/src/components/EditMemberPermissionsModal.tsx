@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 import type { MemberPermState } from "@/components/LibraryMemberPermissionsEditor";
 
 interface EditMemberPermissionsModalProps {
@@ -28,6 +29,7 @@ export function EditMemberPermissionsModal({
 }: EditMemberPermissionsModalProps) {
   const qc = useQueryClient();
   const updatePermissions = useUpdatePermissions();
+  const run = useApiAction();
   const [role, setRole] = useState(member.role);
   const [canView, setCanView] = useState(member.can_view ?? false);
   const [canEdit, setCanEdit] = useState(member.can_edit ?? false);
@@ -48,23 +50,24 @@ export function EditMemberPermissionsModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    try {
-      await updatePermissions.mutateAsync({
-        id: libraryId,
-        userId,
-        data: {
-          role,
-          can_view: isLibraryAdmin ? true : canView,
-          can_edit: isLibraryAdmin ? true : canEdit,
-          can_delete: isLibraryAdmin ? true : canDelete,
-        },
-      });
-      await qc.invalidateQueries({ queryKey: [`/libraries/${libraryId}/members`] });
-      await qc.invalidateQueries({ queryKey: [`/users/${userId}/memberships`] });
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "保存失败");
-    }
+    const ok = await run(
+      async () => {
+        await updatePermissions.mutateAsync({
+          id: libraryId,
+          userId,
+          data: {
+            role,
+            can_view: isLibraryAdmin ? true : canView,
+            can_edit: isLibraryAdmin ? true : canEdit,
+            can_delete: isLibraryAdmin ? true : canDelete,
+          },
+        });
+        await qc.invalidateQueries({ queryKey: [`/libraries/${libraryId}/members`] });
+        await qc.invalidateQueries({ queryKey: [`/users/${userId}/memberships`] });
+      },
+      { successMessage: "权限已保存", errorMessage: "保存失败" },
+    );
+    if (ok) onClose();
   };
 
   const title = libraryName

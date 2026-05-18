@@ -4,6 +4,7 @@ import { useCreateLibrary } from "@/api/generated/libraries/libraries";
 import { Modal } from "@/components/ui/Modal";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 
 interface CreateLibraryModalProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface CreateLibraryModalProps {
 export function CreateLibraryModal({ open, onClose }: CreateLibraryModalProps) {
   const qc = useQueryClient();
   const createLibrary = useCreateLibrary();
+  const run = useApiAction();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,13 +33,14 @@ export function CreateLibraryModal({ open, onClose }: CreateLibraryModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    try {
-      await createLibrary.mutateAsync({ data: { name, slug } });
-      await qc.invalidateQueries({ queryKey: ["/libraries"] });
-      handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "创建失败");
-    }
+    const ok = await run(
+      async () => {
+        await createLibrary.mutateAsync({ data: { name, slug } });
+        await qc.invalidateQueries({ queryKey: ["/libraries"] });
+      },
+      { successMessage: "图书馆已创建", errorMessage: "创建失败" },
+    );
+    if (ok) handleClose();
   };
 
   return (

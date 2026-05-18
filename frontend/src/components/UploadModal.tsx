@@ -12,6 +12,7 @@ import {
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FileInput } from "@/components/ui/FileInput";
 import styles from "./UploadModal.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 
 interface UploadModalProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface UploadModalProps {
 
 export function UploadModal({ open, onClose }: UploadModalProps) {
   const qc = useQueryClient();
+  const run = useApiAction();
   const { libraryId, library } = useLibrary();
   const [category, setCategory] = useState("未分类");
   const { data: categories } = useListCategories(libraryId ?? "", {
@@ -64,18 +66,20 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
     }
     setLoading(true);
     setError(null);
-    try {
-      await uploadBookMultipart(libraryId, category, file, payload, cover);
-      await qc.invalidateQueries({
-        queryKey: getGetHomeQueryKey({ library_id: libraryId, limit: 12 }),
-      });
-      await qc.invalidateQueries({ queryKey: ["/libraries", libraryId, "categories"] });
+    const ok = await run(
+      async () => {
+        await uploadBookMultipart(libraryId, category, file, payload, cover);
+        await qc.invalidateQueries({
+          queryKey: getGetHomeQueryKey({ library_id: libraryId, limit: 12 }),
+        });
+        await qc.invalidateQueries({ queryKey: ["/libraries", libraryId, "categories"] });
+      },
+      { successMessage: "上传成功", errorMessage: "上传失败" },
+    );
+    setLoading(false);
+    if (ok) {
       resetForm();
       onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "上传失败");
-    } finally {
-      setLoading(false);
     }
   };
 

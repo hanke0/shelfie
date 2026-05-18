@@ -5,6 +5,7 @@ import { useSearch } from "@/api/generated/search/search";
 import { Modal } from "@/components/ui/Modal";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 import adminStyles from "@/pages/AdminPage.module.css";
 
 interface KoreaderLinkModalProps {
@@ -16,6 +17,7 @@ interface KoreaderLinkModalProps {
 export function KoreaderLinkModal({ open, onClose, libraryFilter }: KoreaderLinkModalProps) {
   const qc = useQueryClient();
   const setLink = useSetKoreaderLink();
+  const run = useApiAction();
   const [documentId, setDocumentId] = useState("");
   const [bookSearch, setBookSearch] = useState("");
   const [selectedBookId, setSelectedBookId] = useState("");
@@ -45,16 +47,17 @@ export function KoreaderLinkModal({ open, onClose, libraryFilter }: KoreaderLink
       return;
     }
     setError(null);
-    try {
-      await setLink.mutateAsync({
-        data: { document: documentId.trim(), book_id: selectedBookId },
-      });
-      await qc.invalidateQueries({ queryKey: ["/koreader/links"] });
-      await qc.invalidateQueries({ queryKey: ["/koreader/progress"] });
-      handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "保存失败");
-    }
+    const ok = await run(
+      async () => {
+        await setLink.mutateAsync({
+          data: { document: documentId.trim(), book_id: selectedBookId },
+        });
+        await qc.invalidateQueries({ queryKey: ["/koreader/links"] });
+        await qc.invalidateQueries({ queryKey: ["/koreader/progress"] });
+      },
+      { successMessage: "匹配已保存", errorMessage: "保存失败" },
+    );
+    if (ok) handleClose();
   };
 
   return (

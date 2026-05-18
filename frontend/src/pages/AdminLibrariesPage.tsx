@@ -14,6 +14,9 @@ import { LibraryMemberPermissionsEditor } from "@/components/LibraryMemberPermis
 import { getUser } from "@/lib/auth";
 import { useLibrary } from "@/context/LibraryContext";
 import { useConfirmTwice } from "@/context/ConfirmContext";
+import { useToast } from "@/context/ToastContext";
+import { formatApiError } from "@/lib/api-error";
+import { useApiAction } from "@/hooks/useApiAction";
 import styles from "./AdminPage.module.css";
 
 export function AdminLibrariesPage() {
@@ -25,6 +28,8 @@ export function AdminLibrariesPage() {
   const refreshLibrary = useRefreshLibrary();
   const deleteLibrary = useDeleteLibrary();
   const confirmTwice = useConfirmTwice();
+  const toast = useToast();
+  const run = useApiAction();
 
   const [selectedLib, setSelectedLib] = useState<string>(contextLibraryId ?? "");
   const { data: members } = useListMembers(selectedLib, {
@@ -71,17 +76,24 @@ export function AdminLibrariesPage() {
       }
       setSelectedLib("");
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : "删除失败");
+      const msg = formatApiError(err, "删除失败");
+      setDeleteError(msg);
+      toast.error(msg);
     }
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     if (!selectedLib) return;
-    const res = await refreshLibrary.mutateAsync({ id: selectedLib });
-    setRefreshResult(
-      res.result
-        ? `新增 ${res.result.added.length}，更新 ${res.result.updated.length}，孤儿 ${res.result.removed.length}`
-        : "完成",
+    void run(
+      async () => {
+        const res = await refreshLibrary.mutateAsync({ id: selectedLib });
+        setRefreshResult(
+          res.result
+            ? `新增 ${res.result.added.length}，更新 ${res.result.updated.length}，孤儿 ${res.result.removed.length}`
+            : "完成",
+        );
+      },
+      { errorMessage: "同步失败" },
     );
   };
 

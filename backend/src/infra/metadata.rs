@@ -1,0 +1,98 @@
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+pub struct ReadingProgress {
+    pub current_page: Option<i32>,
+    pub percent: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_position: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+pub struct BookMetadata {
+    pub title: String,
+    #[serde(default)]
+    pub author: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub language: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub translator: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub publisher: String,
+    /// 出版日期，格式 `YYYY-MM`（如 2024-02）
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub publish_date: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub isbn: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_count: Option<i32>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub original_title: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub series: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reading_progress: Option<ReadingProgress>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub category: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notes: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BookMetadata, ReadingProgress};
+
+    #[test]
+    fn metadata_roundtrip() {
+        let meta = BookMetadata {
+            title: "测试".into(),
+            author: "作者".into(),
+            reading_progress: Some(ReadingProgress {
+                current_page: Some(10),
+                percent: Some(25.5),
+                last_position: None,
+            }),
+            ..Default::default()
+        };
+        let json = meta.to_json().unwrap();
+        let parsed = BookMetadata::from_json(&json).unwrap();
+        assert_eq!(parsed.title, "测试");
+        assert_eq!(parsed.reading_progress.unwrap().current_page, Some(10));
+    }
+}
+
+impl BookMetadata {
+    pub fn from_json(s: &str) -> crate::error::AppResult<Self> {
+        Ok(serde_json::from_str(s)?)
+    }
+
+    pub fn to_json(&self) -> crate::error::AppResult<String> {
+        Ok(serde_json::to_string_pretty(self)?)
+    }
+
+    /// 规范化出版日期；空字符串合法；否则须为 `YYYY-MM`
+    pub fn normalize_publish_date(s: &str) -> crate::error::AppResult<String> {
+        let s = s.trim();
+        if s.is_empty() {
+            return Ok(String::new());
+        }
+        let valid = s.len() == 7
+            && s.as_bytes().get(4) == Some(&b'-')
+            && s[..4].chars().all(|c| c.is_ascii_digit())
+            && s[5..].chars().all(|c| c.is_ascii_digit())
+            && matches!(s[5..].parse::<u32>(), Ok(m) if (1..=12).contains(&m));
+        if valid {
+            Ok(s.to_string())
+        } else {
+            Err(crate::error::AppError::BadRequest(
+                "publish_date must be YYYY-MM (e.g. 2024-02)".into(),
+            ))
+        }
+    }
+
+    pub fn normalize_fields(&mut self) -> crate::error::AppResult<()> {
+        self.publish_date = Self::normalize_publish_date(&self.publish_date)?;
+        Ok(())
+    }
+}

@@ -1,0 +1,381 @@
+use crate::error::{AppError, AppResult};
+use crate::infra::metadata::BookMetadata;
+use std::path::{Path, PathBuf};
+use uuid::Uuid;
+
+const BOOK_EXTENSIONS: &[&str] = &["pdf", "epub", "mobi"];
+const COVER_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png"];
+
+pub fn library_root(data_root: &Path, library_id: &Uuid) -> PathBuf {
+    data_root.join(library_id.to_string())
+}
+
+/// 分类目录：该分类下所有图书文件平铺存放
+pub fn category_dir(library_root: &Path, category: &str) -> PathBuf {
+    library_root.join(sanitize_segment(category))
+}
+
+/// 图书文件名基底：`{书名}_{作者}`（经清理）
+pub fn book_base_name(title: &str, author: &str) -> String {
+    let title = sanitize_segment(title);
+    let author = sanitize_segment(author);
+    let base = match (title.is_empty(), author.is_empty()) {
+        (true, true) => "untitled".to_string(),
+        (true, false) => author,
+        (false, true) => title,
+        (false, false) => format!("{title}_{author}"),
+    };
+    truncate_base(&base, 180)
+}
+
+fn truncate_base(s: &str, max_len: usize) -> String {
+    if s.chars().count() <= max_len {
+        return s.to_string();
+    }
+    s.chars().take(max_len).collect()
+}
+
+pub fn sanitize_segment(s: &str) -> String {
+    let cleaned: String = s
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else if c.is_whitespace() {
+                '_'
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let trimmed = cleaned.trim_matches('_').to_string();
+    if trimmed.is_empty() {
+        String::new()
+    } else {
+        trimmed
+    }
+}
+
+/// 若目录中已存在同名基底文件，追加 `_2`、`_3` …
+pub fn ensure_unique_base(dir: &Path, base: &str) -> String {
+    if !dir.exists() {
+        return base.to_string();
+    }
+    let mut candidate = base.to_string();
+    let mut n = 2u32;
+    while base_name_exists_in_dir(dir, &candidate) {
+        candidate = format!("{base}_{n}");
+        n += 1;
+    }
+    candidate
+}
+
+fn base_name_exists_in_dir(dir: &Path, base: &str) -> bool {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                if stem == base {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+pub fn validate_book_extension(ext: &str) -> AppResult<()> {
+    let ext = ext.to_lowercase();
+    if BOOK_EXTENSIONS.contains(&ext.as_str()) {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest(format!(
+            "Unsupported book format. Allowed: {}",
+            BOOK_EXTENSIONS.join(", ")
+        )))
+    }
+}
+
+pub fn validate_cover_extension(ext: &str) -> AppResult<()> {
+    let ext = ext.to_lowercase();
+    if COVER_EXTENSIONS.contains(&ext.as_str()) {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest(format!(
+            "Unsupported cover format. Allowed: {}",
+            COVER_EXTENSIONS.join(", ")
+        )))
+    }
+}
+
+pub async fn ensure_dir(path: &Path) -> AppResult<()> {
+    tokio::fs::create_dir_all(path).await?;
+    Ok(())
+}
+
+pub async fn write_book_file(
+    dir: &Path,
+    base: &str,
+    ext: &str,
+    bytes: &[u8],
+) -> AppResult<PathBuf> {
+    ensure_dir(dir).await?;
+    let path = dir.join(format!("{}.{}", base, ext.to_lowercase()));
+    tokio::fs::write(&path, bytes).await?;
+    Ok(path)
+}
+
+pub async fn write_cover_file(
+    dir: &Path,
+    base: &str,
+    ext: &str,
+    bytes: &[u8],
+) -> AppResult<PathBuf> {
+    ensure_dir(dir).await?;
+    let path = dir.join(format!("{}.{}", base, ext.to_lowercase()));
+    tokio::fs::write(&path, bytes).await?;
+    Ok(path)
+}
+
+pub async fn write_metadata_file(
+    dir: &Path,
+    base: &str,
+    metadata: &BookMetadata,
+) -> AppResult<PathBuf> {
+    ensure_dir(dir).await?;
+    let path = dir.join(format!("{base}.json"));
+    tokio::fs::write(&path, metadata.to_json()?).await?;
+    Ok(path)
+}
+
+pub async fn read_metadata_file(path: &Path) -> AppResult<BookMetadata> {
+    let content = tokio::fs::read_to_string(path).await?;
+    Ok(serde_json::from_str(&content)?)
+}
+
+/// 删除一本图书的三个文件（不删除分类目录）
+pub async fn remove_book_files(book: &Path, metadata: &Path, cover: &Path) -> AppResult<()> {
+    for path in [book, metadata, cover] {
+        if path.is_file() {
+            tokio::fs::remove_file(path).await.ok();
+        }
+    }
+    Ok(())
+}
+
+pub fn extension_from_filename(name: &str) -> Option<String> {
+    Path::new(name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_lowercase())
+}
+
+/// 当浏览器未提供文件名扩展名时，根据 MIME 推断
+pub fn extension_from_mime(mime: &str) -> Option<String> {
+    let mime = mime.to_lowercase();
+    if mime.contains("pdf") {
+        return Some("pdf".into());
+    }
+    if mime.contains("epub") {
+        return Some("epub".into());
+    }
+    if mime.contains("mobi") {
+        return Some("mobi".into());
+    }
+    if mime.contains("jpeg") || mime.contains("jpg") {
+        return Some("jpg".into());
+    }
+    if mime.contains("png") {
+        return Some("png".into());
+    }
+    None
+}
+
+pub fn resolve_book_extension(filename: Option<&str>, content_type: Option<&str>) -> Option<String> {
+    filename
+        .and_then(extension_from_filename)
+        .or_else(|| content_type.and_then(extension_from_mime))
+}
+
+pub fn resolve_cover_extension(filename: Option<&str>, content_type: Option<&str>) -> Option<String> {
+    filename
+        .and_then(extension_from_filename)
+        .or_else(|| content_type.and_then(extension_from_mime))
+}
+
+pub fn is_book_extension(ext: &str) -> bool {
+    BOOK_EXTENSIONS.contains(&ext.to_lowercase().as_str())
+}
+
+pub fn file_stem(path: &Path) -> Option<String> {
+    path.file_stem().and_then(|s| s.to_str()).map(|s| s.to_string())
+}
+
+pub fn find_metadata_in_dir(dir: &Path, book_stem: Option<&str>) -> Option<PathBuf> {
+    if let Some(stem) = book_stem {
+        let named = dir.join(format!("{stem}.json"));
+        if named.is_file() {
+            return Some(named);
+        }
+    }
+    let legacy = dir.join("metadata.json");
+    if legacy.is_file() {
+        return Some(legacy);
+    }
+    std::fs::read_dir(dir).ok()?.filter_map(|e| e.ok()).find_map(|entry| {
+        let path = entry.path();
+        if path.is_file() {
+            if path.extension().and_then(|x| x.to_str()) == Some("json") {
+                return Some(path);
+            }
+        }
+        None
+    })
+}
+
+pub fn find_cover_in_dir(dir: &Path, book_stem: Option<&str>) -> Option<PathBuf> {
+    if let Some(stem) = book_stem {
+        for ext in COVER_EXTENSIONS {
+            let p = dir.join(format!("{stem}.{ext}"));
+            if p.is_file() {
+                return Some(p);
+            }
+        }
+    }
+    std::fs::read_dir(dir).ok()?.filter_map(|e| e.ok()).find_map(|entry| {
+        let path = entry.path();
+        if !path.is_file() {
+            return None;
+        }
+        let name = path.file_name().and_then(|n| n.to_str())?;
+        if name.starts_with("cover.") {
+            return Some(path);
+        }
+        if let Some(stem) = book_stem {
+            if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
+                if file_stem == stem {
+                    if let Some(ext) = path.extension().and_then(|x| x.to_str()) {
+                        if COVER_EXTENSIONS.contains(&ext.to_lowercase().as_str()) {
+                            return Some(path);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    })
+}
+
+/// 标题/作者变更时重命名目录内图书、metadata、封面（保持扩展名）
+pub async fn rename_book_assets(
+    dir: &Path,
+    metadata: &BookMetadata,
+    book_path: &Path,
+    metadata_path: &Path,
+    cover_path: &Path,
+) -> AppResult<(PathBuf, PathBuf, PathBuf)> {
+    let book_ext = book_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .ok_or_else(|| AppError::Internal("Book file has no extension".into()))?;
+    let cover_ext = cover_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .ok_or_else(|| AppError::Internal("Cover file has no extension".into()))?;
+
+    let new_base = ensure_unique_base_for_rename(dir, &book_base_name(&metadata.title, &metadata.author), book_path);
+
+    let new_book = dir.join(format!("{new_base}.{book_ext}"));
+    let new_meta = dir.join(format!("{new_base}.json"));
+    let new_cover = dir.join(format!("{new_base}.{cover_ext}"));
+
+    if book_path != new_book {
+        if new_book.exists() {
+            tokio::fs::remove_file(&new_book).await.ok();
+        }
+        tokio::fs::rename(book_path, &new_book).await?;
+    }
+    if metadata_path != new_meta {
+        if new_meta.exists() {
+            tokio::fs::remove_file(&new_meta).await.ok();
+        }
+        tokio::fs::rename(metadata_path, &new_meta).await?;
+    }
+    if cover_path != new_cover {
+        if new_cover.exists() {
+            tokio::fs::remove_file(&new_cover).await.ok();
+        }
+        tokio::fs::rename(cover_path, &new_cover).await?;
+    }
+
+    Ok((new_book, new_meta, new_cover))
+}
+
+fn ensure_unique_base_for_rename(dir: &Path, base: &str, current_book: &Path) -> String {
+    let current_stem = file_stem(current_book).unwrap_or_default();
+    if base == current_stem {
+        return base.to_string();
+    }
+    let mut candidate = base.to_string();
+    let mut n = 2u32;
+    while base_name_exists_in_dir(dir, &candidate) && candidate != current_stem {
+        candidate = format!("{base}_{n}");
+        n += 1;
+    }
+    candidate
+}
+
+#[derive(Debug, Clone)]
+pub struct ScannedBookFile {
+    pub category: String,
+    pub book_file: PathBuf,
+}
+
+/// 扫描图书馆：每个分类目录下平铺的图书文件
+pub async fn scan_library_books(library_root: &Path) -> AppResult<Vec<ScannedBookFile>> {
+    let mut results = Vec::new();
+    if !library_root.exists() {
+        return Ok(results);
+    }
+
+    let mut categories = tokio::fs::read_dir(library_root).await?;
+    while let Some(cat_entry) = categories.next_entry().await? {
+        if !cat_entry.file_type().await?.is_dir() {
+            continue;
+        }
+        let category = cat_entry.file_name().to_string_lossy().to_string();
+        let cat_path = cat_entry.path();
+
+        let mut entries = tokio::fs::read_dir(&cat_path).await?;
+        while let Some(entry) = entries.next_entry().await? {
+            if !entry.file_type().await?.is_file() {
+                continue;
+            }
+            let path = entry.path();
+            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                if is_book_extension(ext) {
+                    results.push(ScannedBookFile {
+                        category: category.clone(),
+                        book_file: path,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base_name_from_title_author() {
+        assert_eq!(book_base_name("三体", "刘慈欣"), "三体_刘慈欣");
+        assert_eq!(book_base_name("Hello World", "Author"), "Hello_World_Author");
+    }
+}

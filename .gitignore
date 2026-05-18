@@ -1,0 +1,25 @@
+# Rust
+backend/target/
+**/*.rs.bk
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/src/api/generated/
+
+# Data & secrets
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

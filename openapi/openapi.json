@@ -177,6 +177,7 @@
         ],
         "operationId": "upload_book",
         "requestBody": {
+          "description": "Fields: library_id, category, file (required); metadata, cover (optional)",
           "content": {
             "multipart/form-data": {}
           }
@@ -804,6 +805,43 @@
         ]
       }
     },
+    "/libraries/{id}/members/{user_id}": {
+      "delete": {
+        "tags": [
+          "Libraries"
+        ],
+        "operationId": "remove_member",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/libraries/{id}/members/{user_id}/permissions": {
       "patch": {
         "tags": [
@@ -1123,6 +1161,110 @@
           }
         }
       }
+    },
+    "/users/{user_id}": {
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "delete_user",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/memberships": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "list_user_memberships",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserLibraryMembershipDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/password": {
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "change_password",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1130,7 +1272,6 @@
       "AddMemberRequest": {
         "type": "object",
         "required": [
-          "user_id",
           "role"
         ],
         "properties": {
@@ -1147,7 +1288,17 @@
             "type": "string"
           },
           "user_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "与 username 二选一"
+          },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -1310,6 +1461,24 @@
             "type": "string"
           },
           "translator": {
+            "type": "string"
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "required": [
+          "new_password"
+        ],
+        "properties": {
+          "current_password": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "修改自己的密码时必填"
+          },
+          "new_password": {
             "type": "string"
           }
         }
@@ -1751,6 +1920,30 @@
           "password"
         ],
         "properties": {
+          "can_delete": {
+            "type": "boolean"
+          },
+          "can_edit": {
+            "type": "boolean"
+          },
+          "can_view": {
+            "type": "boolean"
+          },
+          "library_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "普通用户必填：加入的图书馆"
+          },
+          "library_role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "在图书馆内的角色：admin（馆管理员）或 member（成员）"
+          },
           "password": {
             "type": "string"
           },
@@ -1791,6 +1984,7 @@
       "UpdateMemberPermissionsRequest": {
         "type": "object",
         "required": [
+          "role",
           "can_view",
           "can_edit",
           "can_delete"
@@ -1804,6 +1998,10 @@
           },
           "can_view": {
             "type": "boolean"
+          },
+          "role": {
+            "type": "string",
+            "description": "馆内角色：admin（馆管理员）或 member（成员）"
           }
         }
       },
@@ -1855,6 +2053,32 @@
             "type": "string"
           }
         }
+      },
+      "UserLibraryMembershipDto": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PermissionFlags"
+          },
+          {
+            "type": "object",
+            "required": [
+              "library_id",
+              "library_name",
+              "role"
+            ],
+            "properties": {
+              "library_id": {
+                "type": "string"
+              },
+              "library_name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              }
+            }
+          }
+        ]
       }
     },
     "securitySchemes": {

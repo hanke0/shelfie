@@ -25,6 +25,7 @@ pub async fn create_library(
     Extension(AuthContext(user)): Extension<AuthContext>,
     Json(req): Json<CreateLibraryRequest>,
 ) -> AppResult<(axum::http::StatusCode, Json<LibraryDto>)> {
+    crate::domain::user::require_system_admin(&user)?;
     let lib = library::create_library(&state, &user, req).await?;
     Ok((axum::http::StatusCode::CREATED, Json(lib)))
 }
@@ -37,7 +38,9 @@ pub async fn list_members(
 ) -> AppResult<Json<Vec<LibraryMemberDto>>> {
     let perm = library::resolve_permission(&state.db, &user, &id).await?;
     library::require_view(&perm)?;
-    Ok(Json(library::list_members(&state.db, &id).await?))
+    Ok(Json(
+        library::list_members_for_user(&state.db, &user, &id).await?,
+    ))
 }
 
 #[utoipa::path(post, path = "/libraries/{id}/members", tag = "Libraries", params(("id" = Uuid, Path)), request_body = AddMemberRequest, responses((status = 204)), security(("bearer_auth" = [])))]
@@ -48,10 +51,13 @@ pub async fn add_member(
     Json(req): Json<AddMemberRequest>,
 ) -> AppResult<axum::http::StatusCode> {
     let perm = library::resolve_permission(&state.db, &user, &id).await?;
-    if user.role != "system_admin" && perm.can_edit == false {
-        return Err(crate::error::AppError::Forbidden("Cannot manage members".into()));
+    library::require_view(&perm)?;
+    if !library::can_manage_members(&state.db, &user, &id).await? {
+        return Err(crate::error::AppError::Forbidden(
+            "Cannot manage library members".into(),
+        ));
     }
-    library::add_member(&state.db, &id, req).await?;
+    library::add_member(&state.db, &id, &user, req).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
@@ -63,9 +69,24 @@ pub async fn update_permissions(
     Json(req): Json<UpdateMemberPermissionsRequest>,
 ) -> AppResult<axum::http::StatusCode> {
     let perm = library::resolve_permission(&state.db, &user, &id).await?;
-    if user.role != "system_admin" && !perm.can_edit {
-        return Err(crate::error::AppError::Forbidden("Cannot manage members".into()));
+    library::require_view(&perm)?;
+    if !library::can_edit_member_permissions(&user) {
+        return Err(crate::error::AppError::Forbidden(
+            "Only system admin can edit member permissions".into(),
+        ));
     }
     library::update_member_permissions(&state.db, &id, &user_id, req).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(delete, path = "/libraries/{id}/members/{user_id}", tag = "Libraries", params(("id" = Uuid, Path), ("user_id" = String, Path)), responses((status = 204)), security(("bearer_auth" = [])))]
+pub async fn remove_member(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Path((id, user_id)): Path<(Uuid, String)>,
+) -> AppResult<axum::http::StatusCode> {
+    let perm = library::resolve_permission(&state.db, &user, &id).await?;
+    library::require_view(&perm)?;
+    library::remove_member(&state.db, &id, &user, &user_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }

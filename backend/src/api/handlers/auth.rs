@@ -1,7 +1,7 @@
 use crate::api::middleware::auth::AuthContext;
 use crate::domain::auth::{self, AuthUser};
-use crate::domain::user;
-use crate::error::{AppError, AppResult};
+use crate::domain::user::{self, CreateUserParams};
+use crate::error::AppResult;
 use crate::state::AppState;
 use axum::{extract::State, Extension, Json};
 use serde::{Deserialize, Serialize};
@@ -32,6 +32,22 @@ pub struct RegisterRequest {
     pub password: String,
     #[serde(default = "default_role")]
     pub role: String,
+    /// 普通用户必填：加入的图书馆
+    #[serde(default)]
+    pub library_id: Option<uuid::Uuid>,
+    /// 在图书馆内的角色：admin（馆管理员）或 member（成员）
+    #[serde(default)]
+    pub library_role: Option<String>,
+    #[serde(default = "default_true")]
+    pub can_view: bool,
+    #[serde(default)]
+    pub can_edit: bool,
+    #[serde(default)]
+    pub can_delete: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_role() -> String {
@@ -69,8 +85,21 @@ pub async fn register(
     Extension(AuthContext(user)): Extension<AuthContext>,
     Json(req): Json<RegisterRequest>,
 ) -> AppResult<(axum::http::StatusCode, Json<UserInfo>)> {
-    user::require_system_admin(&user)?;
-    let created = auth::register_user(&state.db, &req.username, &req.password, &req.role).await?;
+    let created = user::create_user(
+        &state,
+        &user,
+        CreateUserParams {
+            username: req.username,
+            password: req.password,
+            role: req.role,
+            library_id: req.library_id,
+            library_role: req.library_role,
+            can_view: req.can_view,
+            can_edit: req.can_edit,
+            can_delete: req.can_delete,
+        },
+    )
+    .await?;
     Ok((axum::http::StatusCode::CREATED, Json(to_user_info(&created))))
 }
 

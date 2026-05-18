@@ -59,6 +59,41 @@ pub async fn login(
     Ok((token, user))
 }
 
+pub async fn change_password(
+    db: &SqlitePool,
+    user_id: &Uuid,
+    current_password: Option<&str>,
+    new_password: &str,
+    verify_current: bool,
+) -> AppResult<()> {
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT password_hash FROM users WHERE id = ?")
+            .bind(user_id.to_string())
+            .fetch_optional(db)
+            .await?;
+
+    let (password_hash,) = row.ok_or_else(|| AppError::NotFound("User not found".into()))?;
+
+    if verify_current {
+        let current = current_password.ok_or_else(|| {
+            AppError::BadRequest("current_password is required".into())
+        })?;
+        if !verify(current, &password_hash)? {
+            return Err(AppError::Unauthorized("Invalid current password".into()));
+        }
+    }
+
+    let new_hash = hash(new_password, DEFAULT_COST)?;
+    let password_md5 = md5_hex(new_password.as_bytes());
+    sqlx::query("UPDATE users SET password_hash = ?, password_md5 = ? WHERE id = ?")
+        .bind(new_hash)
+        .bind(password_md5)
+        .bind(user_id.to_string())
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
 pub async fn register_user(
     db: &SqlitePool,
     username: &str,

@@ -6,7 +6,7 @@ use crate::state::AppState;
 use axum::{
     extract::DefaultBodyLimit,
     middleware,
-    routing::{get, patch, post, put},
+    routing::{delete, get, patch, post, put},
     Router,
 };
 use tower_http::cors::{Any, CorsLayer};
@@ -57,12 +57,25 @@ pub fn build_router(state: AppState) -> Router {
             "/libraries/{id}/members/{user_id}/permissions",
             patch(handlers::libraries::update_permissions),
         )
+        .route(
+            "/libraries/{id}/members/{user_id}",
+            delete(handlers::libraries::remove_member),
+        )
         .route("/libraries/{id}/refresh", post(handlers::sync::refresh_library))
         .route(
             "/libraries/{id}/refresh/{job_id}",
             get(handlers::sync::get_refresh_job),
         )
         .route("/users", get(handlers::users::list_users))
+        .route(
+            "/users/{user_id}/memberships",
+            get(handlers::users::list_user_memberships),
+        )
+        .route(
+            "/users/{user_id}/password",
+            patch(handlers::users::change_password),
+        )
+        .route("/users/{user_id}", delete(handlers::users::delete_user))
         .route("/koreader/progress", get(handlers::koreader::list_koreader_progress))
         .route(
             "/koreader/links",

@@ -1,5 +1,5 @@
 use crate::domain::auth::AuthUser;
-use crate::domain::book::{self, mark_orphan, upsert_from_fs};
+use crate::domain::book::{mark_orphan, upsert_from_fs};
 use crate::domain::library::{self, resolve_permission, require_edit};
 use crate::error::AppResult;
 use crate::infra::fs;

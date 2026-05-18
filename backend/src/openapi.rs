@@ -3,7 +3,7 @@ use crate::domain::book::{BookCard, BookDetail, UpdateBookRequest, UpdateProgres
 use crate::domain::home::HomeResponse;
 use crate::domain::library::{
     AddMemberRequest, CreateLibraryRequest, LibraryDto, LibraryMemberDto, PermissionFlags,
-    UpdateMemberPermissionsRequest,
+    UpdateMemberPermissionsRequest, UserLibraryMembershipDto,
 };
 use crate::domain::koreader::{
     KoreaderDocumentLink, KoreaderProgressRow, KosyncAuthResponse, KosyncProgressResponse,
@@ -38,9 +38,13 @@ use utoipa::{Modify, OpenApi};
         handlers::libraries::list_members,
         handlers::libraries::add_member,
         handlers::libraries::update_permissions,
+        handlers::libraries::remove_member,
         handlers::sync::refresh_library,
         handlers::sync::get_refresh_job,
         handlers::users::list_users,
+        handlers::users::list_user_memberships,
+        handlers::users::change_password,
+        handlers::users::delete_user,
         handlers::koreader::kosync_healthcheck,
         handlers::koreader::kosync_auth_user,
         handlers::koreader::kosync_update_progress,
@@ -69,6 +73,8 @@ use utoipa::{Modify, OpenApi};
         CreateLibraryRequest,
         AddMemberRequest,
         UpdateMemberPermissionsRequest,
+        UserLibraryMembershipDto,
+        handlers::users::ChangePasswordRequest,
         UserDto,
         RefreshJobResponse,
         RefreshDiff,

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import { getUser, clearAuth } from "@/lib/auth";
 import { LibrarySelector } from "@/components/LibrarySelector";
+import { UserMenu } from "@/components/UserMenu";
 import { useLibrary } from "@/context/LibraryContext";
 import styles from "./Header.module.css";
 
@@ -11,7 +11,6 @@ interface HeaderProps {
 }
 
 export function Header({ search, onSearchChange, onUploadClick }: HeaderProps) {
-  const user = getUser();
   const navigate = useNavigate();
   const { libraryId } = useLibrary();
 
@@ -46,27 +45,7 @@ export function Header({ search, onSearchChange, onUploadClick }: HeaderProps) {
         <button type="button" className="btn" onClick={onUploadClick}>
           上传
         </button>
-        <Link to="/admin/libraries" className="btn btn-ghost">
-          图书馆
-        </Link>
-        <Link to="/admin/koreader" className="btn btn-ghost">
-          KOReader
-        </Link>
-        {user?.role === "system_admin" && (
-          <Link to="/admin/users" className="btn btn-ghost">
-            用户
-          </Link>
-        )}
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={() => {
-            clearAuth();
-            navigate("/login");
-          }}
-        >
-          {user?.username ?? "登录"}
-        </button>
+        <UserMenu />
       </div>
     </header>
   );

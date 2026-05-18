@@ -16,6 +16,7 @@ import { useConfirmTwice } from "@/context/ConfirmContext";
 import { displayLanguageValue } from "@/data/iso639-1";
 import { CategorySelect } from "@/components/CategorySelect";
 import { LanguageCombobox } from "@/components/ui/LanguageCombobox";
+import { RatingPicker } from "@/components/ui/RatingPicker";
 import { downloadBookFile } from "@/lib/download";
 import styles from "./BookDetailPage.module.css";
 
@@ -264,6 +265,21 @@ export function BookDetailPage() {
                     />
                   ) : (
                     metaForm.page_count ?? "—"
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <th>评分</th>
+                <td>
+                  {canEdit ? (
+                    <RatingPicker
+                      value={metaForm.rating}
+                      onChange={(rating) => setMetaForm({ ...metaForm, rating })}
+                    />
+                  ) : metaForm.rating ? (
+                    `${metaForm.rating} / 5`
+                  ) : (
+                    "—"
                   )}
                 </td>
               </tr>

@@ -27,6 +27,10 @@ pub struct BookMetadata {
     pub isbn: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub page_count: Option<i32>,
+    /// 评分 1–5；未评分时不序列化
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schema(minimum = 1, maximum = 5)]
+    pub rating: Option<u8>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub original_title: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -63,6 +67,31 @@ mod tests {
         assert_eq!(parsed.title, "测试");
         assert_eq!(parsed.reading_progress.unwrap().current_page, Some(10));
     }
+
+    #[test]
+    fn rating_roundtrip_and_validation() {
+        let mut meta = BookMetadata {
+            title: "T".into(),
+            rating: Some(4),
+            ..Default::default()
+        };
+        meta.normalize_fields().unwrap();
+        let json = meta.to_json().unwrap();
+        assert!(json.contains("\"rating\": 4"));
+        let mut bad = BookMetadata {
+            title: "T".into(),
+            rating: Some(6),
+            ..Default::default()
+        };
+        assert!(bad.normalize_fields().is_err());
+        let mut zero = BookMetadata {
+            title: "T".into(),
+            rating: Some(0),
+            ..Default::default()
+        };
+        zero.normalize_fields().unwrap();
+        assert_eq!(zero.rating, None);
+    }
 }
 
 impl BookMetadata {
@@ -94,8 +123,20 @@ impl BookMetadata {
         }
     }
 
+    pub fn normalize_rating(rating: Option<u8>) -> crate::error::AppResult<Option<u8>> {
+        match rating {
+            None => Ok(None),
+            Some(0) => Ok(None),
+            Some(n @ 1..=5) => Ok(Some(n)),
+            Some(_) => Err(crate::error::AppError::BadRequest(
+                "rating must be an integer from 1 to 5".into(),
+            )),
+        }
+    }
+
     pub fn normalize_fields(&mut self) -> crate::error::AppResult<()> {
         self.publish_date = Self::normalize_publish_date(&self.publish_date)?;
+        self.rating = Self::normalize_rating(self.rating)?;
         Ok(())
     }
 }

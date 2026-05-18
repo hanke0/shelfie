@@ -9,8 +9,18 @@
   flex-direction: column;
   gap: 0.35rem;
   margin-bottom: 0.85rem;
+}
+
+.labelLine {
+  display: block;
   font-size: 0.85rem;
   color: var(--ink-muted);
+  line-height: 1.35;
+}
+
+.req {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .hint {
@@ -24,10 +34,6 @@
   color: #a33;
   margin: 0 0 0.75rem;
   font-size: 0.85rem;
-}
-
-.req {
-  color: var(--accent);
 }
 
 .permFieldset {

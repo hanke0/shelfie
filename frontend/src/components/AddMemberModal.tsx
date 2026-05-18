@@ -4,6 +4,7 @@ import { useAddMember } from "@/api/generated/libraries/libraries";
 import { useListUsers } from "@/api/generated/users/users";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 
 interface AddMemberModalProps {
@@ -98,7 +99,7 @@ export function AddMemberModal({
         {error && <p className={formStyles.error}>{error}</p>}
         {isSystemAdmin && users ? (
           <label className={formStyles.field}>
-            用户
+            <FieldLabel required>用户</FieldLabel>
             <Select
               value={memberUserId}
               onChange={(e) => setMemberUserId(e.target.value)}
@@ -114,7 +115,7 @@ export function AddMemberModal({
           </label>
         ) : (
           <label className={formStyles.field}>
-            用户名
+            <FieldLabel required>用户名</FieldLabel>
             <input
               type="text"
               value={memberUsername}

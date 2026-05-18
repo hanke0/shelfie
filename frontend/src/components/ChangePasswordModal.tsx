@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useChangePassword } from "@/api/generated/users/users";
 import { getUser } from "@/lib/auth";
 import { Modal } from "@/components/ui/Modal";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 
 interface ChangePasswordModalProps {
@@ -76,7 +77,7 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
       <form id="change-password-form" className={formStyles.form} onSubmit={(e) => void handleSubmit(e)}>
         {error && <p className={formStyles.error}>{error}</p>}
         <label className={formStyles.field}>
-          当前密码
+          <FieldLabel required>当前密码</FieldLabel>
           <input
             type="password"
             value={currentPassword}
@@ -86,7 +87,7 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
           />
         </label>
         <label className={formStyles.field}>
-          新密码
+          <FieldLabel required>新密码</FieldLabel>
           <input
             type="password"
             value={newPassword}
@@ -97,7 +98,7 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
           />
         </label>
         <label className={formStyles.field}>
-          确认新密码
+          <FieldLabel required>确认新密码</FieldLabel>
           <input
             type="password"
             value={confirmPassword}

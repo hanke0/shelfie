@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLogin } from "@/api/generated/auth/auth";
 import { setAuth } from "@/lib/auth";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import styles from "./LoginPage.module.css";
 
 export function LoginPage() {
@@ -30,11 +31,11 @@ export function LoginPage() {
         <p className={styles.sub}>登录你的书架</p>
 
         <label>
-          用户名
-          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+          <FieldLabel required>用户名</FieldLabel>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required />
         </label>
         <label>
-          密码
+          <FieldLabel required>密码</FieldLabel>
           <input
             type="password"
             value={password}

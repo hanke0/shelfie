@@ -85,6 +85,10 @@ pub fn build_router(state: AppState) -> Router {
             get(handlers::users::list_user_memberships),
         )
         .route(
+            "/users/{user_id}/username",
+            patch(handlers::users::update_username),
+        )
+        .route(
             "/users/{user_id}/password",
             patch(handlers::users::change_password),
         )

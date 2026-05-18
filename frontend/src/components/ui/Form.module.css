@@ -4,6 +4,19 @@
   gap: 0;
 }
 
+.sectionTitle {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.form + .form {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
 .field {
   display: flex;
   flex-direction: column;

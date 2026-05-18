@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { clearAuth, getUser } from "@/lib/auth";
-import { ChangePasswordModal } from "@/components/ChangePasswordModal";
+import { clearAuth, useStoredUser } from "@/lib/auth";
+import { AccountSettingsModal } from "@/components/AccountSettingsModal";
 import styles from "./UserMenu.module.css";
 
 interface UserMenuProps {
@@ -9,10 +9,10 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ className }: UserMenuProps) {
-  const user = getUser();
+  const user = useStoredUser();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -96,10 +96,10 @@ export function UserMenu({ className }: UserMenuProps) {
               role="menuitem"
               onClick={() => {
                 setOpen(false);
-                setPasswordOpen(true);
+                setSettingsOpen(true);
               }}
             >
-              修改密码
+              账号设置
             </button>
             <button type="button" className={styles.item} role="menuitem" onClick={logout}>
               退出登录
@@ -108,7 +108,7 @@ export function UserMenu({ className }: UserMenuProps) {
         )}
       </div>
 
-      <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      <AccountSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }

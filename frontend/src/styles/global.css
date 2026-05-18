@@ -41,6 +41,42 @@ textarea {
   font-family: inherit;
 }
 
+/* 文本类表单控件 — 全站统一（checkbox/radio/file/button 除外） */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not([type="color"]),
+textarea {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not([type="color"]):hover,
+textarea:hover {
+  border-color: var(--accent-soft);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not([type="color"]):focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.12);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-muted);
+  opacity: 0.85;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 2.75rem;
+}
+
 .app-shell {
   max-width: 1280px;
   margin: 0 auto;

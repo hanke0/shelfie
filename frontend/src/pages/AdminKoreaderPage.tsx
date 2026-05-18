@@ -4,11 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListKoreaderLinks,
   useListKoreaderProgress,
-  useSetKoreaderLink,
   useDeleteKoreaderLink,
 } from "@/api/generated/koreader/koreader";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
-import { useSearch } from "@/api/generated/search/search";
+import { KoreaderLinkModal } from "@/components/KoreaderLinkModal";
+import { Select } from "@/components/ui/Select";
 import { useLibrary } from "@/context/LibraryContext";
 import styles from "./AdminPage.module.css";
 import tableStyles from "./AdminKoreaderPage.module.css";
@@ -18,6 +18,7 @@ export function AdminKoreaderPage() {
   const { libraryId: contextLibraryId, setLibraryId } = useLibrary();
   const { data: libraries } = useListLibraries();
   const [libraryFilter, setLibraryFilter] = useState(contextLibraryId ?? "");
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
 
   const libParam = libraryFilter ? { library_id: libraryFilter } : undefined;
   const { data: progressRows } = useListKoreaderProgress(libParam ?? {}, {
@@ -27,32 +28,7 @@ export function AdminKoreaderPage() {
     query: { enabled: true },
   });
 
-  const setLink = useSetKoreaderLink();
   const deleteLink = useDeleteKoreaderLink();
-
-  const [documentId, setDocumentId] = useState("");
-  const [bookSearch, setBookSearch] = useState("");
-  const [selectedBookId, setSelectedBookId] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-
-  const { data: searchResults } = useSearch(
-    { q: bookSearch, library_id: libraryFilter || undefined, limit: 20 },
-    { query: { enabled: bookSearch.trim().length >= 1 } },
-  );
-
-  const handleSetLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!documentId.trim() || !selectedBookId) return;
-    await setLink.mutateAsync({
-      data: { document: documentId.trim(), book_id: selectedBookId },
-    });
-    setDocumentId("");
-    setSelectedBookId("");
-    setBookSearch("");
-    setMessage("已保存匹配关系");
-    qc.invalidateQueries({ queryKey: ["/koreader/links"] });
-    qc.invalidateQueries({ queryKey: ["/koreader/progress"] });
-  };
 
   const handleDeleteLink = async (doc: string) => {
     await deleteLink.mutateAsync({ document: doc });
@@ -74,68 +50,30 @@ export function AdminKoreaderPage() {
       </p>
 
       <div className={styles.card}>
-        <h2>筛选图书馆</h2>
-        <select
-          value={libraryFilter}
-          onChange={(e) => {
-            setLibraryFilter(e.target.value);
-            if (e.target.value) setLibraryId(e.target.value);
-          }}
-        >
-          <option value="">全部</option>
-          {libraries?.map((lib) => (
-            <option key={lib.id} value={lib.id}>
-              {lib.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <form className={styles.card} onSubmit={(e) => void handleSetLink(e)}>
-        <h2>手动匹配 document → 图书</h2>
-        <label>
-          KOReader document（32 位 MD5）
-          <input
-            value={documentId}
-            onChange={(e) => setDocumentId(e.target.value)}
-            placeholder="41cce710f34e5ec21315e19c99821415"
-            required
-          />
-        </label>
-        <label>
-          搜索图书
-          <input
-            value={bookSearch}
+        <div className={styles.cardHeader}>
+          <h2>筛选与匹配</h2>
+          <button type="button" className="btn" onClick={() => setLinkModalOpen(true)}>
+            新建匹配
+          </button>
+        </div>
+        <label className={`${styles.filterRow} ${styles.fieldInline}`}>
+          <span className={styles.muted}>图书馆</span>
+          <Select
+            value={libraryFilter}
             onChange={(e) => {
-              setBookSearch(e.target.value);
-              setSelectedBookId("");
+              setLibraryFilter(e.target.value);
+              if (e.target.value) setLibraryId(e.target.value);
             }}
-            placeholder="书名或作者"
-          />
-        </label>
-        {searchResults && searchResults.length > 0 && (
-          <ul className={styles.list}>
-            {searchResults.map((b) => (
-              <li key={b.id}>
-                <button
-                  type="button"
-                  className={selectedBookId === b.id ? styles.active : ""}
-                  onClick={() => setSelectedBookId(b.id)}
-                >
-                  {b.title} — {b.author || "未知作者"}
-                </button>
-              </li>
+          >
+            <option value="">全部</option>
+            {libraries?.map((lib) => (
+              <option key={lib.id} value={lib.id}>
+                {lib.name}
+              </option>
             ))}
-          </ul>
-        )}
-        {selectedBookId && (
-          <p className={styles.muted}>已选图书 ID: {selectedBookId}</p>
-        )}
-        <button type="submit" className="btn" disabled={!selectedBookId}>
-          保存匹配
-        </button>
-        {message && <p>{message}</p>}
-      </form>
+          </Select>
+        </label>
+      </div>
 
       <div className={styles.card}>
         <h2>已匹配 ({links?.length ?? 0})</h2>
@@ -209,6 +147,12 @@ export function AdminKoreaderPage() {
           </tbody>
         </table>
       </div>
+
+      <KoreaderLinkModal
+        open={linkModalOpen}
+        onClose={() => setLinkModalOpen(false)}
+        libraryFilter={libraryFilter}
+      />
     </div>
   );
 }

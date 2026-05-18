@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useRemoveMember,
-  useUpdatePermissions,
-} from "@/api/generated/libraries/libraries";
+import { useRemoveMember } from "@/api/generated/libraries/libraries";
+import { EditMemberPermissionsModal } from "@/components/EditMemberPermissionsModal";
 import styles from "@/pages/AdminPage.module.css";
 
 export type MemberPermState = {
@@ -21,6 +19,8 @@ function permLabel(m: MemberPermState) {
 export function LibraryMemberPermissionsEditor({
   libraryId,
   userId,
+  username,
+  libraryName,
   member,
   canEditPermissions,
   canRemoveMember,
@@ -28,58 +28,18 @@ export function LibraryMemberPermissionsEditor({
 }: {
   libraryId: string;
   userId: string;
+  username?: string;
+  libraryName?: string;
   member: MemberPermState;
-  /** 系统管理员：可改角色与细粒度权限 */
   canEditPermissions: boolean;
-  /** 馆管理员可踢普通成员；系统管理员可踢任何人 */
   canRemoveMember: boolean;
   onSaved?: () => void;
 }) {
   const qc = useQueryClient();
-  const updatePermissions = useUpdatePermissions();
   const removeMember = useRemoveMember();
-  const [role, setRole] = useState(member.role);
-  const [canView, setCanView] = useState(member.can_view ?? false);
-  const [canEdit, setCanEdit] = useState(member.can_edit ?? false);
-  const [canDelete, setCanDelete] = useState(member.can_delete ?? false);
-  const [saving, setSaving] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setRole(member.role);
-    setCanView(member.can_view ?? false);
-    setCanEdit(member.can_edit ?? false);
-    setCanDelete(member.can_delete ?? false);
-    setError(null);
-  }, [libraryId, userId, member.role, member.can_view, member.can_edit, member.can_delete]);
-
-  const isLibraryAdmin = role === "admin";
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      await updatePermissions.mutateAsync({
-        id: libraryId,
-        userId,
-        data: {
-          role,
-          can_view: isLibraryAdmin ? true : canView,
-          can_edit: isLibraryAdmin ? true : canEdit,
-          can_delete: isLibraryAdmin ? true : canDelete,
-        },
-      });
-      await qc.invalidateQueries({ queryKey: [`/libraries/${libraryId}/members`] });
-      await qc.invalidateQueries({ queryKey: [`/users/${userId}/memberships`] });
-      onSaved?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "保存失败");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleRemove = async () => {
     if (!window.confirm("确定将该用户移出本图书馆？")) return;
@@ -98,65 +58,39 @@ export function LibraryMemberPermissionsEditor({
   };
 
   return (
-    <div className={styles.memberActions}>
-      {canEditPermissions ? (
-        <form className={styles.permForm} onSubmit={(e) => void handleSave(e)}>
-          <label>
-            馆内角色
-            <select value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="member">成员</option>
-              <option value="admin">馆管理员</option>
-            </select>
-          </label>
-          {!isLibraryAdmin && (
-            <>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={canView}
-                  onChange={(e) => setCanView(e.target.checked)}
-                />
-                查看
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={canEdit}
-                  onChange={(e) => setCanEdit(e.target.checked)}
-                />
-                编辑
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={canDelete}
-                  onChange={(e) => setCanDelete(e.target.checked)}
-                />
-                删除
-              </label>
-            </>
-          )}
-          {isLibraryAdmin && (
-            <span className={styles.muted}>馆管理员在本馆拥有全部图书权限，并可拉人/踢人。</span>
-          )}
-          <button type="submit" className="btn btn-ghost" disabled={saving}>
-            {saving ? "保存中…" : "保存权限"}
-          </button>
-        </form>
-      ) : (
+    <>
+      <div className={styles.memberActions}>
         <span className={styles.muted}>{permLabel(member)}</span>
+        <div className={styles.rowActions}>
+          {canEditPermissions && (
+            <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
+              编辑权限
+            </button>
+          )}
+          {canRemoveMember && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={removing}
+              onClick={() => void handleRemove()}
+            >
+              {removing ? "移除中…" : "移出图书馆"}
+            </button>
+          )}
+        </div>
+        {error && <span className={styles.error}>{error}</span>}
+      </div>
+      {canEditPermissions && username && (
+        <EditMemberPermissionsModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          libraryId={libraryId}
+          userId={userId}
+          username={username}
+          libraryName={libraryName}
+          member={member}
+        />
       )}
-      {canRemoveMember && (
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={removing}
-          onClick={() => void handleRemove()}
-        >
-          {removing ? "移除中…" : "移出图书馆"}
-        </button>
-      )}
-      {error && <span className={styles.error}>{error}</span>}
-    </div>
+    </>
   );
 }

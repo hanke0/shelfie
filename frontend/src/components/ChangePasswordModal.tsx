@@ -1,25 +1,37 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { useChangePassword } from "@/api/generated/users/users";
 import { getUser } from "@/lib/auth";
-import styles from "./AdminPage.module.css";
+import { Modal } from "@/components/ui/Modal";
+import formStyles from "@/components/ui/Form.module.css";
 
-export function ChangePasswordPage() {
+interface ChangePasswordModalProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps) {
   const user = getUser();
-  const navigate = useNavigate();
   const changePassword = useChangePassword();
-
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  if (!user) {
-    return null;
-  }
+  const reset = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setError(null);
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setError(null);
     if (newPassword.length < 6) {
       setError("新密码至少 6 位");
@@ -32,26 +44,38 @@ export function ChangePasswordPage() {
     try {
       await changePassword.mutateAsync({
         userId: user.id,
-        data: {
-          current_password: currentPassword,
-          new_password: newPassword,
-        },
+        data: { current_password: currentPassword, new_password: newPassword },
       });
-      navigate("/");
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "修改失败");
     }
   };
 
   return (
-    <div className={`app-shell ${styles.page}`}>
-      <Link to="/" className={styles.back}>
-        ← 返回首页
-      </Link>
-      <h1>修改密码</h1>
-      <form className={styles.card} onSubmit={(e) => void handleSubmit(e)}>
-        {error && <p className={styles.error}>{error}</p>}
-        <label>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="修改密码"
+      footer={
+        <>
+          <button type="button" className="btn btn-ghost" onClick={handleClose}>
+            取消
+          </button>
+          <button
+            type="submit"
+            form="change-password-form"
+            className="btn"
+            disabled={changePassword.isPending}
+          >
+            {changePassword.isPending ? "保存中…" : "保存"}
+          </button>
+        </>
+      }
+    >
+      <form id="change-password-form" className={formStyles.form} onSubmit={(e) => void handleSubmit(e)}>
+        {error && <p className={formStyles.error}>{error}</p>}
+        <label className={formStyles.field}>
           当前密码
           <input
             type="password"
@@ -61,7 +85,7 @@ export function ChangePasswordPage() {
             autoComplete="current-password"
           />
         </label>
-        <label>
+        <label className={formStyles.field}>
           新密码
           <input
             type="password"
@@ -72,7 +96,7 @@ export function ChangePasswordPage() {
             autoComplete="new-password"
           />
         </label>
-        <label>
+        <label className={formStyles.field}>
           确认新密码
           <input
             type="password"
@@ -83,10 +107,7 @@ export function ChangePasswordPage() {
             autoComplete="new-password"
           />
         </label>
-        <button type="submit" className="btn" disabled={changePassword.isPending}>
-          {changePassword.isPending ? "保存中…" : "保存"}
-        </button>
       </form>
-    </div>
+    </Modal>
   );
 }

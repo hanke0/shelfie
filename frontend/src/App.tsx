@@ -8,7 +8,6 @@ import { SearchPage } from "@/pages/SearchPage";
 import { AdminLibrariesPage } from "@/pages/AdminLibrariesPage";
 import { AdminUsersPage } from "@/pages/AdminUsersPage";
 import { AdminKoreaderPage } from "@/pages/AdminKoreaderPage";
-import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 
 export default function App() {
   return (
@@ -68,14 +67,6 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AdminKoreaderPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/account/password"
-          element={
-            <ProtectedRoute>
-              <ChangePasswordPage />
             </ProtectedRoute>
           }
         />

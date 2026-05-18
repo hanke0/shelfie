@@ -1,4 +1,5 @@
 import { useLibrary } from "@/context/LibraryContext";
+import { Select } from "@/components/ui/Select";
 import styles from "./LibrarySelector.module.css";
 
 export function LibrarySelector() {
@@ -21,17 +22,18 @@ export function LibrarySelector() {
   return (
     <label className={styles.wrap}>
       <span className={styles.label}>当前图书馆</span>
-      <select
+      <Select
         value={libraryId ?? ""}
         onChange={(e) => setLibraryId(e.target.value || null)}
         aria-label="选择图书馆"
+        className={styles.select}
       >
         {libraries.map((lib) => (
           <option key={lib.id} value={lib.id}>
             {lib.name}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }

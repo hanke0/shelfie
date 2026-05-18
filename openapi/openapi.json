@@ -1605,6 +1605,15 @@
           "publisher": {
             "type": "string"
           },
+          "rating": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "评分 1–5；未评分时不序列化",
+            "minimum": 0
+          },
           "reading_progress": {
             "oneOf": [
               {

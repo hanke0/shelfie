@@ -2,6 +2,7 @@ import type { BookMetadata } from "@/api/generated/models";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { CategorySelect } from "@/components/CategorySelect";
 import { LanguageCombobox } from "@/components/ui/LanguageCombobox";
+import { RatingPicker } from "@/components/ui/RatingPicker";
 import styles from "./MetadataFormFields.module.css";
 
 export const emptyMetadata = (): BookMetadata => ({
@@ -36,6 +37,7 @@ export function metadataForUpload(
     category: category.trim(),
     publish_date: metadata.publish_date?.trim() ?? "",
     page_count: metadata.page_count,
+    rating: metadata.rating,
   };
 }
 
@@ -133,6 +135,14 @@ export function MetadataFormFields({
           type="number"
           value={metadata.page_count ?? ""}
           onChange={setPageCount}
+        />
+      </label>
+
+      <label>
+        <FieldLabel>评分</FieldLabel>
+        <RatingPicker
+          value={metadata.rating}
+          onChange={(rating) => onChange({ ...metadata, rating })}
         />
       </label>
 

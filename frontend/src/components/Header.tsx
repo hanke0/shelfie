@@ -23,7 +23,7 @@ export function Header({ search, onSearchChange, onUploadClick }: HeaderProps) {
         </span>
       </Link>
 
-      <LibrarySelector />
+      <LibrarySelector className={styles.headerControl} />
 
       <div className={styles.searchWrap}>
         <input
@@ -42,10 +42,10 @@ export function Header({ search, onSearchChange, onUploadClick }: HeaderProps) {
       </div>
 
       <div className={styles.actions}>
-        <button type="button" className="btn" onClick={onUploadClick}>
+        <button type="button" className={`btn ${styles.headerBtn}`} onClick={onUploadClick}>
           上传
         </button>
-        <UserMenu />
+        <UserMenu className={styles.headerControl} />
       </div>
     </header>
   );

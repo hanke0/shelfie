@@ -1,18 +1,25 @@
 .wrap {
   position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 .trigger {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.4rem 0.65rem;
+  gap: 0.4rem;
+  height: 100%;
+  padding: 0 0.55rem 0 0.45rem;
+  box-sizing: border-box;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--bg-card);
   color: var(--ink);
   cursor: pointer;
   font: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
 }
 
 .trigger:hover {
@@ -20,14 +27,14 @@
 }
 
 .avatar {
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.35rem;
+  height: 1.35rem;
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
   display: grid;
   place-items: center;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 
@@ -36,11 +43,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 .chevron {
-  font-size: 0.65rem;
+  font-size: 0.55rem;
   color: var(--ink-muted);
 }
 

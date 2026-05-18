@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import type { BookCard as BookCardType } from "@/api/generated/models";
 import { fetchCoverBlob } from "@/lib/custom-fetch";
+import { TitleCoverImage } from "@/components/TitleCoverImage";
 import styles from "./BookCard.module.css";
 
 export function BookCard({ book }: { book: BookCardType }) {
@@ -32,7 +33,11 @@ export function BookCard({ book }: { book: BookCardType }) {
         {coverSrc ? (
           <img src={coverSrc} alt={book.title} />
         ) : (
-          <div className={styles.placeholder}>{book.title.slice(0, 1)}</div>
+          <TitleCoverImage
+            title={book.title}
+            author={book.author}
+            className={styles.generatedCover}
+          />
         )}
       </div>
       <div className={styles.meta}>

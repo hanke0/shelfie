@@ -6,6 +6,11 @@ use uuid::Uuid;
 const BOOK_EXTENSIONS: &[&str] = &["pdf", "epub", "mobi"];
 const COVER_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png"];
 
+/// 磁盘上是否存在已保存的封面文件
+pub fn has_stored_cover(cover_path: &Path) -> bool {
+    !cover_path.as_os_str().is_empty() && cover_path.is_file()
+}
+
 pub fn library_root(data_root: &Path, library_id: &Uuid) -> PathBuf {
     data_root.join(library_id.to_string())
 }
@@ -281,16 +286,10 @@ pub async fn rename_book_assets(
         .extension()
         .and_then(|e| e.to_str())
         .ok_or_else(|| AppError::Internal("Book file has no extension".into()))?;
-    let cover_ext = cover_path
-        .extension()
-        .and_then(|e| e.to_str())
-        .ok_or_else(|| AppError::Internal("Cover file has no extension".into()))?;
-
     let new_base = ensure_unique_base_for_rename(dir, &book_base_name(&metadata.title, &metadata.author), book_path);
 
     let new_book = dir.join(format!("{new_base}.{book_ext}"));
     let new_meta = dir.join(format!("{new_base}.json"));
-    let new_cover = dir.join(format!("{new_base}.{cover_ext}"));
 
     if book_path != new_book {
         if new_book.exists() {
@@ -304,6 +303,17 @@ pub async fn rename_book_assets(
         }
         tokio::fs::rename(metadata_path, &new_meta).await?;
     }
+
+    if !has_stored_cover(cover_path) {
+        return Ok((new_book, new_meta, PathBuf::new()));
+    }
+
+    let cover_ext = cover_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .ok_or_else(|| AppError::Internal("Cover file has no extension".into()))?;
+    let new_cover = dir.join(format!("{new_base}.{cover_ext}"));
+
     if cover_path != new_cover {
         if new_cover.exists() {
             tokio::fs::remove_file(&new_cover).await.ok();

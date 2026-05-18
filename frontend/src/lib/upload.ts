@@ -30,17 +30,21 @@ export async function uploadBookMultipart(
   libraryId: string,
   category: string,
   file: File,
-  cover: File,
   metadata?: Partial<BookMetadata>,
+  cover?: File | null,
 ): Promise<BookDetail> {
   assertFileSize(file, "图书文件");
-  assertFileSize(cover, "封面");
+  if (cover) {
+    assertFileSize(cover, "封面");
+  }
 
   const form = new FormData();
   form.append("library_id", libraryId);
   form.append("category", category);
   form.append("file", file, file.name || "book.pdf");
-  form.append("cover", cover, cover.name || "cover.jpg");
+  if (cover) {
+    form.append("cover", cover, cover.name || "cover.jpg");
+  }
   if (metadata) {
     form.append("metadata", JSON.stringify(metadata));
   }

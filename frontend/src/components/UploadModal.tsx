@@ -37,8 +37,8 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!libraryId || !file || !cover) {
-      setError("请选择图书馆、图书文件和封面");
+    if (!libraryId || !file) {
+      setError("请选择图书馆和图书文件");
       return;
     }
     const payload = metadataForUpload(metadata, category, file);
@@ -49,7 +49,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
     setLoading(true);
     setError(null);
     try {
-      await uploadBookMultipart(libraryId, category, file, cover, payload);
+      await uploadBookMultipart(libraryId, category, file, payload, cover);
       await qc.invalidateQueries({
         queryKey: getGetHomeQueryKey({ library_id: libraryId, limit: 12 }),
       });
@@ -95,13 +95,15 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
             </label>
 
             <label>
-              封面 (JPG / PNG) <span className={styles.req}>*</span>
+              封面 (JPG / PNG，可选)
               <input
                 type="file"
                 accept=".jpg,.jpeg,.png"
                 onChange={(e) => setCover(e.target.files?.[0] ?? null)}
-                required
               />
+              <span className={styles.hint}>
+                未上传时由前端根据书名{metadata.author?.trim() ? "与作者" : ""}生成展示封面（不保存到服务器）
+              </span>
             </label>
           </div>
         </div>

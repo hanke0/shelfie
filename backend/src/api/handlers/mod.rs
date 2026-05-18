@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod books;
+pub mod categories;
 pub mod health;
 pub mod home;
 pub mod koreader;

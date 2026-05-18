@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useListCategories } from "@/api/generated/categories/categories";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetHomeQueryKey } from "@/api/generated/home/home";
 import { useLibrary } from "@/context/LibraryContext";
@@ -21,6 +22,19 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
   const qc = useQueryClient();
   const { libraryId, library } = useLibrary();
   const [category, setCategory] = useState("未分类");
+  const { data: categories } = useListCategories(libraryId ?? "", {
+    query: { enabled: open && !!libraryId },
+  });
+
+  useEffect(() => {
+    if (!open || !categories?.length) return;
+    setCategory((current) => {
+      if (categories.some((c) => c.name === current)) return current;
+      const fallback =
+        categories.find((c) => c.name === "未分类")?.name ?? categories[0]?.name ?? "";
+      return fallback;
+    });
+  }, [open, categories]);
   const [metadata, setMetadata] = useState(emptyMetadata);
   const [file, setFile] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
@@ -55,6 +69,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
       await qc.invalidateQueries({
         queryKey: getGetHomeQueryKey({ library_id: libraryId, limit: 12 }),
       });
+      await qc.invalidateQueries({ queryKey: ["/libraries", libraryId, "categories"] });
       resetForm();
       onClose();
     } catch (err) {
@@ -106,6 +121,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
 
           <div className={styles.metadataSection}>
             <MetadataFormFields
+              libraryId={libraryId}
               metadata={metadata}
               onChange={setMetadata}
               category={category}

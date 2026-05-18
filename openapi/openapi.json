@@ -767,6 +767,129 @@
         ]
       }
     },
+    "/libraries/{id}/categories": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "list_categories",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "create_category",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/libraries/{id}/categories/{name}": {
+      "delete": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "delete_category",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/libraries/{id}/members": {
       "get": {
         "tags": [
@@ -1503,6 +1626,17 @@
           }
         }
       },
+      "CategoryDto": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "ChangePasswordRequest": {
         "type": "object",
         "required": [
@@ -1517,6 +1651,17 @@
             "description": "修改自己的密码时必填"
           },
           "new_password": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
             "type": "string"
           }
         }
@@ -2151,6 +2296,10 @@
     {
       "name": "Libraries",
       "description": "Library management"
+    },
+    {
+      "name": "Categories",
+      "description": "Book categories per library"
     },
     {
       "name": "Sync",

@@ -56,6 +56,15 @@ pub fn build_router(state: AppState) -> Router {
             get(handlers::libraries::list_libraries).post(handlers::libraries::create_library),
         )
         .route("/libraries/{id}", delete(handlers::libraries::delete_library))
+        .route(
+            "/libraries/{id}/categories",
+            get(handlers::categories::list_categories)
+                .post(handlers::categories::create_category),
+        )
+        .route(
+            "/libraries/{id}/categories/{name}",
+            delete(handlers::categories::delete_category),
+        )
         .route("/libraries/{id}/members", get(handlers::libraries::list_members).post(handlers::libraries::add_member))
         .route(
             "/libraries/{id}/members/{user_id}/permissions",

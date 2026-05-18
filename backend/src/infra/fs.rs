@@ -336,6 +336,52 @@ pub struct ScannedBookFile {
     pub book_file: PathBuf,
 }
 
+/// 列出图书馆根目录下的分类子文件夹名
+pub async fn list_library_categories(library_root: &Path) -> AppResult<Vec<String>> {
+    let mut names = Vec::new();
+    if !library_root.exists() {
+        return Ok(names);
+    }
+    let mut entries = tokio::fs::read_dir(library_root).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        if !entry.file_type().await?.is_dir() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.starts_with('.') {
+            continue;
+        }
+        names.push(name);
+    }
+    names.sort();
+    Ok(names)
+}
+
+/// 目录下是否存在任意文件（含子目录）
+pub async fn dir_has_any_files(dir: &Path) -> AppResult<bool> {
+    if !dir.exists() {
+        return Ok(false);
+    }
+    let path = dir.to_path_buf();
+    tokio::task::spawn_blocking(move || dir_has_any_files_sync(&path))
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?
+}
+
+fn dir_has_any_files_sync(dir: &Path) -> AppResult<bool> {
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            return Ok(true);
+        }
+        if path.is_dir() && dir_has_any_files_sync(&path)? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// 图书馆目录下是否存在任意文件（含子目录；空目录或仅空分类目录视为无文件）
 pub async fn library_has_any_files(library_root: &Path) -> AppResult<bool> {
     if !library_root.exists() {

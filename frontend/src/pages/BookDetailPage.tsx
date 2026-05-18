@@ -14,6 +14,7 @@ import { FileInput } from "@/components/ui/FileInput";
 import { updateCoverMultipart } from "@/lib/upload";
 import { useConfirmTwice } from "@/context/ConfirmContext";
 import { displayLanguageValue } from "@/data/iso639-1";
+import { CategorySelect } from "@/components/CategorySelect";
 import { LanguageCombobox } from "@/components/ui/LanguageCombobox";
 import { downloadBookFile } from "@/lib/download";
 import styles from "./BookDetailPage.module.css";
@@ -119,7 +120,6 @@ export function BookDetailPage() {
     { key: "isbn", label: "ISBN" },
     { key: "original_title", label: "原作名" },
     { key: "series", label: "丛书" },
-    { key: "category", label: "分类" },
     { key: "notes", label: "备注" },
   ];
 
@@ -176,6 +176,25 @@ export function BookDetailPage() {
                   </td>
                 </tr>
               ))}
+              <tr>
+                <th>分类</th>
+                <td>
+                  {canEdit ? (
+                    <div className={styles.languageField}>
+                      <CategorySelect
+                        libraryId={book.library_id}
+                        value={metaForm.category ?? book.category}
+                        onChange={(name) =>
+                          setMetaForm({ ...metaForm, category: name })
+                        }
+                        required
+                      />
+                    </div>
+                  ) : (
+                    metaForm.category || book.category || "—"
+                  )}
+                </td>
+              </tr>
               <tr>
                 <th>语言 (ISO 639-1)</th>
                 <td>

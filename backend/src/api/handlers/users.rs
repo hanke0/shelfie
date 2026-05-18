@@ -1,4 +1,6 @@
+use crate::api::handlers::auth::{LoginResponse, UserInfo};
 use crate::api::middleware::auth::AuthContext;
+use crate::domain::auth;
 use crate::domain::library::{self, UserLibraryMembershipDto};
 use crate::domain::user::{self, ChangePasswordParams, UserDto};
 use crate::error::AppResult;
@@ -10,6 +12,11 @@ use axum::{
 use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+#[derive(Deserialize, ToSchema)]
+pub struct UpdateUsernameRequest {
+    pub username: String,
+}
 
 #[derive(Deserialize, ToSchema)]
 pub struct ChangePasswordRequest {
@@ -50,6 +57,36 @@ pub async fn list_user_memberships(
     Ok(Json(
         library::list_memberships_for_user(&state.db, &user, &user_id).await?,
     ))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/users/{user_id}/username",
+    tag = "Users",
+    params(("user_id" = String, Path)),
+    request_body = UpdateUsernameRequest,
+    responses((status = 200, body = LoginResponse)),
+    security(("bearer_auth" = []))
+)]
+pub async fn update_username(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Path(user_id): Path<String>,
+    Json(req): Json<UpdateUsernameRequest>,
+) -> AppResult<Json<LoginResponse>> {
+    let target_id = Uuid::parse_str(&user_id)
+        .map_err(|_| crate::error::AppError::BadRequest("Invalid user id".into()))?;
+    let updated =
+        user::update_username(&state.db, &user, &target_id, &req.username).await?;
+    let token = auth::issue_token(&state.config.jwt_secret, &updated)?;
+    Ok(Json(LoginResponse {
+        token,
+        user: UserInfo {
+            id: updated.id.to_string(),
+            username: updated.username,
+            role: updated.role,
+        },
+    }))
 }
 
 #[utoipa::path(

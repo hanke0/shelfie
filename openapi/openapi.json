@@ -1426,6 +1426,51 @@
           }
         ]
       }
+    },
+    "/users/{user_id}/username": {
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "update_username",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUsernameRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1612,7 +1657,8 @@
             ],
             "format": "int32",
             "description": "评分 1–5；未评分时不序列化",
-            "minimum": 0
+            "maximum": 5,
+            "minimum": 1
           },
           "reading_progress": {
             "oneOf": [
@@ -2205,6 +2251,17 @@
         "properties": {
           "reading_progress": {
             "$ref": "#/components/schemas/ReadingProgress"
+          }
+        }
+      },
+      "UpdateUsernameRequest": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
           }
         }
       },

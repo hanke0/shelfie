@@ -130,6 +130,52 @@ pub struct ChangePasswordParams {
     pub new_password: String,
 }
 
+pub async fn update_username(
+    db: &SqlitePool,
+    requester: &AuthUser,
+    target_user_id: &Uuid,
+    raw_username: &str,
+) -> AppResult<AuthUser> {
+    if requester.id != *target_user_id {
+        return Err(AppError::Forbidden("只能修改自己的用户名".into()));
+    }
+
+    let username = raw_username.trim();
+    if username.is_empty() {
+        return Err(AppError::BadRequest("username cannot be empty".into()));
+    }
+    if username.len() > 64 {
+        return Err(AppError::BadRequest("username must be at most 64 characters".into()));
+    }
+    if username == requester.username {
+        return Ok(requester.clone());
+    }
+
+    let result = sqlx::query("UPDATE users SET username = ? WHERE id = ?")
+        .bind(username)
+        .bind(target_user_id.to_string())
+        .execute(db)
+        .await
+        .map_err(|e| {
+            if let sqlx::Error::Database(db_err) = &e {
+                if db_err.is_unique_violation() {
+                    return AppError::Conflict("Username already exists".into());
+                }
+            }
+            AppError::from(e)
+        })?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound("User not found".into()));
+    }
+
+    Ok(AuthUser {
+        id: requester.id,
+        username: username.to_string(),
+        role: requester.role.clone(),
+    })
+}
+
 pub async fn change_password(
     db: &SqlitePool,
     requester: &AuthUser,

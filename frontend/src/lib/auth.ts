@@ -1,5 +1,12 @@
+import { useEffect, useState } from "react";
+
 const TOKEN_KEY = "shelfie_token";
 const USER_KEY = "shelfie_user";
+const AUTH_CHANGED = "shelfie-auth-changed";
+
+function notifyAuthChanged() {
+  window.dispatchEvent(new Event(AUTH_CHANGED));
+}
 
 export interface StoredUser {
   id: string;
@@ -14,6 +21,7 @@ export function getToken(): string | null {
 export function setAuth(token: string, user: StoredUser) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  notifyAuthChanged();
 }
 
 export function getUser(): StoredUser | null {
@@ -29,6 +37,17 @@ export function getUser(): StoredUser | null {
 export function clearAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  notifyAuthChanged();
+}
+
+export function useStoredUser(): StoredUser | null {
+  const [user, setUser] = useState<StoredUser | null>(() => getUser());
+  useEffect(() => {
+    const sync = () => setUser(getUser());
+    window.addEventListener(AUTH_CHANGED, sync);
+    return () => window.removeEventListener(AUTH_CHANGED, sync);
+  }, []);
+  return user;
 }
 
 export function isAuthenticated(): boolean {

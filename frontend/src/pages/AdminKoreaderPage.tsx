@@ -10,7 +10,7 @@ import { useListLibraries } from "@/api/generated/libraries/libraries";
 import { KoreaderLinkModal } from "@/components/KoreaderLinkModal";
 import { Select } from "@/components/ui/Select";
 import { useLibrary } from "@/context/LibraryContext";
-import { confirmTwice } from "@/lib/confirm";
+import { useConfirmTwice } from "@/context/ConfirmContext";
 import styles from "./AdminPage.module.css";
 import tableStyles from "./AdminKoreaderPage.module.css";
 
@@ -30,13 +30,14 @@ export function AdminKoreaderPage() {
   });
 
   const deleteLink = useDeleteKoreaderLink();
+  const confirmTwice = useConfirmTwice();
 
   const handleDeleteLink = async (doc: string) => {
     if (
-      !confirmTwice(
+      !(await confirmTwice(
         `确定删除 KOReader 匹配（document: ${doc}）？`,
         "再次确认：删除后需重新匹配图书，确定继续吗？",
-      )
+      ))
     ) {
       return;
     }

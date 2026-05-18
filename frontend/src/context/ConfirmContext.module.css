@@ -1,0 +1,22 @@
+.message {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-line;
+}
+
+.warn {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: #a33;
+}
+
+.dangerBtn {
+  background: #a33;
+  color: #fff;
+}
+
+.dangerBtn:hover {
+  background: #8b2a2a;
+}

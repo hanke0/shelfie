@@ -66,6 +66,11 @@
   width: 100%;
 }
 
+.languageField {
+  width: 100%;
+  min-width: 0;
+}
+
 .progressSection {
   margin-top: 1.5rem;
   padding-top: 1rem;

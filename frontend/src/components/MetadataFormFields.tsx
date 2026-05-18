@@ -1,5 +1,6 @@
 import type { BookMetadata } from "@/api/generated/models";
 import { FieldLabel } from "@/components/ui/FieldLabel";
+import { LanguageCombobox } from "@/components/ui/LanguageCombobox";
 import styles from "./MetadataFormFields.module.css";
 
 export const emptyMetadata = (): BookMetadata => ({
@@ -86,11 +87,10 @@ export function MetadataFormFields({
       </label>
 
       <label>
-        <FieldLabel>语言</FieldLabel>
-        <input
+        <FieldLabel>语言 (ISO 639-1)</FieldLabel>
+        <LanguageCombobox
           value={metadata.language ?? ""}
-          onChange={set("language")}
-          placeholder="如：中文、English、日本語"
+          onChange={(code) => onChange({ ...metadata, language: code })}
         />
       </label>
 

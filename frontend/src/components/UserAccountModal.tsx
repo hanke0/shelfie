@@ -4,7 +4,7 @@ import { useChangePassword, useDeleteUser } from "@/api/generated/users/users";
 import { getUser } from "@/lib/auth";
 import { Modal } from "@/components/ui/Modal";
 import { FieldLabel } from "@/components/ui/FieldLabel";
-import { confirmTwice } from "@/lib/confirm";
+import { useConfirmTwice } from "@/context/ConfirmContext";
 import formStyles from "@/components/ui/Form.module.css";
 
 interface UserAccountModalProps {
@@ -26,6 +26,7 @@ export function UserAccountModal({
   const qc = useQueryClient();
   const changePassword = useChangePassword();
   const deleteUser = useDeleteUser();
+  const confirmTwice = useConfirmTwice();
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,10 +66,10 @@ export function UserAccountModal({
 
   const handleDelete = async () => {
     if (
-      !confirmTwice(
+      !(await confirmTwice(
         `确定删除用户「${targetUsername}」？`,
         "再次确认：删除后该账号及关联数据将无法恢复，确定继续吗？",
-      )
+      ))
     ) {
       return;
     }

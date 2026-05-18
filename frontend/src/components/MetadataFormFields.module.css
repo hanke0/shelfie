@@ -16,20 +16,7 @@
   grid-column: 1 / -1;
 }
 
-.grid input,
-.grid textarea {
-  padding: 0.5rem 0.65rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--ink);
-  font-family: inherit;
-}
-
-.grid textarea {
-  resize: vertical;
-  min-height: 2.5rem;
-}
+/* 输入框样式见 global.css */
 
 .req {
   color: var(--accent);

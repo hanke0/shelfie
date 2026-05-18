@@ -39,14 +39,10 @@
   width: 100%;
   padding: 0.65rem 1rem;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--ink);
 }
 
 .searchWrap input:focus {
-  outline: 2px solid var(--accent-soft);
-  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.12);
 }
 
 .actions {

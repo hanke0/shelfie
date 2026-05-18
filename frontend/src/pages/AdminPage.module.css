@@ -16,26 +16,45 @@
   margin-bottom: 1rem;
 }
 
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.cardHeader h2 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
 .card h2 {
   font-family: var(--font-display);
   font-size: 1.1rem;
   margin: 0 0 0.75rem;
 }
 
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.filterRow {
+  max-width: 280px;
+}
+
 .card label {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  margin-bottom: 0.65rem;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
   font-size: 0.85rem;
   color: var(--ink-muted);
-}
-
-.card input,
-.card select {
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
 }
 
 .list {
@@ -158,4 +177,18 @@
 
 .req {
   color: var(--accent);
+}
+
+.subheading {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  margin: 1.25rem 0 0.65rem;
+  font-weight: 600;
+}
+
+.fieldInline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
 }

@@ -10,13 +10,9 @@
   white-space: nowrap;
 }
 
-.wrap select {
-  padding: 0.4rem 0.65rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--ink);
+.select {
   max-width: 180px;
+  border-radius: 999px;
 }
 
 .link {

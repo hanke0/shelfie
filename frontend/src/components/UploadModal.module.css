@@ -46,12 +46,13 @@
   color: var(--ink-muted);
 }
 
-.fileSection input {
-  padding: 0.5rem 0.65rem;
+.fileSection input[type="file"] {
+  padding: 0.45rem 0.5rem;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--ink);
+  border: 1px dashed var(--border);
+  background: var(--bg);
+  color: var(--ink-muted);
+  font-size: 0.85rem;
 }
 
 .req {

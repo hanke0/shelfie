@@ -1,14 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   useListLibraries,
-  useCreateLibrary,
   useListMembers,
-  useAddMember,
 } from "@/api/generated/libraries/libraries";
 import { useRefreshLibrary } from "@/api/generated/sync/sync";
-import { useListUsers } from "@/api/generated/users/users";
+import { CreateLibraryModal } from "@/components/CreateLibraryModal";
+import { AddMemberModal } from "@/components/AddMemberModal";
 import { LibraryMemberPermissionsEditor } from "@/components/LibraryMemberPermissionsEditor";
 import { getUser } from "@/lib/auth";
 import { useLibrary } from "@/context/LibraryContext";
@@ -18,13 +16,7 @@ export function AdminLibrariesPage() {
   const user = getUser();
   const isSystemAdmin = user?.role === "system_admin";
   const { libraryId: contextLibraryId, setLibraryId, library } = useLibrary();
-  const qc = useQueryClient();
   const { data: libraries } = useListLibraries();
-  const { data: users } = useListUsers({
-    query: { enabled: isSystemAdmin },
-  });
-  const createLibrary = useCreateLibrary();
-  const addMember = useAddMember();
   const refreshLibrary = useRefreshLibrary();
 
   const [selectedLib, setSelectedLib] = useState<string>(contextLibraryId ?? "");
@@ -38,46 +30,9 @@ export function AdminLibrariesPage() {
     return members.some((m) => m.user_id === user.id && m.role === "admin");
   }, [isSystemAdmin, user, members]);
 
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [memberUserId, setMemberUserId] = useState("");
-  const [memberUsername, setMemberUsername] = useState("");
+  const [createLibOpen, setCreateLibOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await createLibrary.mutateAsync({ data: { name, slug } });
-    setName("");
-    setSlug("");
-    qc.invalidateQueries({ queryKey: ["/libraries"] });
-  };
-
-  const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedLib) return;
-    const data = isSystemAdmin
-      ? {
-          user_id: memberUserId,
-          role: "member" as const,
-          can_view: true,
-          can_edit: false,
-          can_delete: false,
-        }
-      : {
-          username: memberUsername.trim(),
-          role: "member" as const,
-          can_view: true,
-          can_edit: false,
-          can_delete: false,
-        };
-    if (isSystemAdmin && !memberUserId) return;
-    if (!isSystemAdmin && !memberUsername.trim()) return;
-
-    await addMember.mutateAsync({ id: selectedLib, data });
-    setMemberUserId("");
-    setMemberUsername("");
-    qc.invalidateQueries({ queryKey: [`/libraries/${selectedLib}/members`] });
-  };
 
   const handleRefresh = async () => {
     if (!selectedLib) return;
@@ -101,26 +56,15 @@ export function AdminLibrariesPage() {
         </p>
       )}
 
-      {isSystemAdmin && (
-        <form className={styles.card} onSubmit={(e) => void handleCreate(e)}>
-          <h2>创建图书馆</h2>
-          <p className={styles.muted}>仅系统管理员可创建新图书馆。</p>
-          <label>
-            名称
-            <input value={name} onChange={(e) => setName(e.target.value)} required />
-          </label>
-          <label>
-            Slug
-            <input value={slug} onChange={(e) => setSlug(e.target.value)} required />
-          </label>
-          <button type="submit" className="btn">
-            创建
-          </button>
-        </form>
-      )}
-
       <div className={styles.card}>
-        <h2>图书馆列表</h2>
+        <div className={styles.cardHeader}>
+          <h2>图书馆列表</h2>
+          {isSystemAdmin && (
+            <button type="button" className="btn" onClick={() => setCreateLibOpen(true)}>
+              创建图书馆
+            </button>
+          )}
+        </div>
         <ul className={styles.list}>
           {libraries?.map((lib) => (
             <li key={lib.id}>
@@ -143,7 +87,14 @@ export function AdminLibrariesPage() {
       {selectedLib && (
         <>
           <div className={styles.card}>
-            <h2>{canManageMembers ? "成员管理" : "我的权限"}</h2>
+            <div className={styles.cardHeader}>
+              <h2>{canManageMembers ? "成员管理" : "我的权限"}</h2>
+              {canManageMembers && (
+                <button type="button" className="btn" onClick={() => setAddMemberOpen(true)}>
+                  添加成员
+                </button>
+              )}
+            </div>
             {canManageMembers && !isSystemAdmin && (
               <p className={styles.muted}>
                 馆管理员可添加/移出普通成员；角色与细粒度权限由系统管理员设置。
@@ -164,6 +115,7 @@ export function AdminLibrariesPage() {
                   <LibraryMemberPermissionsEditor
                     libraryId={selectedLib}
                     userId={m.user_id}
+                    username={m.username}
                     member={{
                       role: m.role,
                       can_view: m.can_view,
@@ -180,36 +132,6 @@ export function AdminLibrariesPage() {
                 </li>
               ))}
             </ul>
-
-            {canManageMembers && (
-              <form className={styles.inlineForm} onSubmit={(e) => void handleAddMember(e)}>
-                {isSystemAdmin && users ? (
-                  <select
-                    value={memberUserId}
-                    onChange={(e) => setMemberUserId(e.target.value)}
-                    required
-                  >
-                    <option value="">选择用户…</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.username}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="用户名"
-                    value={memberUsername}
-                    onChange={(e) => setMemberUsername(e.target.value)}
-                    required
-                  />
-                )}
-                <button type="submit" className="btn">
-                  添加成员
-                </button>
-              </form>
-            )}
           </div>
 
           {canManageMembers && (
@@ -225,6 +147,18 @@ export function AdminLibrariesPage() {
             </div>
           )}
         </>
+      )}
+
+      {isSystemAdmin && (
+        <CreateLibraryModal open={createLibOpen} onClose={() => setCreateLibOpen(false)} />
+      )}
+      {selectedLib && (
+        <AddMemberModal
+          open={addMemberOpen}
+          onClose={() => setAddMemberOpen(false)}
+          libraryId={selectedLib}
+          isSystemAdmin={isSystemAdmin}
+        />
       )}
     </div>
   );

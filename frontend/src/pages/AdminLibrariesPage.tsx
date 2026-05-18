@@ -12,6 +12,7 @@ import { AddMemberModal } from "@/components/AddMemberModal";
 import { LibraryMemberPermissionsEditor } from "@/components/LibraryMemberPermissionsEditor";
 import { getUser } from "@/lib/auth";
 import { useLibrary } from "@/context/LibraryContext";
+import { confirmTwice } from "@/lib/confirm";
 import styles from "./AdminPage.module.css";
 
 export function AdminLibrariesPage() {
@@ -43,10 +44,14 @@ export function AdminLibrariesPage() {
 
   const handleDeleteLibrary = async () => {
     if (!selectedLib || !selectedLibrary) return;
-    const ok = window.confirm(
-      `确定删除图书馆「${selectedLibrary.name}」？\n仅当该馆目录下没有任何文件时才能删除（数据库记录与成员将一并清除）。`,
-    );
-    if (!ok) return;
+    if (
+      !confirmTwice(
+        `确定删除图书馆「${selectedLibrary.name}」？\n仅当该馆目录下没有任何文件时才能删除（数据库记录与成员将一并清除）。`,
+        `再次确认：确定删除「${selectedLibrary.name}」吗？`,
+      )
+    ) {
+      return;
+    }
     setDeleteError(null);
     try {
       await deleteLibrary.mutateAsync({ id: selectedLib });

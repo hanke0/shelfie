@@ -274,7 +274,7 @@ pub async fn download_book(
     let mime = mime_guess::from_path(&path)
         .first_or_octet_stream()
         .to_string();
-    let disposition = format!("attachment; filename=\"{}\"", filename.replace('"', "_"));
+    let disposition = crate::infra::content_disposition::attachment_filename(&filename);
 
     Ok(Response::builder()
         .status(StatusCode::OK)

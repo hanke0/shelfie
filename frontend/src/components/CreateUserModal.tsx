@@ -4,6 +4,7 @@ import { useRegister } from "@/api/generated/auth/auth";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 
 interface CreateUserModalProps {
@@ -98,11 +99,11 @@ export function CreateUserModal({ open, onClose }: CreateUserModalProps) {
       <form id="create-user-form" className={formStyles.form} onSubmit={(e) => void handleSubmit(e)}>
         {error && <p className={formStyles.error}>{error}</p>}
         <label className={formStyles.field}>
-          用户名
+          <FieldLabel required>用户名</FieldLabel>
           <input value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label className={formStyles.field}>
-          密码
+          <FieldLabel required>密码</FieldLabel>
           <input
             type="password"
             value={password}
@@ -111,7 +112,7 @@ export function CreateUserModal({ open, onClose }: CreateUserModalProps) {
           />
         </label>
         <label className={formStyles.field}>
-          系统角色
+          <FieldLabel>系统角色</FieldLabel>
           <Select value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="user">普通用户</option>
             <option value="system_admin">系统管理员</option>
@@ -120,7 +121,7 @@ export function CreateUserModal({ open, onClose }: CreateUserModalProps) {
         {isRegularUser ? (
           <>
             <label className={formStyles.field}>
-              所属图书馆 <span className={formStyles.req}>*</span>
+              <FieldLabel required>所属图书馆</FieldLabel>
               <Select
                 value={libraryId}
                 onChange={(e) => setLibraryId(e.target.value)}
@@ -135,7 +136,7 @@ export function CreateUserModal({ open, onClose }: CreateUserModalProps) {
               </Select>
             </label>
             <label className={formStyles.field}>
-              馆内角色
+              <FieldLabel>馆内角色</FieldLabel>
               <Select value={libraryRole} onChange={(e) => setLibraryRole(e.target.value)}>
                 <option value="member">成员</option>
                 <option value="admin">馆管理员</option>

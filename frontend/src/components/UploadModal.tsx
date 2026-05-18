@@ -8,6 +8,7 @@ import {
   metadataForUpload,
   MetadataFormFields,
 } from "@/components/MetadataFormFields";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import styles from "./UploadModal.module.css";
 
 interface UploadModalProps {
@@ -85,7 +86,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
 
           <div className={styles.fileSection}>
             <label>
-              图书文件 (PDF / EPUB / MOBI) <span className={styles.req}>*</span>
+              <FieldLabel required>图书文件 (PDF / EPUB / MOBI)</FieldLabel>
               <input
                 type="file"
                 accept=".pdf,.epub,.mobi"
@@ -95,7 +96,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
             </label>
 
             <label>
-              封面 (JPG / PNG，可选)
+              <FieldLabel>封面 (JPG / PNG，可选)</FieldLabel>
               <input
                 type="file"
                 accept=".jpg,.jpeg,.png"

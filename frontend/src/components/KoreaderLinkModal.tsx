@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSetKoreaderLink } from "@/api/generated/koreader/koreader";
 import { useSearch } from "@/api/generated/search/search";
 import { Modal } from "@/components/ui/Modal";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 import adminStyles from "@/pages/AdminPage.module.css";
 
@@ -81,7 +82,7 @@ export function KoreaderLinkModal({ open, onClose, libraryFilter }: KoreaderLink
       <form id="koreader-link-form" className={formStyles.form} onSubmit={(e) => void handleSubmit(e)}>
         {error && <p className={formStyles.error}>{error}</p>}
         <label className={formStyles.field}>
-          KOReader document（32 位 MD5）
+          <FieldLabel required>KOReader document（32 位 MD5）</FieldLabel>
           <input
             value={documentId}
             onChange={(e) => setDocumentId(e.target.value)}
@@ -90,7 +91,7 @@ export function KoreaderLinkModal({ open, onClose, libraryFilter }: KoreaderLink
           />
         </label>
         <label className={formStyles.field}>
-          搜索图书
+          <FieldLabel>搜索图书</FieldLabel>
           <input
             type="search"
             value={bookSearch}

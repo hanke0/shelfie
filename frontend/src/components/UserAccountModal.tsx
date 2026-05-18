@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useChangePassword, useDeleteUser } from "@/api/generated/users/users";
 import { getUser } from "@/lib/auth";
 import { Modal } from "@/components/ui/Modal";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 
 interface UserAccountModalProps {
@@ -80,7 +81,7 @@ export function UserAccountModal({
       {message && <p className={formStyles.hint}>{message}</p>}
       <form className={formStyles.form} onSubmit={(e) => void handlePassword(e)}>
         <label className={formStyles.field}>
-          新密码
+          <FieldLabel>新密码</FieldLabel>
           <input
             type="password"
             placeholder="至少 6 位"

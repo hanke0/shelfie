@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useUpdatePermissions } from "@/api/generated/libraries/libraries";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 import type { MemberPermState } from "@/components/LibraryMemberPermissionsEditor";
 
@@ -98,7 +99,7 @@ export function EditMemberPermissionsModal({
       >
         {error && <p className={formStyles.error}>{error}</p>}
         <label className={formStyles.field}>
-          馆内角色
+          <FieldLabel>馆内角色</FieldLabel>
           <Select value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="member">成员</option>
             <option value="admin">馆管理员</option>

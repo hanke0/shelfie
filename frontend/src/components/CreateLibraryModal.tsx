@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateLibrary } from "@/api/generated/libraries/libraries";
 import { Modal } from "@/components/ui/Modal";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 
 interface CreateLibraryModalProps {
@@ -70,11 +71,11 @@ export function CreateLibraryModal({ open, onClose }: CreateLibraryModalProps) {
         </p>
         {error && <p className={formStyles.error}>{error}</p>}
         <label className={formStyles.field}>
-          名称
+          <FieldLabel required>名称</FieldLabel>
           <input value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
         <label className={formStyles.field}>
-          Slug（URL 标识，小写字母/数字/连字符）
+          <FieldLabel required>Slug（URL 标识，小写字母/数字/连字符）</FieldLabel>
           <input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}

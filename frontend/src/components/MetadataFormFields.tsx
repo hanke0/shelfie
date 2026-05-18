@@ -1,4 +1,5 @@
 import type { BookMetadata } from "@/api/generated/models";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import styles from "./MetadataFormFields.module.css";
 
 export const emptyMetadata = (): BookMetadata => ({
@@ -66,12 +67,12 @@ export function MetadataFormFields({
   return (
     <div className={styles.grid}>
       <label>
-        分类（文件夹名）
+        <FieldLabel required>分类（文件夹名）</FieldLabel>
         <input value={category} onChange={(e) => onCategoryChange(e.target.value)} required />
       </label>
 
       <label>
-        书名 <span className={styles.req}>*</span>
+        <FieldLabel required>书名</FieldLabel>
         <input
           value={metadata.title ?? ""}
           onChange={set("title")}
@@ -80,12 +81,12 @@ export function MetadataFormFields({
       </label>
 
       <label>
-        作者
+        <FieldLabel>作者</FieldLabel>
         <input value={metadata.author ?? ""} onChange={set("author")} />
       </label>
 
       <label>
-        语言
+        <FieldLabel>语言</FieldLabel>
         <input
           value={metadata.language ?? ""}
           onChange={set("language")}
@@ -94,17 +95,17 @@ export function MetadataFormFields({
       </label>
 
       <label>
-        译者
+        <FieldLabel>译者</FieldLabel>
         <input value={metadata.translator ?? ""} onChange={set("translator")} />
       </label>
 
       <label>
-        出版社
+        <FieldLabel>出版社</FieldLabel>
         <input value={metadata.publisher ?? ""} onChange={set("publisher")} />
       </label>
 
       <label>
-        出版日期
+        <FieldLabel>出版日期</FieldLabel>
         <input
           type="month"
           value={metadata.publish_date ?? ""}
@@ -114,12 +115,12 @@ export function MetadataFormFields({
       </label>
 
       <label>
-        ISBN
+        <FieldLabel>ISBN</FieldLabel>
         <input value={metadata.isbn ?? ""} onChange={set("isbn")} />
       </label>
 
       <label>
-        页数
+        <FieldLabel>页数</FieldLabel>
         <input
           type="number"
           value={metadata.page_count ?? ""}
@@ -128,17 +129,17 @@ export function MetadataFormFields({
       </label>
 
       <label>
-        原作名
+        <FieldLabel>原作名</FieldLabel>
         <input value={metadata.original_title ?? ""} onChange={set("original_title")} />
       </label>
 
       <label>
-        丛书
+        <FieldLabel>丛书</FieldLabel>
         <input value={metadata.series ?? ""} onChange={set("series")} />
       </label>
 
       <label className={styles.fullWidth}>
-        备注
+        <FieldLabel>备注</FieldLabel>
         <textarea value={metadata.notes ?? ""} onChange={set("notes")} rows={2} />
       </label>
     </div>

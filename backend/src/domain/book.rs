@@ -1,7 +1,7 @@
 use crate::domain::auth::AuthUser;
 use crate::domain::library;
 use crate::error::{AppError, AppResult};
-use crate::infra::{fs, BookMetadata, ReadingProgress};
+use crate::infra::{fs, hash, BookMetadata, ReadingProgress};
 use crate::state::AppState;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -57,6 +57,21 @@ struct BookRow {
     last_read_at: Option<String>,
     uploaded_at: String,
     updated_at: String,
+}
+
+pub(crate) struct BookRowInternal {
+    pub library_id: String,
+    pub metadata: String,
+    pub metadata_file_path: String,
+}
+
+pub(crate) async fn fetch_row_internal(db: &SqlitePool, book_id: &Uuid) -> AppResult<BookRowInternal> {
+    let row = fetch_row(db, book_id).await?;
+    Ok(BookRowInternal {
+        library_id: row.library_id,
+        metadata: row.metadata,
+        metadata_file_path: row.metadata_file_path,
+    })
 }
 
 async fn fetch_row(db: &SqlitePool, book_id: &Uuid) -> AppResult<BookRow> {
@@ -216,7 +231,7 @@ pub async fn list_books(
         .collect()
 }
 
-async fn accessible_library_ids(db: &SqlitePool, user: &AuthUser) -> AppResult<Vec<String>> {
+pub(crate) async fn accessible_library_ids(db: &SqlitePool, user: &AuthUser) -> AppResult<Vec<String>> {
     if user.role == "system_admin" {
         let rows: Vec<(String,)> = sqlx::query_as("SELECT id FROM libraries")
             .fetch_all(db)
@@ -258,6 +273,7 @@ pub async fn upload_book(
         metadata.title = format!("Untitled {}", &book_id.to_string()[..8]);
     }
     metadata.normalize_fields()?;
+    metadata.file_md5 = Some(hash::md5_hex(&book_bytes));
 
     let base = fs::ensure_unique_base(&dir, &fs::book_base_name(&metadata.title, &metadata.author));
     let book_path = fs::write_book_file(&dir, &base, &book_ext, &book_bytes).await?;
@@ -604,7 +620,7 @@ pub async fn upsert_from_fs(
                 .unwrap_or_else(|| dir.join("cover.jpg"))
         });
 
-    let metadata = if metadata_path.is_file() {
+    let mut metadata = if metadata_path.is_file() {
         fs::read_metadata_file(&metadata_path).await?
     } else {
         let stem = book_stem.unwrap_or_else(|| book_id.to_string());
@@ -614,6 +630,10 @@ pub async fn upsert_from_fs(
             ..Default::default()
         }
     };
+
+    if book_file.is_file() {
+        metadata.file_md5 = Some(hash::md5_hex_file(book_file).await?);
+    }
 
     let metadata_json = metadata.to_json()?;
     let now = Utc::now().to_rfc3339();

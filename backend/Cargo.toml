@@ -29,6 +29,7 @@ dotenvy = "0.15"
 mime_guess = "2"
 futures-util = "0.3"
 http-body-util = "0.1"
+md5 = "0.7"
 
 [[bin]]
 name = "shelfie-backend"

@@ -49,6 +49,9 @@ export function Header({ search, onSearchChange, onUploadClick }: HeaderProps) {
         <Link to="/admin/libraries" className="btn btn-ghost">
           图书馆
         </Link>
+        <Link to="/admin/koreader" className="btn btn-ghost">
+          KOReader
+        </Link>
         {user?.role === "system_admin" && (
           <Link to="/admin/users" className="btn btn-ghost">
             用户

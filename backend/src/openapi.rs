@@ -5,6 +5,10 @@ use crate::domain::library::{
     AddMemberRequest, CreateLibraryRequest, LibraryDto, LibraryMemberDto, PermissionFlags,
     UpdateMemberPermissionsRequest,
 };
+use crate::domain::koreader::{
+    KoreaderDocumentLink, KoreaderProgressRow, KosyncAuthResponse, KosyncProgressResponse,
+    KosyncUpdateRequest, KosyncUpdateResponse, SetDocumentLinkRequest,
+};
 use crate::domain::sync::{RefreshDiff, RefreshJobResponse};
 use crate::domain::user::UserDto;
 use crate::error::ApiErrorBody;
@@ -37,6 +41,14 @@ use utoipa::{Modify, OpenApi};
         handlers::sync::refresh_library,
         handlers::sync::get_refresh_job,
         handlers::users::list_users,
+        handlers::koreader::kosync_healthcheck,
+        handlers::koreader::kosync_auth_user,
+        handlers::koreader::kosync_update_progress,
+        handlers::koreader::kosync_get_progress,
+        handlers::koreader::list_koreader_progress,
+        handlers::koreader::list_koreader_links,
+        handlers::koreader::set_koreader_link,
+        handlers::koreader::delete_koreader_link,
     ),
     components(schemas(
         handlers::health::HealthResponse,
@@ -60,6 +72,13 @@ use utoipa::{Modify, OpenApi};
         UserDto,
         RefreshJobResponse,
         RefreshDiff,
+        KosyncAuthResponse,
+        KosyncProgressResponse,
+        KosyncUpdateRequest,
+        KosyncUpdateResponse,
+        KoreaderProgressRow,
+        KoreaderDocumentLink,
+        SetDocumentLinkRequest,
         ApiErrorBody,
     )),
     modifiers(&SecurityAddon),
@@ -73,6 +92,7 @@ use utoipa::{Modify, OpenApi};
         (name = "Sync", description = "Filesystem sync"),
         (name = "Users", description = "User administration"),
         (name = "Covers", description = "Cover images"),
+        (name = "KOReader", description = "KOReader progress sync (KOSync protocol) and admin"),
     ),
     info(
         title = "Shelfie API",

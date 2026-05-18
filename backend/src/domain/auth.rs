@@ -1,6 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 use bcrypt::{hash, verify, DEFAULT_COST};
+use crate::infra::hash::md5_hex;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -41,6 +42,13 @@ pub async fn login(
         return Err(AppError::Unauthorized("Invalid credentials".into()));
     }
 
+    let password_md5 = md5_hex(password.as_bytes());
+    sqlx::query("UPDATE users SET password_md5 = ? WHERE id = ?")
+        .bind(&password_md5)
+        .bind(&id)
+        .execute(db)
+        .await?;
+
     let user = AuthUser {
         id: Uuid::parse_str(&id).map_err(|e| AppError::Internal(e.to_string()))?,
         username: username.to_string(),
@@ -59,12 +67,14 @@ pub async fn register_user(
 ) -> AppResult<AuthUser> {
     let id = Uuid::new_v4();
     let password_hash = hash(password, DEFAULT_COST)?;
+    let password_md5 = md5_hex(password.as_bytes());
     sqlx::query(
-        "INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)",
+        "INSERT INTO users (id, username, password_hash, password_md5, role) VALUES (?, ?, ?, ?, ?)",
     )
     .bind(id.to_string())
     .bind(username)
     .bind(password_hash)
+    .bind(password_md5)
     .bind(role)
     .execute(db)
     .await

@@ -443,6 +443,24 @@
         }
       }
     },
+    "/healthcheck": {
+      "get": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "kosync_healthcheck",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/home": {
       "get": {
         "tags": [
@@ -496,6 +514,147 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HomeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/koreader/links": {
+      "get": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "list_koreader_links",
+        "parameters": [
+          {
+            "name": "library_id",
+            "in": "query",
+            "description": "Filter by library",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KoreaderDocumentLink"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "set_koreader_link",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetDocumentLinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KoreaderDocumentLink"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/koreader/links/{document}": {
+      "delete": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "delete_koreader_link",
+        "parameters": [
+          {
+            "name": "document",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/koreader/progress": {
+      "get": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "list_koreader_progress",
+        "parameters": [
+          {
+            "name": "library_id",
+            "in": "query",
+            "description": "Filter by library",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KoreaderProgressRow"
+                  }
                 }
               }
             }
@@ -848,6 +1007,72 @@
         ]
       }
     },
+    "/syncs/progress": {
+      "put": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "kosync_update_progress",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KosyncUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KosyncUpdateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/syncs/progress/{document}": {
+      "get": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "kosync_get_progress",
+        "parameters": [
+          {
+            "name": "document",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KosyncProgressResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/users": {
       "get": {
         "tags": [
@@ -874,6 +1099,29 @@
             "bearer_auth": []
           }
         ]
+      }
+    },
+    "/users/auth": {
+      "get": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "kosync_auth_user",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KosyncAuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          }
+        }
       }
     }
   },
@@ -1012,6 +1260,13 @@
           "category": {
             "type": "string"
           },
+          "file_md5": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "图书文件 MD5（小写 hex），用于 KOReader document 关联"
+          },
           "isbn": {
             "type": "string"
           },
@@ -1113,6 +1368,192 @@
               "$ref": "#/components/schemas/BookCard"
             },
             "description": "最近阅读：按 last_read_at 降序，有阅读进度的优先展示"
+          }
+        }
+      },
+      "KoreaderDocumentLink": {
+        "type": "object",
+        "required": [
+          "document",
+          "book_id",
+          "book_title",
+          "book_author",
+          "library_id",
+          "link_source",
+          "updated_at"
+        ],
+        "properties": {
+          "book_author": {
+            "type": "string"
+          },
+          "book_id": {
+            "type": "string"
+          },
+          "book_title": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "library_id": {
+            "type": "string"
+          },
+          "link_source": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "KoreaderProgressRow": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "username",
+          "document",
+          "progress",
+          "percentage",
+          "updated_at"
+        ],
+        "properties": {
+          "book_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "book_title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "device": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "document": {
+            "type": "string"
+          },
+          "percentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "progress": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "KosyncAuthResponse": {
+        "type": "object",
+        "required": [
+          "authorized"
+        ],
+        "properties": {
+          "authorized": {
+            "type": "string"
+          }
+        }
+      },
+      "KosyncProgressResponse": {
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "properties": {
+          "device": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "device_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "document": {
+            "type": "string"
+          },
+          "percentage": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "progress": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "KosyncUpdateRequest": {
+        "type": "object",
+        "required": [
+          "document",
+          "progress",
+          "percentage",
+          "device"
+        ],
+        "properties": {
+          "device": {
+            "type": "string"
+          },
+          "device_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "document": {
+            "type": "string"
+          },
+          "metadata": {},
+          "percentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "progress": {
+            "type": "string"
+          }
+        }
+      },
+      "KosyncUpdateResponse": {
+        "type": "object",
+        "required": [
+          "document",
+          "timestamp"
+        ],
+        "properties": {
+          "document": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -1321,6 +1762,21 @@
           }
         }
       },
+      "SetDocumentLinkRequest": {
+        "type": "object",
+        "required": [
+          "document",
+          "book_id"
+        ],
+        "properties": {
+          "book_id": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          }
+        }
+      },
       "UpdateBookRequest": {
         "type": "object",
         "required": [
@@ -1445,6 +1901,10 @@
     {
       "name": "Covers",
       "description": "Cover images"
+    },
+    {
+      "name": "KOReader",
+      "description": "KOReader progress sync (KOSync protocol) and admin"
     }
   ]
 }

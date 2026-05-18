@@ -27,6 +27,23 @@ fn multipart_error(err: impl std::fmt::Display) -> AppError {
     }
 }
 
+/// 解析可选封面字段；空 part 视为未上传
+fn parse_cover_field(
+    data: &[u8],
+    filename: Option<&str>,
+    content_type: Option<&str>,
+) -> AppResult<(Option<Vec<u8>>, Option<String>)> {
+    if data.is_empty() {
+        return Ok((None, None));
+    }
+    let ext = fs::resolve_cover_extension(filename, content_type).ok_or_else(|| {
+        AppError::BadRequest(
+            "Cannot detect cover format. Use .jpg or .png filename.".into(),
+        )
+    })?;
+    Ok((Some(data.to_vec()), Some(ext)))
+}
+
 fn parse_metadata_field(data: &[u8]) -> AppResult<BookMetadata> {
     if data.is_empty() {
         return Ok(BookMetadata::default());
@@ -82,7 +99,7 @@ pub async fn get_book(
     post,
     path = "/books",
     tag = "Books",
-    request_body(content_type = "multipart/form-data"),
+    request_body(content_type = "multipart/form-data", description = "Fields: library_id, category, file (required); metadata, cover (optional)"),
     responses((status = 201, body = BookDetail)),
     security(("bearer_auth" = []))
 )]
@@ -127,8 +144,13 @@ pub async fn upload_book(
                 book_bytes = Some(data.to_vec());
             }
             "cover" => {
-                cover_ext = fs::resolve_cover_extension(filename.as_deref(), content_type.as_deref());
-                cover_bytes = Some(data.to_vec());
+                let (bytes, ext) = parse_cover_field(
+                    &data,
+                    filename.as_deref(),
+                    content_type.as_deref(),
+                )?;
+                cover_bytes = bytes;
+                cover_ext = ext;
             }
             _ => {}
         }
@@ -141,10 +163,6 @@ pub async fn upload_book(
         AppError::BadRequest(
             "Cannot detect book format. Use .pdf, .epub, or .mobi filename.".into(),
         )
-    })?;
-    let cover_bytes = cover_bytes.ok_or_else(|| AppError::BadRequest("cover required".into()))?;
-    let cover_ext = cover_ext.ok_or_else(|| {
-        AppError::BadRequest("Cannot detect cover format. Use .jpg or .png filename.".into())
     })?;
     let metadata = metadata.unwrap_or_default();
 
@@ -283,4 +301,23 @@ pub async fn get_cover(
         .header(header::CONTENT_TYPE, mime)
         .body(Body::from(bytes))
         .unwrap())
+}
+
+#[cfg(test)]
+mod upload_cover_tests {
+    use super::parse_cover_field;
+
+    #[test]
+    fn parse_cover_field_empty_means_optional() {
+        let (bytes, ext) = parse_cover_field(&[], None, None).unwrap();
+        assert!(bytes.is_none());
+        assert!(ext.is_none());
+    }
+
+    #[test]
+    fn parse_cover_field_with_jpg() {
+        let (bytes, ext) = parse_cover_field(b"x", Some("a.jpg"), Some("image/jpeg")).unwrap();
+        assert_eq!(bytes, Some(vec![b'x']));
+        assert_eq!(ext.as_deref(), Some("jpg"));
+    }
 }

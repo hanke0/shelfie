@@ -10,6 +10,7 @@ import {
 } from "@/api/generated/books/books";
 import { getGetHomeQueryKey } from "@/api/generated/home/home";
 import { fetchCoverBlob } from "@/lib/custom-fetch";
+import { TitleCoverImage } from "@/components/TitleCoverImage";
 import { updateCoverMultipart } from "@/lib/upload";
 import { downloadBookFile } from "@/lib/download";
 import styles from "./BookDetailPage.module.css";
@@ -117,7 +118,15 @@ export function BookDetailPage() {
 
       <div className={styles.layout}>
         <div className={styles.coverCol}>
-          {coverSrc ? <img src={coverSrc} alt={metaForm.title} /> : <div className={styles.coverPh} />}
+          {coverSrc ? (
+            <img src={coverSrc} alt={metaForm.title} />
+          ) : (
+            <TitleCoverImage
+              title={metaForm.title}
+              author={metaForm.author}
+              className={styles.coverPh}
+            />
+          )}
           {canEdit && (
             <label className={styles.coverUpload}>
               更换封面

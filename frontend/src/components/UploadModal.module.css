@@ -82,3 +82,9 @@
   font-size: 0.9rem;
   color: var(--ink-muted);
 }
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  line-height: 1.35;
+}

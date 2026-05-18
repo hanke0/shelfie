@@ -254,12 +254,14 @@ pub async fn upload_book(
     category: String,
     book_bytes: Vec<u8>,
     book_ext: String,
-    cover_bytes: Vec<u8>,
-    cover_ext: String,
+    cover_bytes: Option<Vec<u8>>,
+    cover_ext: Option<String>,
     mut metadata: BookMetadata,
 ) -> AppResult<BookDetail> {
     fs::validate_book_extension(&book_ext)?;
-    fs::validate_cover_extension(&cover_ext)?;
+    if let Some(ref ext) = cover_ext {
+        fs::validate_cover_extension(ext)?;
+    }
 
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_edit(&perm)?;
@@ -277,8 +279,19 @@ pub async fn upload_book(
 
     let base = fs::ensure_unique_base(&dir, &fs::book_base_name(&metadata.title, &metadata.author));
     let book_path = fs::write_book_file(&dir, &base, &book_ext, &book_bytes).await?;
-    let cover_path = fs::write_cover_file(&dir, &base, &cover_ext, &cover_bytes).await?;
+    let cover_path = match (cover_bytes.as_ref(), cover_ext.as_ref()) {
+        (Some(bytes), Some(ext)) if !bytes.is_empty() => {
+            fs::write_cover_file(&dir, &base, ext, bytes).await?
+        }
+        (None, None) => PathBuf::new(),
+        _ => {
+            return Err(AppError::BadRequest(
+                "Invalid cover upload".into(),
+            ))
+        }
+    };
     let metadata_path = fs::write_metadata_file(&dir, &base, &metadata).await?;
+    let cover_path_db = cover_path.to_string_lossy().into_owned();
 
     let metadata_json = metadata.to_json()?;
     let now = Utc::now().to_rfc3339();
@@ -294,7 +307,7 @@ pub async fn upload_book(
     .bind(&category)
     .bind(book_path.to_string_lossy().as_ref())
     .bind(metadata_path.to_string_lossy().as_ref())
-    .bind(cover_path.to_string_lossy().as_ref())
+    .bind(&cover_path_db)
     .bind(&metadata_json)
     .bind(&now)
     .bind(&now)
@@ -330,6 +343,7 @@ pub async fn update_book(
     let mut book_path = PathBuf::from(&row.book_file_path);
     let mut metadata_path = PathBuf::from(&row.metadata_file_path);
     let mut cover_path = PathBuf::from(&row.cover_path);
+    let has_cover = fs::has_stored_cover(&cover_path);
 
     if book_path.parent() != Some(target_dir.as_path()) {
         let name = book_path
@@ -350,13 +364,17 @@ pub async fn update_book(
         tokio::fs::rename(&metadata_path, &new_meta).await?;
         metadata_path = new_meta;
 
-        let cover_name = cover_path.file_name().unwrap();
-        let new_cover = target_dir.join(cover_name);
-        if new_cover.exists() {
-            tokio::fs::remove_file(&new_cover).await.ok();
+        if has_cover {
+            let cover_name = cover_path
+                .file_name()
+                .ok_or_else(|| AppError::Internal("Invalid cover path".into()))?;
+            let new_cover = target_dir.join(cover_name);
+            if new_cover.exists() {
+                tokio::fs::remove_file(&new_cover).await.ok();
+            }
+            tokio::fs::rename(&cover_path, &new_cover).await?;
+            cover_path = new_cover;
         }
-        tokio::fs::rename(&cover_path, &new_cover).await?;
-        cover_path = new_cover;
     }
 
     let (new_book, new_meta, new_cover) = fs::rename_book_assets(
@@ -494,7 +512,12 @@ pub async fn get_cover_path(state: &AppState, user: &AuthUser, book_id: &Uuid) -
     let library_id = Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_view(&perm)?;
-    Ok(PathBuf::from(row.cover_path))
+    let path = PathBuf::from(&row.cover_path);
+    if fs::has_stored_cover(&path) {
+        Ok(path)
+    } else {
+        Err(AppError::NotFound("Cover not found".into()))
+    }
 }
 
 pub async fn get_download_path(
@@ -613,12 +636,8 @@ pub async fn upsert_from_fs(
     let metadata_path = fs::find_metadata_in_dir(dir, book_stem.as_deref())
         .unwrap_or_else(|| dir.join("metadata.json"));
     let cover_file = fs::find_cover_in_dir(dir, book_stem.as_deref())
-        .unwrap_or_else(|| {
-            book_stem
-                .as_ref()
-                .map(|s| dir.join(format!("{s}.jpg")))
-                .unwrap_or_else(|| dir.join("cover.jpg"))
-        });
+        .filter(|p| p.is_file())
+        .unwrap_or_default();
 
     let mut metadata = if metadata_path.is_file() {
         fs::read_metadata_file(&metadata_path).await?
@@ -657,7 +676,7 @@ pub async fn upsert_from_fs(
     .bind(category)
     .bind(book_file.to_string_lossy().as_ref())
     .bind(metadata_path.to_string_lossy().as_ref())
-    .bind(cover_file.to_string_lossy().as_ref())
+    .bind(cover_file.to_string_lossy().to_string())
     .bind(&metadata_json)
     .bind(&now)
     .bind(&now)

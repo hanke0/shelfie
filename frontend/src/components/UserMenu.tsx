@@ -4,7 +4,11 @@ import { clearAuth, getUser } from "@/lib/auth";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import styles from "./UserMenu.module.css";
 
-export function UserMenu() {
+interface UserMenuProps {
+  className?: string;
+}
+
+export function UserMenu({ className }: UserMenuProps) {
   const user = getUser();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -30,7 +34,10 @@ export function UserMenu() {
 
   if (!user) {
     return (
-      <Link to="/login" className="btn btn-ghost">
+      <Link
+        to="/login"
+        className={["btn", "btn-ghost", className].filter(Boolean).join(" ")}
+      >
         登录
       </Link>
     );
@@ -40,7 +47,7 @@ export function UserMenu() {
 
   return (
     <>
-      <div className={styles.wrap} ref={rootRef}>
+      <div className={[styles.wrap, className].filter(Boolean).join(" ")} ref={rootRef}>
         <button
           type="button"
           className={styles.trigger}

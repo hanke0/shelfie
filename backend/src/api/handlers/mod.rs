@@ -2,6 +2,7 @@ pub mod auth;
 pub mod books;
 pub mod health;
 pub mod home;
+pub mod koreader;
 pub mod libraries;
 pub mod search;
 pub mod sync;

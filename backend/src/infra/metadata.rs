@@ -37,6 +37,9 @@ pub struct BookMetadata {
     pub category: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub notes: String,
+    /// 图书文件 MD5（小写 hex），用于 KOReader document 关联
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_md5: Option<String>,
 }
 
 #[cfg(test)]

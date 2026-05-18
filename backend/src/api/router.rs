@@ -1,5 +1,6 @@
 use crate::api::handlers;
 use crate::api::middleware::auth::require_auth;
+use crate::api::middleware::kosync_auth::require_kosync_auth;
 use crate::openapi::ApiDoc;
 use crate::state::AppState;
 use axum::{
@@ -14,9 +15,26 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub fn build_router(state: AppState) -> Router {
+    let kosync_public = Router::new()
+        .route("/healthcheck", get(handlers::koreader::kosync_healthcheck))
+        .route("/users/auth", get(handlers::koreader::kosync_auth_user));
+
+    let kosync_protected = Router::new()
+        .route("/syncs/progress", put(handlers::koreader::kosync_update_progress))
+        .route(
+            "/syncs/progress/{document}",
+            get(handlers::koreader::kosync_get_progress),
+        )
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            require_kosync_auth,
+        ));
+
     let public = Router::new()
         .route("/health", get(handlers::health::health))
-        .route("/auth/login", post(handlers::auth::login));
+        .route("/auth/login", post(handlers::auth::login))
+        .merge(kosync_public)
+        .merge(kosync_protected);
 
     let protected = Router::new()
         .route("/auth/register", post(handlers::auth::register))
@@ -45,6 +63,15 @@ pub fn build_router(state: AppState) -> Router {
             get(handlers::sync::get_refresh_job),
         )
         .route("/users", get(handlers::users::list_users))
+        .route("/koreader/progress", get(handlers::koreader::list_koreader_progress))
+        .route(
+            "/koreader/links",
+            get(handlers::koreader::list_koreader_links).put(handlers::koreader::set_koreader_link),
+        )
+        .route(
+            "/koreader/links/{document}",
+            axum::routing::delete(handlers::koreader::delete_koreader_link),
+        )
         .route("/assets/covers/{id}", get(handlers::books::get_cover))
         .layer(middleware::from_fn_with_state(state.clone(), require_auth));
 

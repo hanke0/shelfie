@@ -7,6 +7,7 @@ import { BookListPage } from "@/pages/BookListPage";
 import { SearchPage } from "@/pages/SearchPage";
 import { AdminLibrariesPage } from "@/pages/AdminLibrariesPage";
 import { AdminUsersPage } from "@/pages/AdminUsersPage";
+import { AdminKoreaderPage } from "@/pages/AdminKoreaderPage";
 
 export default function App() {
   return (
@@ -58,6 +59,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/koreader"
+          element={
+            <ProtectedRoute>
+              <AdminKoreaderPage />
             </ProtectedRoute>
           }
         />

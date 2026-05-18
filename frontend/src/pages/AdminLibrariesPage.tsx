@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  useDeleteLibrary,
   useListLibraries,
   useListMembers,
 } from "@/api/generated/libraries/libraries";
@@ -15,9 +17,11 @@ import styles from "./AdminPage.module.css";
 export function AdminLibrariesPage() {
   const user = getUser();
   const isSystemAdmin = user?.role === "system_admin";
+  const qc = useQueryClient();
   const { libraryId: contextLibraryId, setLibraryId, library } = useLibrary();
   const { data: libraries } = useListLibraries();
   const refreshLibrary = useRefreshLibrary();
+  const deleteLibrary = useDeleteLibrary();
 
   const [selectedLib, setSelectedLib] = useState<string>(contextLibraryId ?? "");
   const { data: members } = useListMembers(selectedLib, {
@@ -33,6 +37,28 @@ export function AdminLibrariesPage() {
   const [createLibOpen, setCreateLibOpen] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const selectedLibrary = libraries?.find((lib) => lib.id === selectedLib);
+
+  const handleDeleteLibrary = async () => {
+    if (!selectedLib || !selectedLibrary) return;
+    const ok = window.confirm(
+      `确定删除图书馆「${selectedLibrary.name}」？\n仅当该馆目录下没有任何文件时才能删除（数据库记录与成员将一并清除）。`,
+    );
+    if (!ok) return;
+    setDeleteError(null);
+    try {
+      await deleteLibrary.mutateAsync({ id: selectedLib });
+      await qc.invalidateQueries({ queryKey: ["/libraries"] });
+      if (contextLibraryId === selectedLib) {
+        setLibraryId(null);
+      }
+      setSelectedLib("");
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "删除失败");
+    }
+  };
 
   const handleRefresh = async () => {
     if (!selectedLib) return;
@@ -82,6 +108,22 @@ export function AdminLibrariesPage() {
             </li>
           ))}
         </ul>
+        {isSystemAdmin && selectedLib && selectedLibrary && (
+          <div className={styles.dangerZone}>
+            <p className={styles.muted}>
+              删除前请确认磁盘目录为空（无图书、封面、metadata 等任何文件）。可先移走或删除文件后再操作。
+            </p>
+            {deleteError && <p className={styles.deleteError}>{deleteError}</p>}
+            <button
+              type="button"
+              className={`btn ${styles.deleteBtn}`}
+              disabled={deleteLibrary.isPending}
+              onClick={() => void handleDeleteLibrary()}
+            >
+              {deleteLibrary.isPending ? "删除中…" : "删除此图书馆"}
+            </button>
+          </div>
+        )}
       </div>
 
       {selectedLib && (

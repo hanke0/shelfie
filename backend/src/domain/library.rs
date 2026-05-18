@@ -479,6 +479,45 @@ pub async fn remove_member(
     Ok(())
 }
 
+/// 删除图书馆（仅系统管理员；目录下不能有任何文件）
+pub async fn delete_library(
+    state: &AppState,
+    user: &AuthUser,
+    library_id: &Uuid,
+) -> AppResult<()> {
+    crate::domain::user::require_system_admin(user)?;
+
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT root_path FROM libraries WHERE id = ?")
+            .bind(library_id.to_string())
+            .fetch_optional(&state.db)
+            .await?;
+
+    let (root_path,) = row.ok_or_else(|| AppError::NotFound("Library not found".into()))?;
+    let root = PathBuf::from(&root_path);
+
+    if fs::library_has_any_files(&root).await? {
+        return Err(AppError::Conflict(
+            "Cannot delete library while its directory contains files".into(),
+        ));
+    }
+
+    let result = sqlx::query("DELETE FROM libraries WHERE id = ?")
+        .bind(library_id.to_string())
+        .execute(&state.db)
+        .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound("Library not found".into()));
+    }
+
+    if root.exists() {
+        tokio::fs::remove_dir_all(&root).await?;
+    }
+
+    Ok(())
+}
+
 /// 查询用户在各图书馆的成员关系（系统管理员可查任意用户，普通用户仅能查自己）
 pub async fn list_memberships_for_user(
     db: &SqlitePool,

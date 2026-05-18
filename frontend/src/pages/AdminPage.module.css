@@ -72,6 +72,32 @@
   align-items: center;
 }
 
+.dangerZone {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.deleteError {
+  color: #a33;
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+.deleteBtn {
+  background: #a33;
+  color: #fff;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: #8b2a2a;
+}
+
+.deleteBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .list button {
   background: none;
   border: none;

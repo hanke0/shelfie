@@ -19,6 +19,16 @@ pub async fn list_libraries(
     Ok(Json(library::list_libraries(&state.db, &user).await?))
 }
 
+#[utoipa::path(delete, path = "/libraries/{id}", tag = "Libraries", params(("id" = Uuid, Path)), responses((status = 204), (status = 403), (status = 404), (status = 409)), security(("bearer_auth" = [])))]
+pub async fn delete_library(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Path(id): Path<Uuid>,
+) -> AppResult<axum::http::StatusCode> {
+    library::delete_library(&state, &user, &id).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
 #[utoipa::path(post, path = "/libraries", tag = "Libraries", request_body = CreateLibraryRequest, responses((status = 201, body = LibraryDto)), security(("bearer_auth" = [])))]
 pub async fn create_library(
     State(state): State<AppState>,

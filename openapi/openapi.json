@@ -729,6 +729,44 @@
         ]
       }
     },
+    "/libraries/{id}": {
+      "delete": {
+        "tags": [
+          "Libraries"
+        ],
+        "operationId": "delete_library",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "409": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/libraries/{id}/members": {
       "get": {
         "tags": [

@@ -1,0 +1,98 @@
+.wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: var(--bg);
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.dropzone:hover {
+  border-color: var(--accent-soft);
+  background: var(--bg-card);
+}
+
+.dropzone:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.12);
+}
+
+.dragging {
+  border-color: var(--accent);
+  background: rgba(184, 92, 56, 0.08);
+  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.12);
+}
+
+.hasFile {
+  color: var(--ink);
+  border-style: solid;
+  background: var(--bg-card);
+}
+
+.link {
+  display: block;
+  margin: 0;
+  padding: 0.25rem 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.85rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.link:hover,
+.link.dragging {
+  text-decoration: underline;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.placeholder {
+  pointer-events: none;
+}
+
+.fileName {
+  pointer-events: none;
+  word-break: break-all;
+}
+
+.rejectHint {
+  font-size: 0.8rem;
+  color: #a33;
+}

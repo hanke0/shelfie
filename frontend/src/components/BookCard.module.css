@@ -1,0 +1,72 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  scroll-snap-align: start;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s;
+  min-height: 220px;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+}
+
+.cover {
+  aspect-ratio: 3 / 4;
+  background: #ebe3d8;
+  overflow: hidden;
+}
+
+.cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--accent);
+}
+
+.meta {
+  padding: 0.65rem 0.7rem 0.75rem;
+}
+
+.meta h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.meta p {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.progress {
+  margin-top: 0.5rem;
+  height: 4px;
+  background: var(--accent-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress > div {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}

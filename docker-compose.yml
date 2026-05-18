@@ -1,0 +1,13 @@
+services:
+  shelfie:
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      DATABASE_URL: sqlite:/data/shelfie.db?mode=rwc
+      DATA_ROOT: /data/libraries
+      JWT_SECRET: change-me-in-production
+      RUST_LOG: shelfie_backend=debug,tower_http=info

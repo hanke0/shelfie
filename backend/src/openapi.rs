@@ -1,0 +1,101 @@
+use crate::api::handlers;
+use crate::domain::book::{BookCard, BookDetail, UpdateBookRequest, UpdateProgressRequest};
+use crate::domain::home::HomeResponse;
+use crate::domain::library::{
+    AddMemberRequest, CreateLibraryRequest, LibraryDto, LibraryMemberDto, PermissionFlags,
+    UpdateMemberPermissionsRequest,
+};
+use crate::domain::sync::{RefreshDiff, RefreshJobResponse};
+use crate::domain::user::UserDto;
+use crate::error::ApiErrorBody;
+use crate::infra::{BookMetadata, ReadingProgress};
+use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
+use utoipa::{Modify, OpenApi};
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        handlers::health::health,
+        handlers::auth::login,
+        handlers::auth::register,
+        handlers::home::get_home,
+        handlers::books::list_books,
+        handlers::books::get_book,
+        handlers::books::upload_book,
+        handlers::books::update_book,
+        handlers::books::update_progress,
+        handlers::books::delete_book,
+        handlers::books::update_cover,
+        handlers::books::download_book,
+        handlers::books::get_cover,
+        handlers::search::search,
+        handlers::libraries::list_libraries,
+        handlers::libraries::create_library,
+        handlers::libraries::list_members,
+        handlers::libraries::add_member,
+        handlers::libraries::update_permissions,
+        handlers::sync::refresh_library,
+        handlers::sync::get_refresh_job,
+        handlers::users::list_users,
+    ),
+    components(schemas(
+        handlers::health::HealthResponse,
+        handlers::auth::LoginRequest,
+        handlers::auth::LoginResponse,
+        handlers::auth::UserInfo,
+        handlers::auth::RegisterRequest,
+        HomeResponse,
+        BookCard,
+        BookDetail,
+        BookMetadata,
+        ReadingProgress,
+        UpdateBookRequest,
+        UpdateProgressRequest,
+        LibraryDto,
+        LibraryMemberDto,
+        PermissionFlags,
+        CreateLibraryRequest,
+        AddMemberRequest,
+        UpdateMemberPermissionsRequest,
+        UserDto,
+        RefreshJobResponse,
+        RefreshDiff,
+        ApiErrorBody,
+    )),
+    modifiers(&SecurityAddon),
+    tags(
+        (name = "Health", description = "Health check"),
+        (name = "Auth", description = "Authentication"),
+        (name = "Home", description = "Homepage feeds"),
+        (name = "Books", description = "Book management"),
+        (name = "Search", description = "Global search"),
+        (name = "Libraries", description = "Library management"),
+        (name = "Sync", description = "Filesystem sync"),
+        (name = "Users", description = "User administration"),
+        (name = "Covers", description = "Cover images"),
+    ),
+    info(
+        title = "Shelfie API",
+        version = "0.1.0",
+        description = "图书管理 API。Metadata 写路径：PATCH 更新 DB 后异步写回 metadata.json；refresh 默认以 FS 为准。"
+    )
+)]
+pub struct ApiDoc;
+
+struct SecurityAddon;
+
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "bearer_auth",
+                SecurityScheme::Http(
+                    HttpBuilder::new()
+                        .scheme(HttpAuthScheme::Bearer)
+                        .bearer_format("JWT")
+                        .build(),
+                ),
+            );
+        }
+    }
+}

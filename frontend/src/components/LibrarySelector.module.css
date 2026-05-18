@@ -1,0 +1,24 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.label {
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.wrap select {
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--ink);
+  max-width: 180px;
+}
+
+.link {
+  color: var(--accent);
+}

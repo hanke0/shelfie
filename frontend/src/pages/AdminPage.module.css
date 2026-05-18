@@ -1,0 +1,84 @@
+.page h1 {
+  font-family: var(--font-display);
+}
+
+.back {
+  display: inline-block;
+  margin: 1rem 0;
+  color: var(--accent);
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.card h2 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+}
+
+.card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.card input,
+.card select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.list button {
+  background: none;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink);
+  padding: 0;
+}
+
+.list button.active {
+  color: var(--accent);
+}
+
+.muted {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+
+.inlineForm {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.inlineForm select {
+  flex: 1;
+  min-width: 160px;
+}

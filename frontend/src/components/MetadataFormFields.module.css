@@ -1,0 +1,42 @@
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 0.75rem;
+}
+
+.grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.grid input,
+.grid textarea {
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.grid textarea {
+  resize: vertical;
+  min-height: 2.5rem;
+}
+
+.req {
+  color: var(--accent);
+}
+
+@media (max-width: 520px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -4,6 +4,7 @@ import { useChangePassword, useDeleteUser } from "@/api/generated/users/users";
 import { getUser } from "@/lib/auth";
 import { Modal } from "@/components/ui/Modal";
 import { FieldLabel } from "@/components/ui/FieldLabel";
+import { confirmTwice } from "@/lib/confirm";
 import formStyles from "@/components/ui/Form.module.css";
 
 interface UserAccountModalProps {
@@ -63,7 +64,14 @@ export function UserAccountModal({
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`确定删除用户「${targetUsername}」？此操作不可恢复。`)) return;
+    if (
+      !confirmTwice(
+        `确定删除用户「${targetUsername}」？`,
+        "再次确认：删除后该账号及关联数据将无法恢复，确定继续吗？",
+      )
+    ) {
+      return;
+    }
     setError(null);
     try {
       await deleteUser.mutateAsync({ userId: targetUserId });

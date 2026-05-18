@@ -2,6 +2,28 @@ import { getToken } from "./auth";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api/v1";
 
+/** Parse filename from Content-Disposition (RFC 5987 filename* preferred). */
+export function parseContentDispositionFilename(disposition: string | null): string | null {
+  if (!disposition) return null;
+
+  const utf8Match = /filename\*=UTF-8''([^;\n]+)/i.exec(disposition);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const quoted = /filename="([^"]+)"/i.exec(disposition);
+  if (quoted?.[1]) return quoted[1];
+
+  const plain = /filename=([^;\n]+)/i.exec(disposition);
+  if (plain?.[1]) return plain[1].trim().replace(/^['"]|['"]$/g, "");
+
+  return null;
+}
+
 export async function downloadBookFile(bookId: string, suggestedName?: string) {
   const token = getToken();
   const res = await fetch(`${API_BASE}/books/${bookId}/download`, {
@@ -14,12 +36,8 @@ export async function downloadBookFile(bookId: string, suggestedName?: string) {
   }
 
   const blob = await res.blob();
-  const disposition = res.headers.get("Content-Disposition");
-  let filename = suggestedName ?? "book";
-  if (disposition) {
-    const match = /filename="([^"]+)"/.exec(disposition);
-    if (match?.[1]) filename = match[1];
-  }
+  const fromHeader = parseContentDispositionFilename(res.headers.get("Content-Disposition"));
+  const filename = fromHeader ?? suggestedName ?? "book";
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

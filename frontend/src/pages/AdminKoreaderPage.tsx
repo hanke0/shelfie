@@ -10,6 +10,7 @@ import { useListLibraries } from "@/api/generated/libraries/libraries";
 import { KoreaderLinkModal } from "@/components/KoreaderLinkModal";
 import { Select } from "@/components/ui/Select";
 import { useLibrary } from "@/context/LibraryContext";
+import { confirmTwice } from "@/lib/confirm";
 import styles from "./AdminPage.module.css";
 import tableStyles from "./AdminKoreaderPage.module.css";
 
@@ -31,6 +32,14 @@ export function AdminKoreaderPage() {
   const deleteLink = useDeleteKoreaderLink();
 
   const handleDeleteLink = async (doc: string) => {
+    if (
+      !confirmTwice(
+        `确定删除 KOReader 匹配（document: ${doc}）？`,
+        "再次确认：删除后需重新匹配图书，确定继续吗？",
+      )
+    ) {
+      return;
+    }
     await deleteLink.mutateAsync({ document: doc });
     qc.invalidateQueries({ queryKey: ["/koreader/links"] });
     qc.invalidateQueries({ queryKey: ["/koreader/progress"] });

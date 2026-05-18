@@ -13,6 +13,7 @@ import { fetchCoverBlob } from "@/lib/custom-fetch";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
 import { FileInput } from "@/components/ui/FileInput";
 import { updateCoverMultipart } from "@/lib/upload";
+import { confirmTwice } from "@/lib/confirm";
 import { downloadBookFile } from "@/lib/download";
 import styles from "./BookDetailPage.module.css";
 
@@ -83,7 +84,14 @@ export function BookDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("确定删除这本图书？")) return;
+    if (
+      !confirmTwice(
+        `确定删除《${metaForm.title}》？`,
+        "再次确认：删除后图书文件与记录将无法恢复，确定继续吗？",
+      )
+    ) {
+      return;
+    }
     await deleteBook.mutateAsync({ id });
     navigate("/");
   };

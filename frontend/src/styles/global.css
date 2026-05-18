@@ -41,8 +41,15 @@ textarea {
   font-family: inherit;
 }
 
-/* 文本类表单控件 — 全站统一（checkbox/radio/file/button 除外） */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not([type="color"]),
+/* 文本类表单控件 — 全站统一（checkbox/radio/file/button 除外）
+   :where() 避免一长串 :not() 抬高优先级，便于顶栏等局部样式覆盖 */
+input:where(
+    :not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not(
+        [type="submit"]
+      ):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not(
+        [type="color"]
+      )
+  ),
 textarea {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
@@ -54,12 +61,24 @@ textarea {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not([type="color"]):hover,
+input:where(
+    :not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not(
+        [type="submit"]
+      ):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not(
+        [type="color"]
+      )
+  ):hover,
 textarea:hover {
   border-color: var(--accent-soft);
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not([type="color"]):focus,
+input:where(
+    :not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not(
+        [type="submit"]
+      ):not([type="reset"]):not([type="hidden"]):not([type="image"]):not([type="range"]):not(
+        [type="color"]
+      )
+  ):focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);

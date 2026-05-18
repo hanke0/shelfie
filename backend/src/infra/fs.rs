@@ -1,7 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::infra::metadata::BookMetadata;
+use crate::infra::safe_name;
 use std::path::{Path, PathBuf};
-use uuid::Uuid;
 
 const BOOK_EXTENSIONS: &[&str] = &["pdf", "epub", "mobi"];
 const COVER_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png"];
@@ -11,19 +11,25 @@ pub fn has_stored_cover(cover_path: &Path) -> bool {
     !cover_path.as_os_str().is_empty() && cover_path.is_file()
 }
 
-pub fn library_root(data_root: &Path, library_id: &Uuid) -> PathBuf {
-    data_root.join(library_id.to_string())
+/// 图书馆根目录：`{data_root}/{图书馆名}`（名称经安全化处理，冲突时加 `_2` 等后缀）
+pub fn library_root_for_name(data_root: &Path, library_name: &str) -> AppResult<PathBuf> {
+    safe_name::allocate_library_root(data_root, library_name)
 }
 
 /// 分类目录：该分类下所有图书文件平铺存放
-pub fn category_dir(library_root: &Path, category: &str) -> PathBuf {
-    library_root.join(sanitize_segment(category))
+pub fn category_dir(library_root: &Path, category: &str) -> AppResult<PathBuf> {
+    safe_name::validate_category(category)?;
+    let seg = safe_name::sanitize_path_segment(category);
+    if seg.is_empty() {
+        return Err(AppError::BadRequest("category cannot be empty".into()));
+    }
+    Ok(library_root.join(seg))
 }
 
-/// 图书文件名基底：`{书名}_{作者}`（经清理）
+/// 图书文件名基底：`{书名}_{作者}`（保留 i18n，去除非法路径字符）
 pub fn book_base_name(title: &str, author: &str) -> String {
-    let title = sanitize_segment(title);
-    let author = sanitize_segment(author);
+    let title = safe_name::sanitize_path_segment(title);
+    let author = safe_name::sanitize_path_segment(author);
     let base = match (title.is_empty(), author.is_empty()) {
         (true, true) => "untitled".to_string(),
         (true, false) => author,
@@ -40,25 +46,11 @@ fn truncate_base(s: &str, max_len: usize) -> String {
     s.chars().take(max_len).collect()
 }
 
-pub fn sanitize_segment(s: &str) -> String {
-    let cleaned: String = s
-        .chars()
-        .map(|c| {
-            if c.is_alphanumeric() || c == '-' || c == '_' {
-                c
-            } else if c.is_whitespace() {
-                '_'
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    let trimmed = cleaned.trim_matches('_').to_string();
-    if trimmed.is_empty() {
-        String::new()
-    } else {
-        trimmed
-    }
+pub fn validate_book_path_fields(title: &str, author: &str, category: &str) -> AppResult<()> {
+    safe_name::validate_book_title(title)?;
+    safe_name::validate_book_author(author)?;
+    safe_name::validate_category(category)?;
+    Ok(())
 }
 
 /// 若目录中已存在同名基底文件，追加 `_2`、`_3` …
@@ -387,5 +379,12 @@ mod tests {
     fn base_name_from_title_author() {
         assert_eq!(book_base_name("三体", "刘慈欣"), "三体_刘慈欣");
         assert_eq!(book_base_name("Hello World", "Author"), "Hello_World_Author");
+    }
+
+    #[test]
+    fn category_dir_preserves_cjk() {
+        let root = std::path::PathBuf::from("/tmp/lib");
+        let dir = category_dir(&root, "科幻").unwrap();
+        assert!(dir.ends_with("科幻"));
     }
 }

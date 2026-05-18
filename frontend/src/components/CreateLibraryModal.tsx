@@ -65,15 +65,22 @@ export function CreateLibraryModal({ open, onClose }: CreateLibraryModalProps) {
         className={formStyles.form}
         onSubmit={(e) => void handleSubmit(e)}
       >
-        <p className={formStyles.hint}>仅系统管理员可创建新图书馆。</p>
+        <p className={formStyles.hint}>
+          仅系统管理员可创建新图书馆。磁盘目录将与图书馆名称一致（支持中文等字符，不可含 / \ : * ? 等路径符号）。
+        </p>
         {error && <p className={formStyles.error}>{error}</p>}
         <label className={formStyles.field}>
           名称
           <input value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
         <label className={formStyles.field}>
-          Slug
-          <input value={slug} onChange={(e) => setSlug(e.target.value)} required />
+          Slug（URL 标识，小写字母/数字/连字符）
+          <input
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            pattern="[a-z0-9][a-z0-9_-]*"
+            required
+          />
         </label>
       </form>
     </Modal>

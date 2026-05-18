@@ -126,8 +126,11 @@ pub async fn list_libraries(db: &SqlitePool, user: &AuthUser) -> AppResult<Vec<L
 pub async fn create_library(state: &AppState, user: &AuthUser, req: CreateLibraryRequest) -> AppResult<LibraryDto> {
     crate::domain::user::require_system_admin(user)?;
 
+    crate::infra::safe_name::validate_library_name(&req.name)?;
+    crate::infra::safe_name::validate_slug(&req.slug)?;
+
     let id = Uuid::new_v4();
-    let root_path = fs::library_root(&state.config.data_root, &id);
+    let root_path = fs::library_root_for_name(&state.config.data_root, &req.name)?;
     tokio::fs::create_dir_all(&root_path).await?;
 
     sqlx::query(

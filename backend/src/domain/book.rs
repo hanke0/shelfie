@@ -268,13 +268,14 @@ pub async fn upload_book(
 
     let book_id = Uuid::new_v4();
     let lib_root = library::get_library_root(&state.db, &library_id).await?;
-    let dir = fs::category_dir(&lib_root, &category);
-
     metadata.category = category.clone();
     if metadata.title.is_empty() {
         metadata.title = format!("Untitled {}", &book_id.to_string()[..8]);
     }
     metadata.normalize_fields()?;
+    fs::validate_book_path_fields(&metadata.title, &metadata.author, &category)?;
+
+    let dir = fs::category_dir(&lib_root, &category)?;
     metadata.file_md5 = Some(hash::md5_hex(&book_bytes));
 
     let base = fs::ensure_unique_base(&dir, &fs::book_base_name(&metadata.title, &metadata.author));
@@ -337,7 +338,12 @@ pub async fn update_book(
     } else {
         metadata.category.clone()
     };
-    let target_dir = fs::category_dir(&lib_root, &target_category);
+    fs::validate_book_path_fields(
+        &metadata.title,
+        &metadata.author,
+        &target_category,
+    )?;
+    let target_dir = fs::category_dir(&lib_root, &target_category)?;
     fs::ensure_dir(&target_dir).await?;
 
     let mut book_path = PathBuf::from(&row.book_file_path);

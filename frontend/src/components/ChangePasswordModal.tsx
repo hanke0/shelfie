@@ -4,6 +4,7 @@ import { getUser } from "@/lib/auth";
 import { Modal } from "@/components/ui/Modal";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 
 interface ChangePasswordModalProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface ChangePasswordModalProps {
 export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps) {
   const user = getUser();
   const changePassword = useChangePassword();
+  const run = useApiAction();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -42,15 +44,15 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
       setError("两次输入的新密码不一致");
       return;
     }
-    try {
-      await changePassword.mutateAsync({
-        userId: user.id,
-        data: { current_password: currentPassword, new_password: newPassword },
-      });
-      handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "修改失败");
-    }
+    const ok = await run(
+      () =>
+        changePassword.mutateAsync({
+          userId: user.id,
+          data: { current_password: currentPassword, new_password: newPassword },
+        }),
+      { successMessage: "密码已修改", errorMessage: "修改失败" },
+    );
+    if (ok) handleClose();
   };
 
   return (

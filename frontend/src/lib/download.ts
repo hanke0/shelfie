@@ -31,7 +31,7 @@ export async function downloadBookFile(bookId: string, suggestedName?: string) {
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
+    const err = (await res.json().catch(() => ({}))) as { message?: string };
     throw new Error(err.message ?? "下载失败");
   }
 
@@ -43,6 +43,9 @@ export async function downloadBookFile(bookId: string, suggestedName?: string) {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

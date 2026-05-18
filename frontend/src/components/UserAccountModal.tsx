@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { useConfirmTwice } from "@/context/ConfirmContext";
 import formStyles from "@/components/ui/Form.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 
 interface UserAccountModalProps {
   open: boolean;
@@ -27,6 +28,7 @@ export function UserAccountModal({
   const changePassword = useChangePassword();
   const deleteUser = useDeleteUser();
   const confirmTwice = useConfirmTwice();
+  const run = useApiAction();
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,15 +54,17 @@ export function UserAccountModal({
       setError("密码至少 6 位");
       return;
     }
-    try {
-      await changePassword.mutateAsync({
-        userId: targetUserId,
-        data: { new_password: newPassword },
-      });
+    const ok = await run(
+      () =>
+        changePassword.mutateAsync({
+          userId: targetUserId,
+          data: { new_password: newPassword },
+        }),
+      { successMessage: "密码已更新", errorMessage: "修改失败" },
+    );
+    if (ok) {
       setNewPassword("");
       setMessage("密码已更新");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "修改失败");
     }
   };
 
@@ -74,14 +78,15 @@ export function UserAccountModal({
       return;
     }
     setError(null);
-    try {
-      await deleteUser.mutateAsync({ userId: targetUserId });
-      await qc.invalidateQueries({ queryKey: ["/users"] });
-      onDeleted?.();
-      handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "删除失败");
-    }
+    const ok = await run(
+      async () => {
+        await deleteUser.mutateAsync({ userId: targetUserId });
+        await qc.invalidateQueries({ queryKey: ["/users"] });
+        onDeleted?.();
+      },
+      { errorMessage: "删除失败" },
+    );
+    if (ok) handleClose();
   };
 
   return (

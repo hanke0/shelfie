@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 
 interface CreateUserModalProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface CreateUserModalProps {
 export function CreateUserModal({ open, onClose }: CreateUserModalProps) {
   const qc = useQueryClient();
   const register = useRegister();
+  const run = useApiAction();
   const { data: libraries } = useListLibraries({ query: { enabled: open } });
 
   const [username, setUsername] = useState("");
@@ -54,24 +56,25 @@ export function CreateUserModal({ open, onClose }: CreateUserModalProps) {
       setError("请为普通用户选择所属图书馆");
       return;
     }
-    try {
-      await register.mutateAsync({
-        data: {
-          username,
-          password,
-          role,
-          library_id: isRegularUser ? libraryId : undefined,
-          library_role: isRegularUser ? libraryRole : undefined,
-          can_view: isRegularUser && !isLibraryAdmin ? canView : true,
-          can_edit: isRegularUser && !isLibraryAdmin ? canEdit : false,
-          can_delete: isRegularUser && !isLibraryAdmin ? canDelete : false,
-        },
-      });
-      await qc.invalidateQueries({ queryKey: ["/users"] });
-      handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "创建失败");
-    }
+    const ok = await run(
+      async () => {
+        await register.mutateAsync({
+          data: {
+            username,
+            password,
+            role,
+            library_id: isRegularUser ? libraryId : undefined,
+            library_role: isRegularUser ? libraryRole : undefined,
+            can_view: isRegularUser && !isLibraryAdmin ? canView : true,
+            can_edit: isRegularUser && !isLibraryAdmin ? canEdit : false,
+            can_delete: isRegularUser && !isLibraryAdmin ? canDelete : false,
+          },
+        });
+        await qc.invalidateQueries({ queryKey: ["/users"] });
+      },
+      { successMessage: "用户已创建", errorMessage: "创建失败" },
+    );
+    if (ok) handleClose();
   };
 
   return (

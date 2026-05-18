@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 
 interface AddMemberModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ export function AddMemberModal({
 }: AddMemberModalProps) {
   const qc = useQueryClient();
   const addMember = useAddMember();
+  const run = useApiAction();
   const { data: users } = useListUsers({ query: { enabled: open && isSystemAdmin } });
   const [memberUserId, setMemberUserId] = useState("");
   const [memberUsername, setMemberUsername] = useState("");
@@ -65,13 +67,14 @@ export function AddMemberModal({
       setError("请输入用户名");
       return;
     }
-    try {
-      await addMember.mutateAsync({ id: libraryId, data });
-      await qc.invalidateQueries({ queryKey: [`/libraries/${libraryId}/members`] });
-      handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "添加失败");
-    }
+    const ok = await run(
+      async () => {
+        await addMember.mutateAsync({ id: libraryId, data });
+        await qc.invalidateQueries({ queryKey: [`/libraries/${libraryId}/members`] });
+      },
+      { successMessage: "成员已添加", errorMessage: "添加失败" },
+    );
+    if (ok) handleClose();
   };
 
   return (

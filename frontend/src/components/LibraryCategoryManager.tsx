@@ -9,6 +9,7 @@ import {
 } from "@/api/generated/categories/categories";
 import { useConfirmTwice } from "@/context/ConfirmContext";
 import styles from "@/pages/AdminPage.module.css";
+import { useApiAction } from "@/hooks/useApiAction";
 
 const DEFAULT_CATEGORY = "未分类";
 
@@ -20,6 +21,7 @@ interface LibraryCategoryManagerProps {
 export function LibraryCategoryManager({ libraryId, canEdit }: LibraryCategoryManagerProps) {
   const qc = useQueryClient();
   const confirmTwice = useConfirmTwice();
+  const run = useApiAction();
   const { data: categories, isLoading } = useListCategories(libraryId);
   const createCategory = useCreateCategory();
   const deleteCategory = useDeleteCategory();
@@ -35,13 +37,14 @@ export function LibraryCategoryManager({ libraryId, canEdit }: LibraryCategoryMa
     const name = newName.trim();
     if (!name) return;
     setError(null);
-    try {
-      await createCategory.mutateAsync({ id: libraryId, data: { name } });
-      setNewName("");
-      await invalidate();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "创建失败");
-    }
+    await run(
+      async () => {
+        await createCategory.mutateAsync({ id: libraryId, data: { name } });
+        setNewName("");
+        await invalidate();
+      },
+      { successMessage: "分类已创建", errorMessage: "创建失败" },
+    );
   };
 
   const handleDelete = async (name: string) => {
@@ -54,15 +57,16 @@ export function LibraryCategoryManager({ libraryId, canEdit }: LibraryCategoryMa
       return;
     }
     setError(null);
-    try {
-      await deleteCategory.mutateAsync({
-        id: libraryId,
-        name: encodeURIComponent(name),
-      });
-      await invalidate();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "删除失败");
-    }
+    await run(
+      async () => {
+        await deleteCategory.mutateAsync({
+          id: libraryId,
+          name: encodeURIComponent(name),
+        });
+        await invalidate();
+      },
+      { successMessage: "分类已删除", errorMessage: "删除失败" },
+    );
   };
 
   return (

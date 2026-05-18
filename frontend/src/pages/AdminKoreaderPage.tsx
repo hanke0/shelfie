@@ -11,6 +11,7 @@ import { KoreaderLinkModal } from "@/components/KoreaderLinkModal";
 import { Select } from "@/components/ui/Select";
 import { useLibrary } from "@/context/LibraryContext";
 import { useConfirmTwice } from "@/context/ConfirmContext";
+import { useApiAction } from "@/hooks/useApiAction";
 import styles from "./AdminPage.module.css";
 import tableStyles from "./AdminKoreaderPage.module.css";
 
@@ -31,6 +32,7 @@ export function AdminKoreaderPage() {
 
   const deleteLink = useDeleteKoreaderLink();
   const confirmTwice = useConfirmTwice();
+  const run = useApiAction();
 
   const handleDeleteLink = async (doc: string) => {
     if (
@@ -41,9 +43,14 @@ export function AdminKoreaderPage() {
     ) {
       return;
     }
-    await deleteLink.mutateAsync({ document: doc });
-    qc.invalidateQueries({ queryKey: ["/koreader/links"] });
-    qc.invalidateQueries({ queryKey: ["/koreader/progress"] });
+    await run(
+      async () => {
+        await deleteLink.mutateAsync({ document: doc });
+        await qc.invalidateQueries({ queryKey: ["/koreader/links"] });
+        await qc.invalidateQueries({ queryKey: ["/koreader/progress"] });
+      },
+      { successMessage: "已删除匹配", errorMessage: "删除失败" },
+    );
   };
 
   const pct = (v: number) => `${(v * 100).toFixed(1)}%`;

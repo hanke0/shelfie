@@ -9,6 +9,7 @@ import {
   MetadataFormFields,
 } from "@/components/MetadataFormFields";
 import { FieldLabel } from "@/components/ui/FieldLabel";
+import { FileInput } from "@/components/ui/FileInput";
 import styles from "./UploadModal.module.css";
 
 interface UploadModalProps {
@@ -87,20 +88,22 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
           <div className={styles.fileSection}>
             <label>
               <FieldLabel required>图书文件 (PDF / EPUB / MOBI)</FieldLabel>
-              <input
-                type="file"
+              <FileInput
                 accept=".pdf,.epub,.mobi"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                value={file}
+                onChange={setFile}
                 required
+                placeholder="点击选择或拖拽图书文件到此处"
               />
             </label>
 
             <label>
               <FieldLabel>封面 (JPG / PNG，可选)</FieldLabel>
-              <input
-                type="file"
+              <FileInput
                 accept=".jpg,.jpeg,.png"
-                onChange={(e) => setCover(e.target.files?.[0] ?? null)}
+                value={cover}
+                onChange={setCover}
+                placeholder="点击选择或拖拽封面图片到此处（可选）"
               />
               <span className={styles.hint}>
                 未上传时由前端根据书名{metadata.author?.trim() ? "与作者" : ""}生成展示封面（不保存到服务器）

@@ -336,6 +336,31 @@ pub struct ScannedBookFile {
     pub book_file: PathBuf,
 }
 
+/// 图书馆目录下是否存在任意文件（含子目录；空目录或仅空分类目录视为无文件）
+pub async fn library_has_any_files(library_root: &Path) -> AppResult<bool> {
+    if !library_root.exists() {
+        return Ok(false);
+    }
+    let root = library_root.to_path_buf();
+    tokio::task::spawn_blocking(move || library_has_any_files_sync(&root))
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?
+}
+
+fn library_has_any_files_sync(dir: &Path) -> AppResult<bool> {
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            return Ok(true);
+        }
+        if path.is_dir() && library_has_any_files_sync(&path)? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// 扫描图书馆：每个分类目录下平铺的图书文件
 pub async fn scan_library_books(library_root: &Path) -> AppResult<Vec<ScannedBookFile>> {
     let mut results = Vec::new();
@@ -386,5 +411,24 @@ mod tests {
         let root = std::path::PathBuf::from("/tmp/lib");
         let dir = category_dir(&root, "科幻").unwrap();
         assert!(dir.ends_with("科幻"));
+    }
+
+    #[tokio::test]
+    async fn library_has_any_files_detects_nested_file() {
+        let tmp = std::env::temp_dir().join(format!(
+            "shelfie_fs_test_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&tmp).unwrap();
+        let cat = tmp.join("科幻");
+        std::fs::create_dir_all(&cat).unwrap();
+        assert!(!library_has_any_files(&tmp).await.unwrap());
+        std::fs::write(cat.join("book.pdf"), b"x").unwrap();
+        assert!(library_has_any_files(&tmp).await.unwrap());
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 }

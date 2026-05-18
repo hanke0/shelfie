@@ -51,7 +51,11 @@ pub fn build_router(state: AppState) -> Router {
         .route("/books/{id}/progress", patch(handlers::books::update_progress))
         .route("/books/{id}/cover", put(handlers::books::update_cover))
         .route("/search", get(handlers::search::search))
-        .route("/libraries", get(handlers::libraries::list_libraries).post(handlers::libraries::create_library))
+        .route(
+            "/libraries",
+            get(handlers::libraries::list_libraries).post(handlers::libraries::create_library),
+        )
+        .route("/libraries/{id}", delete(handlers::libraries::delete_library))
         .route("/libraries/{id}/members", get(handlers::libraries::list_members).post(handlers::libraries::add_member))
         .route(
             "/libraries/{id}/members/{user_id}/permissions",

@@ -44,15 +44,6 @@
   gap: 0.35rem;
 }
 
-.fileSection input[type="file"] {
-  padding: 0.45rem 0.5rem;
-  border-radius: 8px;
-  border: 1px dashed var(--border);
-  background: var(--bg);
-  color: var(--ink-muted);
-  font-size: 0.85rem;
-}
-
 .modal h2 {
   font-family: var(--font-display);
   margin: 0 0 0.25rem;

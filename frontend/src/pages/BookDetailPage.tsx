@@ -11,6 +11,7 @@ import {
 import { getGetHomeQueryKey } from "@/api/generated/home/home";
 import { fetchCoverBlob } from "@/lib/custom-fetch";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
+import { FileInput } from "@/components/ui/FileInput";
 import { updateCoverMultipart } from "@/lib/upload";
 import { downloadBookFile } from "@/lib/download";
 import styles from "./BookDetailPage.module.css";
@@ -128,18 +129,15 @@ export function BookDetailPage() {
             />
           )}
           {canEdit && (
-            <label className={styles.coverUpload}>
-              更换封面
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void handleCoverChange(f);
-                }}
-              />
-            </label>
+            <FileInput
+              variant="link"
+              accept=".jpg,.jpeg,.png"
+              onChange={(f) => {
+                if (f) void handleCoverChange(f);
+              }}
+              placeholder="更换封面（点击或拖拽图片）"
+              className={styles.coverUpload}
+            />
           )}
         </div>
 

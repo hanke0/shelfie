@@ -35,6 +35,7 @@ use utoipa::{Modify, OpenApi};
         handlers::search::search,
         handlers::libraries::list_libraries,
         handlers::libraries::create_library,
+        handlers::libraries::delete_library,
         handlers::libraries::list_members,
         handlers::libraries::add_member,
         handlers::libraries::update_permissions,

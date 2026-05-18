@@ -132,6 +132,7 @@ pub async fn create_library(state: &AppState, user: &AuthUser, req: CreateLibrar
     let id = Uuid::new_v4();
     let root_path = fs::library_root_for_name(&state.config.data_root, &req.name)?;
     tokio::fs::create_dir_all(&root_path).await?;
+    crate::domain::category::ensure_default_category(&root_path).await?;
 
     sqlx::query(
         "INSERT INTO libraries (id, name, slug, root_path) VALUES (?, ?, ?, ?)",

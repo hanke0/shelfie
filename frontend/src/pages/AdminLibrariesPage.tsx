@@ -9,6 +9,7 @@ import {
 import { useRefreshLibrary } from "@/api/generated/sync/sync";
 import { CreateLibraryModal } from "@/components/CreateLibraryModal";
 import { AddMemberModal } from "@/components/AddMemberModal";
+import { LibraryCategoryManager } from "@/components/LibraryCategoryManager";
 import { LibraryMemberPermissionsEditor } from "@/components/LibraryMemberPermissionsEditor";
 import { getUser } from "@/lib/auth";
 import { useLibrary } from "@/context/LibraryContext";
@@ -34,6 +35,14 @@ export function AdminLibrariesPage() {
     if (isSystemAdmin) return true;
     if (!user || !members) return false;
     return members.some((m) => m.user_id === user.id && m.role === "admin");
+  }, [isSystemAdmin, user, members]);
+
+  const canEditCategories = useMemo(() => {
+    if (isSystemAdmin) return true;
+    if (!user || !members) return false;
+    return members.some(
+      (m) => m.user_id === user.id && (m.role === "admin" || m.can_edit),
+    );
   }, [isSystemAdmin, user, members]);
 
   const [createLibOpen, setCreateLibOpen] = useState(false);
@@ -134,6 +143,8 @@ export function AdminLibrariesPage() {
 
       {selectedLib && (
         <>
+          <LibraryCategoryManager libraryId={selectedLib} canEdit={canEditCategories} />
+
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <h2>{canManageMembers ? "成员管理" : "我的权限"}</h2>

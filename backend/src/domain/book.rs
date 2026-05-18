@@ -268,6 +268,9 @@ pub async fn upload_book(
 
     let book_id = Uuid::new_v4();
     let lib_root = library::get_library_root(&state.db, &library_id).await?;
+    let category = crate::domain::category::canonical_category_name(&category)?;
+    crate::domain::category::require_category_exists(&state.db, &library_id, &lib_root, &category)
+        .await?;
     metadata.category = category.clone();
     if metadata.title.is_empty() {
         metadata.title = format!("Untitled {}", &book_id.to_string()[..8]);
@@ -336,13 +339,22 @@ pub async fn update_book(
     let target_category = if metadata.category.is_empty() {
         row.category.clone()
     } else {
-        metadata.category.clone()
+        crate::domain::category::canonical_category_name(&metadata.category)?
     };
     fs::validate_book_path_fields(
         &metadata.title,
         &metadata.author,
         &target_category,
     )?;
+    if target_category != row.category {
+        crate::domain::category::require_category_exists(
+            &state.db,
+            &library_id,
+            &lib_root,
+            &target_category,
+        )
+        .await?;
+    }
     let target_dir = fs::category_dir(&lib_root, &target_category)?;
     fs::ensure_dir(&target_dir).await?;
 

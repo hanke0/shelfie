@@ -1,6 +1,7 @@
 use crate::api::handlers;
 use crate::domain::book::{BookCard, BookDetail, UpdateBookRequest, UpdateProgressRequest};
 use crate::domain::home::HomeResponse;
+use crate::domain::category::{CategoryDto, CreateCategoryRequest};
 use crate::domain::library::{
     AddMemberRequest, CreateLibraryRequest, LibraryDto, LibraryMemberDto, PermissionFlags,
     UpdateMemberPermissionsRequest, UserLibraryMembershipDto,
@@ -40,6 +41,9 @@ use utoipa::{Modify, OpenApi};
         handlers::libraries::add_member,
         handlers::libraries::update_permissions,
         handlers::libraries::remove_member,
+        handlers::categories::list_categories,
+        handlers::categories::create_category,
+        handlers::categories::delete_category,
         handlers::sync::refresh_library,
         handlers::sync::get_refresh_job,
         handlers::users::list_users,
@@ -72,6 +76,8 @@ use utoipa::{Modify, OpenApi};
         LibraryMemberDto,
         PermissionFlags,
         CreateLibraryRequest,
+        CategoryDto,
+        CreateCategoryRequest,
         AddMemberRequest,
         UpdateMemberPermissionsRequest,
         UserLibraryMembershipDto,
@@ -96,6 +102,7 @@ use utoipa::{Modify, OpenApi};
         (name = "Books", description = "Book management"),
         (name = "Search", description = "Global search"),
         (name = "Libraries", description = "Library management"),
+        (name = "Categories", description = "Book categories per library"),
         (name = "Sync", description = "Filesystem sync"),
         (name = "Users", description = "User administration"),
         (name = "Covers", description = "Cover images"),

@@ -1,5 +1,6 @@
 import type { BookMetadata } from "@/api/generated/models";
 import { FieldLabel } from "@/components/ui/FieldLabel";
+import { CategorySelect } from "@/components/CategorySelect";
 import { LanguageCombobox } from "@/components/ui/LanguageCombobox";
 import styles from "./MetadataFormFields.module.css";
 
@@ -39,6 +40,7 @@ export function metadataForUpload(
 }
 
 interface MetadataFormFieldsProps {
+  libraryId: string | null | undefined;
   metadata: BookMetadata;
   onChange: (metadata: BookMetadata) => void;
   category: string;
@@ -46,6 +48,7 @@ interface MetadataFormFieldsProps {
 }
 
 export function MetadataFormFields({
+  libraryId,
   metadata,
   onChange,
   category,
@@ -68,8 +71,13 @@ export function MetadataFormFields({
   return (
     <div className={styles.grid}>
       <label>
-        <FieldLabel required>分类（文件夹名）</FieldLabel>
-        <input value={category} onChange={(e) => onCategoryChange(e.target.value)} required />
+        <FieldLabel required>分类</FieldLabel>
+        <CategorySelect
+          libraryId={libraryId}
+          value={category}
+          onChange={onCategoryChange}
+          required
+        />
       </label>
 
       <label>

@@ -16,18 +16,22 @@ export function Header({ search, onSearchChange, onUploadClick }: HeaderProps) {
 
   return (
     <header className={styles.header}>
-      <Link to="/" className={styles.brand}>
-        <span className={styles.brandMark}>◈</span>
-        <span className={styles.brandText}>
-          Shelfie<span className={styles.dot}>·</span>书架
-        </span>
-      </Link>
-
-      <LibrarySelector className={styles.headerControl} />
+      <div className={styles.start}>
+        <Link to="/" className={styles.brand}>
+          <span className={styles.brandMark}>◈</span>
+          <span className={styles.brandText}>
+            Shelfie<span className={styles.dot}>·</span>书架
+          </span>
+        </Link>
+        <LibrarySelector className={styles.headerControl} />
+      </div>
 
       <div className={styles.searchWrap}>
         <input
-          type="search"
+          type="text"
+          role="searchbox"
+          enterKeyHint="search"
+          className={styles.searchInput}
           placeholder="搜索书名、作者、ISBN…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}

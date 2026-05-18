@@ -13,7 +13,7 @@
   padding: 0 0.55rem 0 0.45rem;
   box-sizing: border-box;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--header-radius, 999px);
   background: var(--bg-card);
   color: var(--ink);
   cursor: pointer;

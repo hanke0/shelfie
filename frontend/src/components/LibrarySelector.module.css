@@ -13,7 +13,7 @@
   padding: 0 0.35rem 0 0.4rem;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--header-radius, 999px);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;

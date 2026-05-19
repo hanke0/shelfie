@@ -156,6 +156,67 @@ pub async fn get_book(
     })
 }
 
+#[derive(Debug, Clone)]
+pub struct OpdsBookRow {
+    pub id: String,
+    pub title: String,
+    pub author: String,
+    pub category: String,
+    pub book_file_path: String,
+    pub updated_at: String,
+    pub summary: Option<String>,
+    pub language: Option<String>,
+}
+
+pub async fn list_books_for_opds(
+    db: &SqlitePool,
+    user: &AuthUser,
+    library_id: Uuid,
+    category: Option<&str>,
+    limit: i64,
+) -> AppResult<Vec<OpdsBookRow>> {
+    let accessible = accessible_library_ids(db, user).await?;
+    if !accessible.contains(&library_id.to_string()) {
+        return Err(AppError::Forbidden("No access to library".into()));
+    }
+
+    let mut query = r#"
+        SELECT id, category, book_file_path, metadata, updated_at
+        FROM books
+        WHERE library_id = ?
+    "#
+    .to_string();
+
+    if category.is_some() {
+        query.push_str(" AND category = ?");
+    }
+    query.push_str(" ORDER BY title COLLATE NOCASE LIMIT ?");
+
+    let mut q = sqlx::query_as::<_, (String, String, String, String, String)>(&query);
+    q = q.bind(library_id.to_string());
+    if let Some(cat) = category {
+        q = q.bind(cat);
+    }
+    q = q.bind(limit);
+
+    let rows = q.fetch_all(db).await?;
+    rows.into_iter()
+        .map(|(id, category, book_file_path, metadata, updated_at)| {
+            let meta = BookMetadata::from_json(&metadata)?;
+            Ok(OpdsBookRow {
+                id,
+                title: meta.title,
+                author: meta.author,
+                category,
+                book_file_path,
+                updated_at,
+                summary: (!meta.notes.is_empty()).then(|| meta.notes),
+                language: (!meta.language.is_empty()).then(|| meta.language),
+            })
+        })
+        .collect()
+}
+
 pub async fn list_books(
     db: &SqlitePool,
     user: &AuthUser,

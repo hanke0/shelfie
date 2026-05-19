@@ -1,6 +1,7 @@
 use crate::api::handlers;
 use crate::api::middleware::auth::require_auth;
 use crate::api::middleware::kosync_auth::require_kosync_auth;
+use crate::api::middleware::opds_auth::require_opds_auth;
 use crate::openapi::ApiDoc;
 use crate::state::AppState;
 use axum::{
@@ -28,6 +29,21 @@ pub fn build_router(state: AppState) -> Router {
         .layer(middleware::from_fn_with_state(
             state.clone(),
             require_kosync_auth,
+        ));
+
+    let opds = Router::new()
+        .route("/opds", get(handlers::opds::opds_root))
+        .route(
+            "/opds/libraries/{library_id}",
+            get(handlers::opds::opds_library),
+        )
+        .route(
+            "/opds/libraries/{library_id}/books",
+            get(handlers::opds::opds_library_books),
+        )
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            require_opds_auth,
         ));
 
     let public = Router::new()
@@ -105,7 +121,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/assets/covers/{id}", get(handlers::books::get_cover))
         .layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
-    let api = Router::new().merge(public).merge(protected);
+    let api = Router::new()
+        .merge(public)
+        .merge(opds)
+        .merge(protected);
 
     /// 图书上传需支持较大 PDF/EPUB（默认 2MB 会导致 multipart 解析失败）
     const UPLOAD_LIMIT: usize = 512 * 1024 * 1024;

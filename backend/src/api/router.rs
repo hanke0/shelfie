@@ -129,7 +129,7 @@ pub fn build_router(state: AppState) -> Router {
     /// 图书上传需支持较大 PDF/EPUB（默认 2MB 会导致 multipart 解析失败）
     const UPLOAD_LIMIT: usize = 512 * 1024 * 1024;
 
-    Router::new()
+    let router = Router::new()
         .nest("/api/v1", api)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(DefaultBodyLimit::max(UPLOAD_LIMIT))
@@ -140,5 +140,13 @@ pub fn build_router(state: AppState) -> Router {
                 .allow_headers(Any),
         )
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(state);
+
+    #[cfg(feature = "embed-frontend")]
+    {
+        return crate::infra::embed_frontend::merge(router);
+    }
+
+    #[cfg(not(feature = "embed-frontend"))]
+    router
 }

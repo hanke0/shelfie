@@ -9,6 +9,7 @@
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "npm run build -w shelfie-frontend",
     "build:backend": "cargo build --release -p shelfie-backend",
+    "build:bundle": "npm run build:frontend && cargo build --release -p shelfie-backend --features embed-frontend",
     "dev:frontend": "npm run dev -w shelfie-frontend",
     "dev:backend": "cargo run -p shelfie-backend",
     "test": "cargo test --workspace && npm run build -w shelfie-frontend",

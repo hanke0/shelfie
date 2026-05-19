@@ -8,6 +8,10 @@ default-run = "shelfie-backend"
 name = "shelfie_backend"
 path = "src/lib.rs"
 
+[features]
+default = []
+embed-frontend = ["dep:rust-embed"]
+
 [dependencies]
 axum = { version = "0.8", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }
@@ -32,6 +36,7 @@ http-body-util = "0.1"
 md5 = "0.7"
 base64 = "0.22"
 urlencoding = "2"
+rust-embed = { version = "8", optional = true }
 
 [[bin]]
 name = "shelfie-backend"

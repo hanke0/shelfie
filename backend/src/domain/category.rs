@@ -69,10 +69,7 @@ pub async fn list_categories(
     let lib_root = library::get_library_root(&state.db, library_id).await?;
     let names = collect_category_names(&state.db, library_id, &lib_root).await?;
 
-    Ok(names
-        .into_iter()
-        .map(|name| CategoryDto { name })
-        .collect())
+    Ok(names.into_iter().map(|name| CategoryDto { name }).collect())
 }
 
 pub async fn create_category(
@@ -120,13 +117,12 @@ pub async fn delete_category(
     let lib_root = library::get_library_root(&state.db, library_id).await?;
     let dir = fs::category_dir(&lib_root, &name)?;
 
-    let book_count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM books WHERE library_id = ? AND category = ?",
-    )
-    .bind(library_id.to_string())
-    .bind(&name)
-    .fetch_one(&state.db)
-    .await?;
+    let book_count: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM books WHERE library_id = ? AND category = ?")
+            .bind(library_id.to_string())
+            .bind(&name)
+            .fetch_one(&state.db)
+            .await?;
 
     if book_count.0 > 0 {
         return Err(AppError::Conflict(

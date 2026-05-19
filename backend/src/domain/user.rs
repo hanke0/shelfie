@@ -21,11 +21,7 @@ pub async fn list_users(db: &SqlitePool) -> AppResult<Vec<UserDto>> {
             .await?;
     Ok(rows
         .into_iter()
-        .map(|(id, username, role)| UserDto {
-            id,
-            username,
-            role,
-        })
+        .map(|(id, username, role)| UserDto { id, username, role })
         .collect())
 }
 
@@ -88,18 +84,11 @@ pub async fn create_user(
         ));
     }
 
-    let user = auth::register_user(
-        &state.db,
-        &params.username,
-        &params.password,
-        &params.role,
-    )
-    .await?;
+    let user =
+        auth::register_user(&state.db, &params.username, &params.password, &params.role).await?;
 
     if let Some(library_id) = params.library_id {
-        let library_role = params
-            .library_role
-            .unwrap_or_else(|| "member".to_string());
+        let library_role = params.library_role.unwrap_or_else(|| "member".to_string());
         validate_library_role(&library_role)?;
 
         // 确认图书馆存在
@@ -145,7 +134,9 @@ pub async fn update_username(
         return Err(AppError::BadRequest("username cannot be empty".into()));
     }
     if username.len() > 64 {
-        return Err(AppError::BadRequest("username must be at most 64 characters".into()));
+        return Err(AppError::BadRequest(
+            "username must be at most 64 characters".into(),
+        ));
     }
     if username == requester.username {
         return Ok(requester.clone());
@@ -200,14 +191,7 @@ pub async fn change_password(
         .await
     } else {
         require_system_admin(requester)?;
-        auth::change_password(
-            db,
-            target_user_id,
-            None,
-            &params.new_password,
-            false,
-        )
-        .await
+        auth::change_password(db, target_user_id, None, &params.new_password, false).await
     }
 }
 
@@ -219,14 +203,15 @@ pub async fn delete_user(
     require_system_admin(admin)?;
 
     if admin.id == *target_user_id {
-        return Err(AppError::BadRequest("Cannot delete your own account".into()));
+        return Err(AppError::BadRequest(
+            "Cannot delete your own account".into(),
+        ));
     }
 
-    let target_role: Option<(String,)> =
-        sqlx::query_as("SELECT role FROM users WHERE id = ?")
-            .bind(target_user_id.to_string())
-            .fetch_optional(db)
-            .await?;
+    let target_role: Option<(String,)> = sqlx::query_as("SELECT role FROM users WHERE id = ?")
+        .bind(target_user_id.to_string())
+        .fetch_optional(db)
+        .await?;
 
     let (target_role,) = target_role.ok_or_else(|| AppError::NotFound("User not found".into()))?;
 

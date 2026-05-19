@@ -1,11 +1,11 @@
 pub mod auth;
 pub mod books;
-pub mod opds;
 pub mod categories;
 pub mod health;
 pub mod home;
 pub mod koreader;
 pub mod libraries;
+pub mod opds;
 pub mod search;
 pub mod sync;
 pub mod users;

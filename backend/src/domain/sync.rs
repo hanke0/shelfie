@@ -1,6 +1,6 @@
 use crate::domain::auth::AuthUser;
 use crate::domain::book::{mark_orphan, upsert_from_fs};
-use crate::domain::library::{self, resolve_permission, require_edit};
+use crate::domain::library::{self, require_edit, resolve_permission};
 use crate::error::AppResult;
 use crate::infra::fs;
 use crate::state::AppState;
@@ -36,13 +36,11 @@ pub async fn start_refresh(
     require_edit(&perm)?;
 
     let job_id = Uuid::new_v4();
-    sqlx::query(
-        "INSERT INTO refresh_jobs (id, library_id, status) VALUES (?, ?, 'running')",
-    )
-    .bind(job_id.to_string())
-    .bind(library_id.to_string())
-    .execute(&state.db)
-    .await?;
+    sqlx::query("INSERT INTO refresh_jobs (id, library_id, status) VALUES (?, ?, 'running')")
+        .bind(job_id.to_string())
+        .bind(library_id.to_string())
+        .execute(&state.db)
+        .await?;
 
     let diff = run_refresh(state, library_id, prefer_db).await;
     let status = "completed";
@@ -73,19 +71,16 @@ pub async fn get_refresh_job(
     let perm = resolve_permission(&state.db, user, library_id).await?;
     require_edit(&perm)?;
 
-    let row: Option<(String, Option<String>)> = sqlx::query_as(
-        "SELECT status, result FROM refresh_jobs WHERE id = ? AND library_id = ?",
-    )
-    .bind(job_id.to_string())
-    .bind(library_id.to_string())
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT status, result FROM refresh_jobs WHERE id = ? AND library_id = ?")
+            .bind(job_id.to_string())
+            .bind(library_id.to_string())
+            .fetch_optional(&state.db)
+            .await?;
 
     let (status, result) =
         row.ok_or_else(|| crate::error::AppError::NotFound("Job not found".into()))?;
-    let diff = result
-        .map(|r| serde_json::from_str(&r))
-        .transpose()?;
+    let diff = result.map(|r| serde_json::from_str(&r)).transpose()?;
 
     Ok(RefreshJobResponse {
         job_id: job_id.to_string(),
@@ -124,14 +119,13 @@ async fn run_refresh(state: &AppState, library_id: &Uuid, prefer_db: bool) -> Re
         let path_str = entry.book_file.to_string_lossy().to_string();
         fs_paths.insert(path_str.clone());
 
-        let existing: Option<(String,)> = sqlx::query_as(
-            "SELECT id FROM books WHERE book_file_path = ?",
-        )
-        .bind(&path_str)
-        .fetch_optional(&state.db)
-        .await
-        .ok()
-        .flatten();
+        let existing: Option<(String,)> =
+            sqlx::query_as("SELECT id FROM books WHERE book_file_path = ?")
+                .bind(&path_str)
+                .fetch_optional(&state.db)
+                .await
+                .ok()
+                .flatten();
 
         if prefer_db {
             if existing.is_none() {
@@ -179,19 +173,18 @@ async fn run_refresh(state: &AppState, library_id: &Uuid, prefer_db: bool) -> Re
         }
     }
 
-    let db_rows: Vec<(String, String)> = match sqlx::query_as(
-        "SELECT id, book_file_path FROM books WHERE library_id = ?",
-    )
-    .bind(library_id.to_string())
-    .fetch_all(&state.db)
-    .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            diff.errors.push(e.to_string());
-            return diff;
-        }
-    };
+    let db_rows: Vec<(String, String)> =
+        match sqlx::query_as("SELECT id, book_file_path FROM books WHERE library_id = ?")
+            .bind(library_id.to_string())
+            .fetch_all(&state.db)
+            .await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                diff.errors.push(e.to_string());
+                return diff;
+            }
+        };
 
     for (id, book_file_path) in db_rows {
         if !fs_paths.contains(&book_file_path) && !Path::new(&book_file_path).is_file() {

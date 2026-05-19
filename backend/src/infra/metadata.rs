@@ -46,6 +46,53 @@ pub struct BookMetadata {
     pub file_md5: Option<String>,
 }
 
+impl BookMetadata {
+    pub fn from_json(s: &str) -> crate::error::AppResult<Self> {
+        Ok(serde_json::from_str(s)?)
+    }
+
+    pub fn to_json(&self) -> crate::error::AppResult<String> {
+        Ok(serde_json::to_string_pretty(self)?)
+    }
+
+    /// 规范化出版日期；空字符串合法；否则须为 `YYYY-MM`
+    pub fn normalize_publish_date(s: &str) -> crate::error::AppResult<String> {
+        let s = s.trim();
+        if s.is_empty() {
+            return Ok(String::new());
+        }
+        let valid = s.len() == 7
+            && s.as_bytes().get(4) == Some(&b'-')
+            && s[..4].chars().all(|c| c.is_ascii_digit())
+            && s[5..].chars().all(|c| c.is_ascii_digit())
+            && matches!(s[5..].parse::<u32>(), Ok(m) if (1..=12).contains(&m));
+        if valid {
+            Ok(s.to_string())
+        } else {
+            Err(crate::error::AppError::BadRequest(
+                "publish_date must be YYYY-MM (e.g. 2024-02)".into(),
+            ))
+        }
+    }
+
+    pub fn normalize_rating(rating: Option<u8>) -> crate::error::AppResult<Option<u8>> {
+        match rating {
+            None => Ok(None),
+            Some(0) => Ok(None),
+            Some(n @ 1..=5) => Ok(Some(n)),
+            Some(_) => Err(crate::error::AppError::BadRequest(
+                "rating must be an integer from 1 to 5".into(),
+            )),
+        }
+    }
+
+    pub fn normalize_fields(&mut self) -> crate::error::AppResult<()> {
+        self.publish_date = Self::normalize_publish_date(&self.publish_date)?;
+        self.rating = Self::normalize_rating(self.rating)?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{BookMetadata, ReadingProgress};
@@ -91,52 +138,5 @@ mod tests {
         };
         zero.normalize_fields().unwrap();
         assert_eq!(zero.rating, None);
-    }
-}
-
-impl BookMetadata {
-    pub fn from_json(s: &str) -> crate::error::AppResult<Self> {
-        Ok(serde_json::from_str(s)?)
-    }
-
-    pub fn to_json(&self) -> crate::error::AppResult<String> {
-        Ok(serde_json::to_string_pretty(self)?)
-    }
-
-    /// 规范化出版日期；空字符串合法；否则须为 `YYYY-MM`
-    pub fn normalize_publish_date(s: &str) -> crate::error::AppResult<String> {
-        let s = s.trim();
-        if s.is_empty() {
-            return Ok(String::new());
-        }
-        let valid = s.len() == 7
-            && s.as_bytes().get(4) == Some(&b'-')
-            && s[..4].chars().all(|c| c.is_ascii_digit())
-            && s[5..].chars().all(|c| c.is_ascii_digit())
-            && matches!(s[5..].parse::<u32>(), Ok(m) if (1..=12).contains(&m));
-        if valid {
-            Ok(s.to_string())
-        } else {
-            Err(crate::error::AppError::BadRequest(
-                "publish_date must be YYYY-MM (e.g. 2024-02)".into(),
-            ))
-        }
-    }
-
-    pub fn normalize_rating(rating: Option<u8>) -> crate::error::AppResult<Option<u8>> {
-        match rating {
-            None => Ok(None),
-            Some(0) => Ok(None),
-            Some(n @ 1..=5) => Ok(Some(n)),
-            Some(_) => Err(crate::error::AppError::BadRequest(
-                "rating must be an integer from 1 to 5".into(),
-            )),
-        }
-    }
-
-    pub fn normalize_fields(&mut self) -> crate::error::AppResult<()> {
-        self.publish_date = Self::normalize_publish_date(&self.publish_date)?;
-        self.rating = Self::normalize_rating(self.rating)?;
-        Ok(())
     }
 }

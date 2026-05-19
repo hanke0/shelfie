@@ -17,9 +17,7 @@ use uuid::Uuid;
 fn multipart_error(err: impl std::fmt::Display) -> AppError {
     let msg = err.to_string();
     if msg.contains("length limit") || msg.contains("too large") {
-        AppError::BadRequest(
-            "Upload too large. Maximum total size is 512MB.".into(),
-        )
+        AppError::BadRequest("Upload too large. Maximum total size is 512MB.".into())
     } else if msg.contains("multipart") || msg.contains("boundary") {
         AppError::BadRequest(format!("Invalid upload request: {msg}"))
     } else {
@@ -37,9 +35,7 @@ fn parse_cover_field(
         return Ok((None, None));
     }
     let ext = fs::resolve_cover_extension(filename, content_type).ok_or_else(|| {
-        AppError::BadRequest(
-            "Cannot detect cover format. Use .jpg or .png filename.".into(),
-        )
+        AppError::BadRequest("Cannot detect cover format. Use .jpg or .png filename.".into())
     })?;
     Ok((Some(data.to_vec()), Some(ext)))
 }
@@ -48,15 +44,11 @@ fn parse_metadata_field(data: &[u8]) -> AppResult<BookMetadata> {
     if data.is_empty() {
         return Ok(BookMetadata::default());
     }
-    serde_json::from_slice(data)
-        .or_else(|_| {
-            let text = std::str::from_utf8(data)
-                .map_err(|e| AppError::BadRequest(e.to_string()))?;
-            serde_json::from_str(text).map_err(|e| {
-                AppError::BadRequest(format!("Invalid metadata JSON: {e}"))
-            })
-        })
-        .map_err(Into::into)
+    serde_json::from_slice(data).or_else(|_| {
+        let text = std::str::from_utf8(data).map_err(|e| AppError::BadRequest(e.to_string()))?;
+        serde_json::from_str(text)
+            .map_err(|e| AppError::BadRequest(format!("Invalid metadata JSON: {e}")))
+    })
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -118,21 +110,20 @@ pub async fn upload_book(
     let mut cover_bytes: Option<Vec<u8>> = None;
     let mut cover_ext: Option<String> = None;
 
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|e| multipart_error(e))?
-    {
+    while let Some(field) = multipart.next_field().await.map_err(multipart_error)? {
         let name = field.name().unwrap_or("").to_string();
         let filename = field.file_name().map(|s| s.to_string());
         let content_type = field.content_type().map(|s| s.to_string());
-        let data = field.bytes().await.map_err(|e| multipart_error(e))?;
+        let data = field.bytes().await.map_err(multipart_error)?;
 
         match name.as_str() {
             "library_id" => {
                 library_id = Some(
-                    Uuid::parse_str(std::str::from_utf8(&data).map_err(|e| AppError::BadRequest(e.to_string()))?)
-                        .map_err(|e| AppError::BadRequest(e.to_string()))?,
+                    Uuid::parse_str(
+                        std::str::from_utf8(&data)
+                            .map_err(|e| AppError::BadRequest(e.to_string()))?,
+                    )
+                    .map_err(|e| AppError::BadRequest(e.to_string()))?,
                 );
             }
             "category" => {
@@ -146,11 +137,8 @@ pub async fn upload_book(
                 book_bytes = Some(data.to_vec());
             }
             "cover" => {
-                let (bytes, ext) = parse_cover_field(
-                    &data,
-                    filename.as_deref(),
-                    content_type.as_deref(),
-                )?;
+                let (bytes, ext) =
+                    parse_cover_field(&data, filename.as_deref(), content_type.as_deref())?;
                 cover_bytes = bytes;
                 cover_ext = ext;
             }
@@ -158,7 +146,8 @@ pub async fn upload_book(
         }
     }
 
-    let library_id = library_id.ok_or_else(|| AppError::BadRequest("library_id required".into()))?;
+    let library_id =
+        library_id.ok_or_else(|| AppError::BadRequest("library_id required".into()))?;
     let category = category.ok_or_else(|| AppError::BadRequest("category required".into()))?;
     let book_bytes = book_bytes.ok_or_else(|| AppError::BadRequest("file required".into()))?;
     let book_ext = book_ext.ok_or_else(|| {
@@ -171,13 +160,15 @@ pub async fn upload_book(
     let detail = book::upload_book(
         &state,
         &user,
-        library_id,
-        category,
-        book_bytes,
-        book_ext,
-        cover_bytes,
-        cover_ext,
-        metadata,
+        book::UploadBookInput {
+            library_id,
+            category,
+            book_bytes,
+            book_ext,
+            cover_bytes,
+            cover_ext,
+            metadata,
+        },
     )
     .await?;
 
@@ -191,7 +182,9 @@ pub async fn update_book(
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateBookRequest>,
 ) -> AppResult<Json<BookDetail>> {
-    Ok(Json(book::update_book(&state, &user, &id, req.metadata).await?))
+    Ok(Json(
+        book::update_book(&state, &user, &id, req.metadata).await?,
+    ))
 }
 
 #[utoipa::path(patch, path = "/books/{id}/progress", tag = "Books", params(("id" = Uuid, Path)), request_body = UpdateProgressRequest, responses((status = 200, body = BookDetail)), security(("bearer_auth" = [])))]
@@ -234,15 +227,11 @@ pub async fn update_cover(
     let mut cover_bytes: Option<Vec<u8>> = None;
     let mut cover_ext: Option<String> = None;
 
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|e| multipart_error(e))?
-    {
+    while let Some(field) = multipart.next_field().await.map_err(multipart_error)? {
         if field.name() == Some("cover") {
             let filename = field.file_name().map(|s| s.to_string());
             let content_type = field.content_type().map(|s| s.to_string());
-            let data = field.bytes().await.map_err(|e| multipart_error(e))?;
+            let data = field.bytes().await.map_err(multipart_error)?;
             cover_ext = fs::resolve_cover_extension(filename.as_deref(), content_type.as_deref());
             cover_bytes = Some(data.to_vec());
         }

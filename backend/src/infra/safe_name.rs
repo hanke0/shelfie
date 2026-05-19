@@ -76,12 +76,12 @@ pub fn validate_library_name(name: &str) -> AppResult<()> {
 pub fn validate_slug(slug: &str) -> AppResult<()> {
     let trimmed = slug.trim();
     if trimmed.is_empty() || trimmed.len() > 64 {
-        return Err(AppError::BadRequest(
-            "slug must be 1–64 characters".into(),
-        ));
+        return Err(AppError::BadRequest("slug must be 1–64 characters".into()));
     }
     let mut chars = trimmed.chars();
-    let first = chars.next().ok_or_else(|| AppError::BadRequest("slug cannot be empty".into()))?;
+    let first = chars
+        .next()
+        .ok_or_else(|| AppError::BadRequest("slug cannot be empty".into()))?;
     if !first.is_ascii_lowercase() && !first.is_ascii_digit() {
         return Err(AppError::BadRequest(
             "slug must start with a lowercase letter or digit".into(),

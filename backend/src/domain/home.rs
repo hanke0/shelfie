@@ -1,5 +1,5 @@
 use crate::domain::auth::AuthUser;
-use crate::domain::book::BookCard;
+use crate::domain::book::{BookCard, BookDbRow};
 use crate::error::AppResult;
 use crate::infra::BookMetadata;
 use crate::state::AppState;
@@ -16,21 +16,7 @@ pub struct HomeResponse {
     pub aha_moment: Vec<BookCard>,
 }
 
-fn map_rows(
-    rows: Vec<(
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        Option<String>,
-        String,
-        String,
-    )>,
-) -> Result<Vec<BookCard>, serde_json::Error> {
+fn map_rows(rows: Vec<BookDbRow>) -> Result<Vec<BookCard>, serde_json::Error> {
     rows.into_iter()
         .map(|r| {
             let meta: BookMetadata = serde_json::from_str(&r.6)?;
@@ -56,12 +42,11 @@ async fn accessible_ids(state: &AppState, user: &AuthUser) -> AppResult<Vec<Stri
             .await?;
         return Ok(rows.into_iter().map(|r| r.0).collect());
     }
-    let rows: Vec<(String,)> = sqlx::query_as(
-        "SELECT library_id FROM library_members WHERE user_id = ? AND can_view = 1",
-    )
-    .bind(user.id.to_string())
-    .fetch_all(&state.db)
-    .await?;
+    let rows: Vec<(String,)> =
+        sqlx::query_as("SELECT library_id FROM library_members WHERE user_id = ? AND can_view = 1")
+            .bind(user.id.to_string())
+            .fetch_all(&state.db)
+            .await?;
     Ok(rows.into_iter().map(|r| r.0).collect())
 }
 
@@ -103,9 +88,22 @@ pub async fn get_home(
         LIMIT ?
         "#
     );
-    let mut recent_q = sqlx::query_as::<_, (
-        String, String, String, String, String, String, String, String, Option<String>, String, String,
-    )>(&recent_sql);
+    let mut recent_q = sqlx::query_as::<
+        _,
+        (
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            String,
+            String,
+        ),
+    >(&recent_sql);
     for id in &libs {
         recent_q = recent_q.bind(id);
     }
@@ -122,9 +120,22 @@ pub async fn get_home(
         LIMIT ?
         "#
     );
-    let mut new_q = sqlx::query_as::<_, (
-        String, String, String, String, String, String, String, String, Option<String>, String, String,
-    )>(&new_sql);
+    let mut new_q = sqlx::query_as::<
+        _,
+        (
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            String,
+            String,
+        ),
+    >(&new_sql);
     for id in &libs {
         new_q = new_q.bind(id);
     }
@@ -142,9 +153,22 @@ pub async fn get_home(
         "#
     );
 
-    let mut aha_q = sqlx::query_as::<_, (
-        String, String, String, String, String, String, String, String, Option<String>, String, String,
-    )>(&random_sql);
+    let mut aha_q = sqlx::query_as::<
+        _,
+        (
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            String,
+            String,
+        ),
+    >(&random_sql);
     for id in &libs {
         aha_q = aha_q.bind(id);
     }

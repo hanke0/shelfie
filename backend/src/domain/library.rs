@@ -15,6 +15,30 @@ pub struct LibraryDto {
     pub slug: String,
     pub root_path: String,
     pub created_at: String,
+    /// OPDS 目录地址（相对路径，需配合站点根 URL 与 HTTP Basic 认证）
+    pub opds_url: String,
+}
+
+pub fn opds_catalog_path(library_id: &str) -> String {
+    format!("/api/v1/opds/libraries/{library_id}")
+}
+
+fn library_dto(
+    id: String,
+    name: String,
+    slug: String,
+    root_path: String,
+    created_at: String,
+) -> LibraryDto {
+    let opds_url = opds_catalog_path(&id);
+    LibraryDto {
+        id,
+        name,
+        slug,
+        root_path,
+        created_at,
+        opds_url,
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -88,12 +112,8 @@ pub async fn list_libraries(db: &SqlitePool, user: &AuthUser) -> AppResult<Vec<L
         .await?;
         return Ok(rows
             .into_iter()
-            .map(|(id, name, slug, root_path, created_at)| LibraryDto {
-                id,
-                name,
-                slug,
-                root_path,
-                created_at,
+            .map(|(id, name, slug, root_path, created_at)| {
+                library_dto(id, name, slug, root_path, created_at)
             })
             .collect());
     }
@@ -113,14 +133,20 @@ pub async fn list_libraries(db: &SqlitePool, user: &AuthUser) -> AppResult<Vec<L
 
     Ok(rows
         .into_iter()
-        .map(|(id, name, slug, root_path, created_at)| LibraryDto {
-            id,
-            name,
-            slug,
-            root_path,
-            created_at,
+        .map(|(id, name, slug, root_path, created_at)| {
+            library_dto(id, name, slug, root_path, created_at)
         })
         .collect())
+}
+
+pub async fn get_library_name(db: &SqlitePool, library_id: &Uuid) -> AppResult<String> {
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT name FROM libraries WHERE id = ?")
+            .bind(library_id.to_string())
+            .fetch_optional(db)
+            .await?;
+    let (name,) = row.ok_or_else(|| AppError::NotFound("Library not found".into()))?;
+    Ok(name)
 }
 
 pub async fn create_library(state: &AppState, user: &AuthUser, req: CreateLibraryRequest) -> AppResult<LibraryDto> {
@@ -158,13 +184,13 @@ pub async fn create_library(state: &AppState, user: &AuthUser, req: CreateLibrar
             .fetch_one(&state.db)
             .await?;
 
-    Ok(LibraryDto {
-        id: id.to_string(),
-        name: req.name,
-        slug: req.slug,
-        root_path: root_path.to_string_lossy().to_string(),
-        created_at: created_at.0,
-    })
+    Ok(library_dto(
+        id.to_string(),
+        req.name,
+        req.slug,
+        root_path.to_string_lossy().to_string(),
+        created_at.0,
+    ))
 }
 
 pub async fn get_library_root(db: &SqlitePool, library_id: &Uuid) -> AppResult<PathBuf> {

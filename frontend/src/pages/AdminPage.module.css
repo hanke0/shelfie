@@ -78,6 +78,29 @@
   border-top: 1px solid var(--border);
 }
 
+.opdsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.opdsUrl {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.opdsInline {
+  font-size: 0.85em;
+}
+
 .deleteError {
   color: #a33;
   font-size: 0.85rem;

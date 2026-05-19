@@ -6,6 +6,8 @@ pub struct Config {
     pub data_root: PathBuf,
     pub jwt_secret: String,
     pub port: u16,
+    /// 用于 OPDS 等需要绝对 URL 的场景；未设置时从请求头推断
+    pub public_base_url: Option<String>,
 }
 
 impl Config {
@@ -23,6 +25,10 @@ impl Config {
                 .ok()
                 .and_then(|p| p.parse().ok())
                 .unwrap_or(8080),
+            public_base_url: std::env::var("PUBLIC_BASE_URL")
+                .ok()
+                .filter(|s| !s.trim().is_empty())
+                .map(|s| s.trim_end_matches('/').to_string()),
         }
     }
 }

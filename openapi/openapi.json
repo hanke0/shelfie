@@ -1971,7 +1971,8 @@
           "name",
           "slug",
           "root_path",
-          "created_at"
+          "created_at",
+          "opds_url"
         ],
         "properties": {
           "created_at": {
@@ -1982,6 +1983,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "opds_url": {
+            "type": "string",
+            "description": "OPDS 目录地址（相对路径，需配合站点根 URL 与 HTTP Basic 认证）"
           },
           "root_path": {
             "type": "string"

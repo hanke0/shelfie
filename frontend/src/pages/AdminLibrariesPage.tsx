@@ -16,6 +16,7 @@ import { useLibrary } from "@/context/LibraryContext";
 import { useConfirmTwice } from "@/context/ConfirmContext";
 import { useToast } from "@/context/ToastContext";
 import { formatApiError } from "@/lib/api-error";
+import { opdsLibraryCatalogUrl, opdsRootCatalogUrl } from "@/lib/opds-url";
 import { useApiAction } from "@/hooks/useApiAction";
 import styles from "./AdminPage.module.css";
 
@@ -56,6 +57,21 @@ export function AdminLibrariesPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const selectedLibrary = libraries?.find((lib) => lib.id === selectedLib);
+
+  const opdsCatalogUrl = selectedLibrary
+    ? opdsLibraryCatalogUrl(selectedLibrary.id, selectedLibrary.opds_url)
+    : null;
+  const opdsRootUrl = opdsRootCatalogUrl();
+
+  const copyOpdsUrl = async () => {
+    if (!opdsCatalogUrl) return;
+    try {
+      await navigator.clipboard.writeText(opdsCatalogUrl);
+      toast.success("已复制 OPDS 地址");
+    } catch {
+      toast.error("复制失败");
+    }
+  };
 
   const handleDeleteLibrary = async () => {
     if (!selectedLib || !selectedLibrary) return;
@@ -153,8 +169,26 @@ export function AdminLibrariesPage() {
         )}
       </div>
 
-      {selectedLib && (
+      {selectedLib && selectedLibrary && (
         <>
+          <div className={styles.card}>
+            <h2>OPDS 目录</h2>
+            <p className={styles.muted}>
+              在阅读器（如 KOReader、Apple Books 部分客户端）中添加 OPDS 目录时使用下方地址，认证方式为
+              HTTP Basic（你的 Shelfie 用户名与密码）。
+            </p>
+            <div className={styles.opdsRow}>
+              <code className={styles.opdsUrl}>{opdsCatalogUrl}</code>
+              <button type="button" className="btn btn-ghost" onClick={() => void copyOpdsUrl()}>
+                复制
+              </button>
+            </div>
+            <p className={styles.muted}>
+              根目录（含你有权访问的全部图书馆）：{" "}
+              <code className={styles.opdsInline}>{opdsRootUrl}</code>
+            </p>
+          </div>
+
           <LibraryCategoryManager libraryId={selectedLib} canEdit={canEditCategories} />
 
           <div className={styles.card}>

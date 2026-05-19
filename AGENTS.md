@@ -70,6 +70,7 @@ npm run codegen
 | `DATABASE_URL` | SQLite 连接串 |
 | `DATA_ROOT` | 图书馆根目录父路径 |
 | `JWT_SECRET` | JWT 签名密钥 |
+| `HOST` | 监听地址，默认 `127.0.0.1`（局域网访问可设为 `0.0.0.0`） |
 | `PORT` | 监听端口，默认 8080 |
 
 ## Refresh 同步策略

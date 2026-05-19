@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ensure_default_admin(&state).await?;
 
     let app = build_router(state);
-    let addr = format!("0.0.0.0:{}", config.port);
+    let addr = format!("{}:{}", config.host, config.port);
     tracing::info!("Shelfie listening on {addr}");
     #[cfg(feature = "embed-frontend")]
     tracing::info!("Embedded frontend static files enabled (SPA fallback)");

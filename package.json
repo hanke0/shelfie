@@ -1,0 +1,19 @@
+{
+  "name": "shelfie",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "npm run build -w shelfie-frontend",
+    "build:backend": "cargo build --release -p shelfie-backend",
+    "dev:frontend": "npm run dev -w shelfie-frontend",
+    "dev:backend": "cargo run -p shelfie-backend",
+    "test": "cargo test --workspace && npm run build -w shelfie-frontend",
+    "codegen": "npm run codegen -w shelfie-frontend",
+    "typecheck": "npm exec -w shelfie-frontend -- tsc -b",
+    "export-openapi": "./scripts/export-openapi.sh"
+  }
+}

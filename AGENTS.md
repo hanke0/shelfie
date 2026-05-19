@@ -16,13 +16,16 @@ Shelfie 是图书管理 Web 应用：用户上传 PDF/EPUB/MOBI，按分类存�
 ## 开发命令
 
 ```bash
-# 后端
-cd backend && cargo run
-cd backend && cargo test
+# 根目录（Rust workspace + npm workspaces）
+cargo run -p shelfie-backend
+cargo test --workspace
+npm install
+npm run dev:frontend
+npm run build
 
 # 导出 OpenAPI → 前端 codegen
 ./scripts/export-openapi.sh
-cd frontend && npm run codegen && npm run dev
+npm run codegen
 ```
 
 ## 目录约定

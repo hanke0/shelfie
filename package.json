@@ -15,6 +15,7 @@
     "test": "cargo test --workspace && npm run build -w shelfie-frontend",
     "codegen": "npm run codegen -w shelfie-frontend",
     "typecheck": "npm exec -w shelfie-frontend -- tsc -b",
-    "export-openapi": "./scripts/export-openapi.sh"
+    "export-openapi": "./scripts/export-openapi.sh",
+    "bump-version": "./scripts/bump-version.sh"
   }
 }

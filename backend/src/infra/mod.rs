@@ -1,3 +1,6 @@
+#[cfg(feature = "embed-frontend")]
+pub mod embed_frontend;
+
 pub mod content_disposition;
 pub mod db;
 pub mod fs;

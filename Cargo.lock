@@ -1599,6 +1599,7 @@ dependencies = [
  "jsonwebtoken",
  "md5",
  "mime_guess",
+ "rust-embed",
  "serde",
  "serde_json",
  "sqlx",

@@ -23,6 +23,10 @@ npm install
 npm run dev:frontend
 npm run build
 
+# 单二进制：嵌入前端 dist，由后端托管静态资源
+npm run build:bundle
+cargo run -p shelfie-backend --features embed-frontend
+
 # 导出 OpenAPI → 前端 codegen
 ./scripts/export-openapi.sh
 npm run codegen

@@ -23,6 +23,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = build_router(state);
     let addr = format!("0.0.0.0:{}", config.port);
     tracing::info!("Shelfie listening on {addr}");
+    #[cfg(feature = "embed-frontend")]
+    tracing::info!("Embedded frontend static files enabled (SPA fallback)");
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
     Ok(())

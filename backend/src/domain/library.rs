@@ -140,16 +140,19 @@ pub async fn list_libraries(db: &SqlitePool, user: &AuthUser) -> AppResult<Vec<L
 }
 
 pub async fn get_library_name(db: &SqlitePool, library_id: &Uuid) -> AppResult<String> {
-    let row: Option<(String,)> =
-        sqlx::query_as("SELECT name FROM libraries WHERE id = ?")
-            .bind(library_id.to_string())
-            .fetch_optional(db)
-            .await?;
+    let row: Option<(String,)> = sqlx::query_as("SELECT name FROM libraries WHERE id = ?")
+        .bind(library_id.to_string())
+        .fetch_optional(db)
+        .await?;
     let (name,) = row.ok_or_else(|| AppError::NotFound("Library not found".into()))?;
     Ok(name)
 }
 
-pub async fn create_library(state: &AppState, user: &AuthUser, req: CreateLibraryRequest) -> AppResult<LibraryDto> {
+pub async fn create_library(
+    state: &AppState,
+    user: &AuthUser,
+    req: CreateLibraryRequest,
+) -> AppResult<LibraryDto> {
     crate::domain::user::require_system_admin(user)?;
 
     crate::infra::safe_name::validate_library_name(&req.name)?;
@@ -160,29 +163,26 @@ pub async fn create_library(state: &AppState, user: &AuthUser, req: CreateLibrar
     tokio::fs::create_dir_all(&root_path).await?;
     crate::domain::category::ensure_default_category(&root_path).await?;
 
-    sqlx::query(
-        "INSERT INTO libraries (id, name, slug, root_path) VALUES (?, ?, ?, ?)",
-    )
-    .bind(id.to_string())
-    .bind(&req.name)
-    .bind(&req.slug)
-    .bind(root_path.to_string_lossy().as_ref())
-    .execute(&state.db)
-    .await
-    .map_err(|e| {
-        if let sqlx::Error::Database(db_err) = &e {
-            if db_err.is_unique_violation() {
-                return AppError::Conflict("Library slug already exists".into());
+    sqlx::query("INSERT INTO libraries (id, name, slug, root_path) VALUES (?, ?, ?, ?)")
+        .bind(id.to_string())
+        .bind(&req.name)
+        .bind(&req.slug)
+        .bind(root_path.to_string_lossy().as_ref())
+        .execute(&state.db)
+        .await
+        .map_err(|e| {
+            if let sqlx::Error::Database(db_err) = &e {
+                if db_err.is_unique_violation() {
+                    return AppError::Conflict("Library slug already exists".into());
+                }
             }
-        }
-        AppError::from(e)
-    })?;
+            AppError::from(e)
+        })?;
 
-    let created_at: (String,) =
-        sqlx::query_as("SELECT created_at FROM libraries WHERE id = ?")
-            .bind(id.to_string())
-            .fetch_one(&state.db)
-            .await?;
+    let created_at: (String,) = sqlx::query_as("SELECT created_at FROM libraries WHERE id = ?")
+        .bind(id.to_string())
+        .fetch_one(&state.db)
+        .await?;
 
     Ok(library_dto(
         id.to_string(),
@@ -194,11 +194,10 @@ pub async fn create_library(state: &AppState, user: &AuthUser, req: CreateLibrar
 }
 
 pub async fn get_library_root(db: &SqlitePool, library_id: &Uuid) -> AppResult<PathBuf> {
-    let row: Option<(String,)> =
-        sqlx::query_as("SELECT root_path FROM libraries WHERE id = ?")
-            .bind(library_id.to_string())
-            .fetch_optional(db)
-            .await?;
+    let row: Option<(String,)> = sqlx::query_as("SELECT root_path FROM libraries WHERE id = ?")
+        .bind(library_id.to_string())
+        .fetch_optional(db)
+        .await?;
     let (root_path,) = row.ok_or_else(|| AppError::NotFound("Library not found".into()))?;
     Ok(PathBuf::from(root_path))
 }
@@ -280,13 +279,12 @@ pub async fn can_manage_members(
     if user.role == "system_admin" {
         return Ok(true);
     }
-    let row: Option<(String,)> = sqlx::query_as(
-        "SELECT role FROM library_members WHERE library_id = ? AND user_id = ?",
-    )
-    .bind(library_id.to_string())
-    .bind(user.id.to_string())
-    .fetch_optional(db)
-    .await?;
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT role FROM library_members WHERE library_id = ? AND user_id = ?")
+            .bind(library_id.to_string())
+            .bind(user.id.to_string())
+            .fetch_optional(db)
+            .await?;
     Ok(row.is_some_and(|(role,)| role == "admin"))
 }
 
@@ -299,12 +297,13 @@ async fn resolve_member_user_id(db: &SqlitePool, req: &AddMemberRequest) -> AppR
     if let Some(name) = &req.username {
         let name = name.trim();
         if !name.is_empty() {
-            let row: Option<(String,)> =
-                sqlx::query_as("SELECT id FROM users WHERE username = ?")
-                    .bind(name)
-                    .fetch_optional(db)
-                    .await?;
-            return row.ok_or_else(|| AppError::NotFound("User not found".into())).map(|(id,)| id);
+            let row: Option<(String,)> = sqlx::query_as("SELECT id FROM users WHERE username = ?")
+                .bind(name)
+                .fetch_optional(db)
+                .await?;
+            return row
+                .ok_or_else(|| AppError::NotFound("User not found".into()))
+                .map(|(id,)| id);
         }
     }
     Err(AppError::BadRequest("user_id or username required".into()))
@@ -407,9 +406,21 @@ pub async fn add_member(
         ));
     }
     let user_id = resolve_member_user_id(db, &req).await?;
-    let can_view = if req.role == "admin" { 1 } else { req.can_view as i64 };
-    let can_edit = if req.role == "admin" { 1 } else { req.can_edit as i64 };
-    let can_delete = if req.role == "admin" { 1 } else { req.can_delete as i64 };
+    let can_view = if req.role == "admin" {
+        1
+    } else {
+        req.can_view as i64
+    };
+    let can_edit = if req.role == "admin" {
+        1
+    } else {
+        req.can_edit as i64
+    };
+    let can_delete = if req.role == "admin" {
+        1
+    } else {
+        req.can_delete as i64
+    };
 
     sqlx::query(
         r#"
@@ -495,7 +506,9 @@ pub async fn remove_member(
     }
 
     if target_user_id == requester.id.to_string() && requester.role != "system_admin" {
-        return Err(AppError::BadRequest("Cannot remove yourself from the library".into()));
+        return Err(AppError::BadRequest(
+            "Cannot remove yourself from the library".into(),
+        ));
     }
 
     sqlx::query("DELETE FROM library_members WHERE library_id = ? AND user_id = ?")
@@ -507,18 +520,13 @@ pub async fn remove_member(
 }
 
 /// 删除图书馆（仅系统管理员；目录下不能有任何文件）
-pub async fn delete_library(
-    state: &AppState,
-    user: &AuthUser,
-    library_id: &Uuid,
-) -> AppResult<()> {
+pub async fn delete_library(state: &AppState, user: &AuthUser, library_id: &Uuid) -> AppResult<()> {
     crate::domain::user::require_system_admin(user)?;
 
-    let row: Option<(String,)> =
-        sqlx::query_as("SELECT root_path FROM libraries WHERE id = ?")
-            .bind(library_id.to_string())
-            .fetch_optional(&state.db)
-            .await?;
+    let row: Option<(String,)> = sqlx::query_as("SELECT root_path FROM libraries WHERE id = ?")
+        .bind(library_id.to_string())
+        .fetch_optional(&state.db)
+        .await?;
 
     let (root_path,) = row.ok_or_else(|| AppError::NotFound("Library not found".into()))?;
     let root = PathBuf::from(&root_path);
@@ -552,7 +560,9 @@ pub async fn list_memberships_for_user(
     target_user_id: &str,
 ) -> AppResult<Vec<UserLibraryMembershipDto>> {
     if requester.role != "system_admin" && requester.id.to_string() != target_user_id {
-        return Err(AppError::Forbidden("Cannot view other users' memberships".into()));
+        return Err(AppError::Forbidden(
+            "Cannot view other users' memberships".into(),
+        ));
     }
 
     let rows: Vec<(String, String, String, i64, i64, i64)> = sqlx::query_as(
@@ -570,15 +580,17 @@ pub async fn list_memberships_for_user(
 
     Ok(rows
         .into_iter()
-        .map(|(library_id, library_name, role, cv, ce, cd)| UserLibraryMembershipDto {
-            library_id,
-            library_name,
-            role,
-            permissions: PermissionFlags {
-                can_view: cv != 0,
-                can_edit: ce != 0,
-                can_delete: cd != 0,
+        .map(
+            |(library_id, library_name, role, cv, ce, cd)| UserLibraryMembershipDto {
+                library_id,
+                library_name,
+                role,
+                permissions: PermissionFlags {
+                    can_view: cv != 0,
+                    can_edit: ce != 0,
+                    can_delete: cd != 0,
+                },
             },
-        })
+        )
         .collect())
 }

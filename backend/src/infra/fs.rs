@@ -191,13 +191,19 @@ pub fn extension_from_mime(mime: &str) -> Option<String> {
     None
 }
 
-pub fn resolve_book_extension(filename: Option<&str>, content_type: Option<&str>) -> Option<String> {
+pub fn resolve_book_extension(
+    filename: Option<&str>,
+    content_type: Option<&str>,
+) -> Option<String> {
     filename
         .and_then(extension_from_filename)
         .or_else(|| content_type.and_then(extension_from_mime))
 }
 
-pub fn resolve_cover_extension(filename: Option<&str>, content_type: Option<&str>) -> Option<String> {
+pub fn resolve_cover_extension(
+    filename: Option<&str>,
+    content_type: Option<&str>,
+) -> Option<String> {
     filename
         .and_then(extension_from_filename)
         .or_else(|| content_type.and_then(extension_from_mime))
@@ -208,7 +214,9 @@ pub fn is_book_extension(ext: &str) -> bool {
 }
 
 pub fn file_stem(path: &Path) -> Option<String> {
-    path.file_stem().and_then(|s| s.to_str()).map(|s| s.to_string())
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_string())
 }
 
 pub fn find_metadata_in_dir(dir: &Path, book_stem: Option<&str>) -> Option<PathBuf> {
@@ -222,15 +230,16 @@ pub fn find_metadata_in_dir(dir: &Path, book_stem: Option<&str>) -> Option<PathB
     if legacy.is_file() {
         return Some(legacy);
     }
-    std::fs::read_dir(dir).ok()?.filter_map(|e| e.ok()).find_map(|entry| {
-        let path = entry.path();
-        if path.is_file() {
-            if path.extension().and_then(|x| x.to_str()) == Some("json") {
+    std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(|e| e.ok())
+        .find_map(|entry| {
+            let path = entry.path();
+            if path.is_file() && path.extension().and_then(|x| x.to_str()) == Some("json") {
                 return Some(path);
             }
-        }
-        None
-    })
+            None
+        })
 }
 
 pub fn find_cover_in_dir(dir: &Path, book_stem: Option<&str>) -> Option<PathBuf> {
@@ -242,28 +251,31 @@ pub fn find_cover_in_dir(dir: &Path, book_stem: Option<&str>) -> Option<PathBuf>
             }
         }
     }
-    std::fs::read_dir(dir).ok()?.filter_map(|e| e.ok()).find_map(|entry| {
-        let path = entry.path();
-        if !path.is_file() {
-            return None;
-        }
-        let name = path.file_name().and_then(|n| n.to_str())?;
-        if name.starts_with("cover.") {
-            return Some(path);
-        }
-        if let Some(stem) = book_stem {
-            if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
-                if file_stem == stem {
-                    if let Some(ext) = path.extension().and_then(|x| x.to_str()) {
-                        if COVER_EXTENSIONS.contains(&ext.to_lowercase().as_str()) {
-                            return Some(path);
+    std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(|e| e.ok())
+        .find_map(|entry| {
+            let path = entry.path();
+            if !path.is_file() {
+                return None;
+            }
+            let name = path.file_name().and_then(|n| n.to_str())?;
+            if name.starts_with("cover.") {
+                return Some(path);
+            }
+            if let Some(stem) = book_stem {
+                if let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    if file_stem == stem {
+                        if let Some(ext) = path.extension().and_then(|x| x.to_str()) {
+                            if COVER_EXTENSIONS.contains(&ext.to_lowercase().as_str()) {
+                                return Some(path);
+                            }
                         }
                     }
                 }
             }
-        }
-        None
-    })
+            None
+        })
 }
 
 /// 标题/作者变更时重命名目录内图书、metadata、封面（保持扩展名）
@@ -278,7 +290,11 @@ pub async fn rename_book_assets(
         .extension()
         .and_then(|e| e.to_str())
         .ok_or_else(|| AppError::Internal("Book file has no extension".into()))?;
-    let new_base = ensure_unique_base_for_rename(dir, &book_base_name(&metadata.title, &metadata.author), book_path);
+    let new_base = ensure_unique_base_for_rename(
+        dir,
+        &book_base_name(&metadata.title, &metadata.author),
+        book_path,
+    );
 
     let new_book = dir.join(format!("{new_base}.{book_ext}"));
     let new_meta = dir.join(format!("{new_base}.json"));
@@ -449,7 +465,10 @@ mod tests {
     #[test]
     fn base_name_from_title_author() {
         assert_eq!(book_base_name("三体", "刘慈欣"), "三体_刘慈欣");
-        assert_eq!(book_base_name("Hello World", "Author"), "Hello_World_Author");
+        assert_eq!(
+            book_base_name("Hello World", "Author"),
+            "Hello_World_Author"
+        );
     }
 
     #[test]

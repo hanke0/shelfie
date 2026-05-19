@@ -59,47 +59,22 @@ struct BookRow {
     updated_at: String,
 }
 
-pub(crate) struct BookRowInternal {
-    pub library_id: String,
-    pub metadata: String,
-    pub metadata_file_path: String,
-}
+pub(crate) type BookDbRow = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    Option<String>,
+    String,
+    String,
+);
 
-pub(crate) async fn fetch_row_internal(db: &SqlitePool, book_id: &Uuid) -> AppResult<BookRowInternal> {
-    let row = fetch_row(db, book_id).await?;
-    Ok(BookRowInternal {
-        library_id: row.library_id,
-        metadata: row.metadata,
-        metadata_file_path: row.metadata_file_path,
-    })
-}
-
-async fn fetch_row(db: &SqlitePool, book_id: &Uuid) -> AppResult<BookRow> {
-    let row: Option<(
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        Option<String>,
-        String,
-        String,
-    )> = sqlx::query_as(
-        r#"
-        SELECT id, library_id, category, book_file_path, metadata_file_path, cover_path,
-               metadata, sync_status, last_read_at, uploaded_at, updated_at
-        FROM books WHERE id = ?
-        "#,
-    )
-    .bind(book_id.to_string())
-    .fetch_optional(db)
-    .await?;
-
-    let r = row.ok_or_else(|| AppError::NotFound("Book not found".into()))?;
-    Ok(BookRow {
+fn book_row_from_db(r: BookDbRow) -> BookRow {
+    BookRow {
         id: r.0,
         library_id: r.1,
         category: r.2,
@@ -111,7 +86,41 @@ async fn fetch_row(db: &SqlitePool, book_id: &Uuid) -> AppResult<BookRow> {
         last_read_at: r.8,
         uploaded_at: r.9,
         updated_at: r.10,
+    }
+}
+
+pub(crate) struct BookRowInternal {
+    pub library_id: String,
+    pub metadata: String,
+    pub metadata_file_path: String,
+}
+
+pub(crate) async fn fetch_row_internal(
+    db: &SqlitePool,
+    book_id: &Uuid,
+) -> AppResult<BookRowInternal> {
+    let row = fetch_row(db, book_id).await?;
+    Ok(BookRowInternal {
+        library_id: row.library_id,
+        metadata: row.metadata,
+        metadata_file_path: row.metadata_file_path,
     })
+}
+
+async fn fetch_row(db: &SqlitePool, book_id: &Uuid) -> AppResult<BookRow> {
+    let row: Option<BookDbRow> = sqlx::query_as(
+        r#"
+        SELECT id, library_id, category, book_file_path, metadata_file_path, cover_path,
+               metadata, sync_status, last_read_at, uploaded_at, updated_at
+        FROM books WHERE id = ?
+        "#,
+    )
+    .bind(book_id.to_string())
+    .fetch_optional(db)
+    .await?;
+
+    let r = row.ok_or_else(|| AppError::NotFound("Book not found".into()))?;
+    Ok(book_row_from_db(r))
 }
 
 fn row_to_card(row: &BookRow) -> AppResult<BookCard> {
@@ -128,13 +137,10 @@ fn row_to_card(row: &BookRow) -> AppResult<BookCard> {
     })
 }
 
-pub async fn get_book(
-    state: &AppState,
-    user: &AuthUser,
-    book_id: &Uuid,
-) -> AppResult<BookDetail> {
+pub async fn get_book(state: &AppState, user: &AuthUser, book_id: &Uuid) -> AppResult<BookDetail> {
     let row = fetch_row(&state.db, book_id).await?;
-    let library_id = Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id =
+        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_view(&perm)?;
 
@@ -210,8 +216,8 @@ pub async fn list_books_for_opds(
                 category,
                 book_file_path,
                 updated_at,
-                summary: (!meta.notes.is_empty()).then(|| meta.notes),
-                language: (!meta.language.is_empty()).then(|| meta.language),
+                summary: (!meta.notes.is_empty()).then_some(meta.notes),
+                language: (!meta.language.is_empty()).then_some(meta.language),
             })
         })
         .collect()
@@ -254,19 +260,7 @@ pub async fn list_books(
 
     query = format!("{query} ORDER BY {order} LIMIT ?");
 
-    let mut q = sqlx::query_as::<_, (
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        Option<String>,
-        String,
-        String,
-    )>(&query);
+    let mut q = sqlx::query_as::<_, BookDbRow>(&query);
 
     for id in &accessible {
         q = q.bind(id);
@@ -281,52 +275,52 @@ pub async fn list_books(
 
     let rows = q.fetch_all(db).await?;
     rows.into_iter()
-        .map(|r| {
-            let row = BookRow {
-                id: r.0,
-                library_id: r.1,
-                category: r.2,
-                book_file_path: r.3,
-                metadata_file_path: r.4,
-                cover_path: r.5,
-                metadata: r.6,
-                sync_status: r.7,
-                last_read_at: r.8,
-                uploaded_at: r.9,
-                updated_at: r.10,
-            };
-            row_to_card(&row)
-        })
+        .map(|r| row_to_card(&book_row_from_db(r)))
         .collect()
 }
 
-pub(crate) async fn accessible_library_ids(db: &SqlitePool, user: &AuthUser) -> AppResult<Vec<String>> {
+pub(crate) async fn accessible_library_ids(
+    db: &SqlitePool,
+    user: &AuthUser,
+) -> AppResult<Vec<String>> {
     if user.role == "system_admin" {
         let rows: Vec<(String,)> = sqlx::query_as("SELECT id FROM libraries")
             .fetch_all(db)
             .await?;
         return Ok(rows.into_iter().map(|r| r.0).collect());
     }
-    let rows: Vec<(String,)> = sqlx::query_as(
-        "SELECT library_id FROM library_members WHERE user_id = ? AND can_view = 1",
-    )
-    .bind(user.id.to_string())
-    .fetch_all(db)
-    .await?;
+    let rows: Vec<(String,)> =
+        sqlx::query_as("SELECT library_id FROM library_members WHERE user_id = ? AND can_view = 1")
+            .bind(user.id.to_string())
+            .fetch_all(db)
+            .await?;
     Ok(rows.into_iter().map(|r| r.0).collect())
+}
+
+pub struct UploadBookInput {
+    pub library_id: Uuid,
+    pub category: String,
+    pub book_bytes: Vec<u8>,
+    pub book_ext: String,
+    pub cover_bytes: Option<Vec<u8>>,
+    pub cover_ext: Option<String>,
+    pub metadata: BookMetadata,
 }
 
 pub async fn upload_book(
     state: &AppState,
     user: &AuthUser,
-    library_id: Uuid,
-    category: String,
-    book_bytes: Vec<u8>,
-    book_ext: String,
-    cover_bytes: Option<Vec<u8>>,
-    cover_ext: Option<String>,
-    mut metadata: BookMetadata,
+    input: UploadBookInput,
 ) -> AppResult<BookDetail> {
+    let UploadBookInput {
+        library_id,
+        category,
+        book_bytes,
+        book_ext,
+        cover_bytes,
+        cover_ext,
+        mut metadata,
+    } = input;
     fs::validate_book_extension(&book_ext)?;
     if let Some(ref ext) = cover_ext {
         fs::validate_cover_extension(ext)?;
@@ -357,11 +351,7 @@ pub async fn upload_book(
             fs::write_cover_file(&dir, &base, ext, bytes).await?
         }
         (None, None) => PathBuf::new(),
-        _ => {
-            return Err(AppError::BadRequest(
-                "Invalid cover upload".into(),
-            ))
-        }
+        _ => return Err(AppError::BadRequest("Invalid cover upload".into())),
     };
     let metadata_path = fs::write_metadata_file(&dir, &base, &metadata).await?;
     let cover_path_db = cover_path.to_string_lossy().into_owned();
@@ -397,7 +387,8 @@ pub async fn update_book(
     metadata: BookMetadata,
 ) -> AppResult<BookDetail> {
     let row = fetch_row(&state.db, book_id).await?;
-    let library_id = Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id =
+        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_edit(&perm)?;
 
@@ -410,11 +401,7 @@ pub async fn update_book(
     } else {
         crate::domain::category::canonical_category_name(&metadata.category)?
     };
-    fs::validate_book_path_fields(
-        &metadata.title,
-        &metadata.author,
-        &target_category,
-    )?;
+    fs::validate_book_path_fields(&metadata.title, &metadata.author, &target_category)?;
     if target_category != row.category {
         crate::domain::category::require_category_exists(
             &state.db,
@@ -542,7 +529,8 @@ pub async fn update_cover(
 ) -> AppResult<BookDetail> {
     fs::validate_cover_extension(&cover_ext)?;
     let row = fetch_row(&state.db, book_id).await?;
-    let library_id = Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id =
+        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_edit(&perm)?;
 
@@ -553,7 +541,8 @@ pub async fn update_cover(
         .to_path_buf();
 
     let meta = BookMetadata::from_json(&row.metadata)?;
-    let base = fs::file_stem(&book_path).unwrap_or_else(|| fs::book_base_name(&meta.title, &meta.author));
+    let base =
+        fs::file_stem(&book_path).unwrap_or_else(|| fs::book_base_name(&meta.title, &meta.author));
 
     if let Some(old_cover) = fs::find_cover_in_dir(&dir, Some(&base)) {
         if old_cover != dir.join(format!("{base}.{cover_ext}")) {
@@ -576,7 +565,8 @@ pub async fn update_cover(
 
 pub async fn delete_book(state: &AppState, user: &AuthUser, book_id: &Uuid) -> AppResult<()> {
     let row = fetch_row(&state.db, book_id).await?;
-    let library_id = Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id =
+        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_delete(&perm)?;
 
@@ -594,9 +584,14 @@ pub async fn delete_book(state: &AppState, user: &AuthUser, book_id: &Uuid) -> A
     Ok(())
 }
 
-pub async fn get_cover_path(state: &AppState, user: &AuthUser, book_id: &Uuid) -> AppResult<PathBuf> {
+pub async fn get_cover_path(
+    state: &AppState,
+    user: &AuthUser,
+    book_id: &Uuid,
+) -> AppResult<PathBuf> {
     let row = fetch_row(&state.db, book_id).await?;
-    let library_id = Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id =
+        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_view(&perm)?;
     let path = PathBuf::from(&row.cover_path);
@@ -613,7 +608,8 @@ pub async fn get_download_path(
     book_id: &Uuid,
 ) -> AppResult<(PathBuf, String)> {
     let row = fetch_row(&state.db, book_id).await?;
-    let library_id = Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id =
+        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_view(&perm)?;
 
@@ -651,19 +647,7 @@ pub async fn search_books(
             }
         }
 
-        let rows: Vec<(
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            Option<String>,
-            String,
-            String,
-        )> = sqlx::query_as(
+        let rows: Vec<BookDbRow> = sqlx::query_as(
             r#"
             SELECT id, library_id, category, book_file_path, metadata_file_path, cover_path,
                    metadata, sync_status, last_read_at, uploaded_at, updated_at
@@ -688,20 +672,7 @@ pub async fn search_books(
         .await?;
 
         for r in rows {
-            let row = BookRow {
-                id: r.0,
-                library_id: r.1,
-                category: r.2,
-                book_file_path: r.3,
-                metadata_file_path: r.4,
-                cover_path: r.5,
-                metadata: r.6,
-                sync_status: r.7,
-                last_read_at: r.8,
-                uploaded_at: r.9,
-                updated_at: r.10,
-            };
-            results.push(row_to_card(&row)?);
+            results.push(row_to_card(&book_row_from_db(r))?);
         }
     }
 

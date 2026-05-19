@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use utoipa::OpenApi;
 
 fn main() {
-    let spec = ApiDoc::openapi().to_pretty_json().expect("serialize openapi");
+    let spec = ApiDoc::openapi()
+        .to_pretty_json()
+        .expect("serialize openapi");
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("openapi")

@@ -11,6 +11,21 @@ use std::path::PathBuf;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+type KosyncProgressDbRow = (f64, String, Option<String>, Option<String>, i64);
+
+type KoreaderProgressListRow = (
+    String,
+    String,
+    String,
+    String,
+    f64,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    String,
+);
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct KosyncAuthResponse {
     pub authorized: String,
@@ -81,7 +96,11 @@ fn is_valid_document(document: &str) -> bool {
     !document.is_empty() && !document.contains(':')
 }
 
-pub async fn authenticate_kosync(db: &SqlitePool, username: &str, auth_key: &str) -> AppResult<AuthUser> {
+pub async fn authenticate_kosync(
+    db: &SqlitePool,
+    username: &str,
+    auth_key: &str,
+) -> AppResult<AuthUser> {
     if username.is_empty() || auth_key.is_empty() {
         return Err(AppError::Unauthorized("Invalid credentials".into()));
     }
@@ -95,9 +114,9 @@ pub async fn authenticate_kosync(db: &SqlitePool, username: &str, auth_key: &str
     let (id, password_md5, role) =
         row.ok_or_else(|| AppError::Unauthorized("Invalid credentials".into()))?;
 
-    let stored = password_md5
-        .filter(|k| !k.is_empty())
-        .ok_or_else(|| AppError::Unauthorized("KOReader sync not enabled: log in via web once".into()))?;
+    let stored = password_md5.filter(|k| !k.is_empty()).ok_or_else(|| {
+        AppError::Unauthorized("KOReader sync not enabled: log in via web once".into())
+    })?;
 
     if stored != auth_key {
         return Err(AppError::Unauthorized("Invalid credentials".into()));
@@ -110,7 +129,11 @@ pub async fn authenticate_kosync(db: &SqlitePool, username: &str, auth_key: &str
     })
 }
 
-pub async fn kosync_auth_user(db: &SqlitePool, username: &str, auth_key: &str) -> AppResult<KosyncAuthResponse> {
+pub async fn kosync_auth_user(
+    db: &SqlitePool,
+    username: &str,
+    auth_key: &str,
+) -> AppResult<KosyncAuthResponse> {
     authenticate_kosync(db, username, auth_key).await?;
     Ok(KosyncAuthResponse {
         authorized: "OK".into(),
@@ -126,7 +149,7 @@ pub async fn kosync_get_progress(
         return Err(AppError::BadRequest("invalid document".into()));
     }
 
-    let row: Option<(f64, String, Option<String>, Option<String>, i64)> = sqlx::query_as(
+    let row: Option<KosyncProgressDbRow> = sqlx::query_as(
         r#"
         SELECT percentage, progress, device, device_id, timestamp
         FROM koreader_progress
@@ -301,8 +324,7 @@ async fn user_can_view_book(db: &SqlitePool, user: &AuthUser, book_id: &Uuid) ->
         return Ok(false);
     };
 
-    let library_id =
-        Uuid::parse_str(&library_id).map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id = Uuid::parse_str(&library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(db, user, &library_id).await?;
     Ok(perm.can_view)
 }
@@ -371,8 +393,7 @@ async fn apply_progress_to_book(
     let meta_path = PathBuf::from(&row.metadata_file_path);
     if let Some(dir) = meta_path.parent() {
         if let Some(base) = meta_path.file_stem().and_then(|s| s.to_str()) {
-            let _ =
-                crate::infra::fs::write_metadata_file(dir, base, &metadata).await;
+            let _ = crate::infra::fs::write_metadata_file(dir, base, &metadata).await;
         }
     }
 
@@ -391,18 +412,7 @@ pub async fn list_progress(
         return Ok(vec![]);
     }
 
-    let rows: Vec<(
-        String,
-        String,
-        String,
-        String,
-        f64,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        String,
-    )> = sqlx::query_as(
+    let rows: Vec<KoreaderProgressListRow> = sqlx::query_as(
         r#"
         SELECT kp.user_id, u.username, kp.document, kp.progress, kp.percentage, kp.device,
                kp.book_id,
@@ -423,10 +433,11 @@ pub async fn list_progress(
     for r in rows {
         let is_own = r.0 == user.id.to_string();
         let book_lib = if let Some(ref bid) = r.6 {
-            let lib: Option<(String,)> = sqlx::query_as("SELECT library_id FROM books WHERE id = ?")
-                .bind(bid)
-                .fetch_optional(&state.db)
-                .await?;
+            let lib: Option<(String,)> =
+                sqlx::query_as("SELECT library_id FROM books WHERE id = ?")
+                    .bind(bid)
+                    .fetch_optional(&state.db)
+                    .await?;
             lib.map(|(l,)| l)
         } else {
             None
@@ -531,14 +542,13 @@ pub async fn set_document_link(
     .await?
     .ok_or_else(|| AppError::NotFound("Book not found".into()))?;
 
-    let library_id =
-        Uuid::parse_str(&row.0).map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id = Uuid::parse_str(&row.0).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_edit(&perm)?;
 
     upsert_document_link(&state.db, &req.document, &book_id, "manual").await?;
 
-  // Backfill koreader_progress.book_id for this user+document
+    // Backfill koreader_progress.book_id for this user+document
     sqlx::query("UPDATE koreader_progress SET book_id = ? WHERE document = ?")
         .bind(book_id.to_string())
         .bind(&req.document)
@@ -605,8 +615,8 @@ pub async fn delete_document_link(
         .bind(&book_id)
         .fetch_one(&state.db)
         .await?;
-    let library_id = Uuid::parse_str(&library_id.0)
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let library_id =
+        Uuid::parse_str(&library_id.0).map_err(|e| AppError::Internal(e.to_string()))?;
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_edit(&perm)?;
 
@@ -615,12 +625,10 @@ pub async fn delete_document_link(
         .execute(&state.db)
         .await?;
 
-    sqlx::query(
-        "UPDATE koreader_progress SET book_id = NULL WHERE document = ?",
-    )
-    .bind(document)
-    .execute(&state.db)
-    .await?;
+    sqlx::query("UPDATE koreader_progress SET book_id = NULL WHERE document = ?")
+        .bind(document)
+        .execute(&state.db)
+        .await?;
 
     Ok(())
 }

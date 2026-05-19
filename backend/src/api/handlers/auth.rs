@@ -65,7 +65,13 @@ pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<Json<LoginResponse>> {
-    let (token, user) = auth::login(&state.db, &state.config.jwt_secret, &req.username, &req.password).await?;
+    let (token, user) = auth::login(
+        &state.db,
+        &state.config.jwt_secret,
+        &req.username,
+        &req.password,
+    )
+    .await?;
     Ok(Json(LoginResponse {
         token,
         user: to_user_info(&user),
@@ -100,7 +106,10 @@ pub async fn register(
         },
     )
     .await?;
-    Ok((axum::http::StatusCode::CREATED, Json(to_user_info(&created))))
+    Ok((
+        axum::http::StatusCode::CREATED,
+        Json(to_user_info(&created)),
+    ))
 }
 
 fn to_user_info(user: &AuthUser) -> UserInfo {

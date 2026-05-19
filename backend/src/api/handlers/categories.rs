@@ -1,5 +1,5 @@
 use crate::api::middleware::auth::AuthContext;
-use crate::domain::category::{self, CreateCategoryRequest, CategoryDto};
+use crate::domain::category::{self, CategoryDto, CreateCategoryRequest};
 use crate::error::AppResult;
 use crate::state::AppState;
 use axum::{

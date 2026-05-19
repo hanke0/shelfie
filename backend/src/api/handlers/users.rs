@@ -76,8 +76,7 @@ pub async fn update_username(
 ) -> AppResult<Json<LoginResponse>> {
     let target_id = Uuid::parse_str(&user_id)
         .map_err(|_| crate::error::AppError::BadRequest("Invalid user id".into()))?;
-    let updated =
-        user::update_username(&state.db, &user, &target_id, &req.username).await?;
+    let updated = user::update_username(&state.db, &user, &target_id, &req.username).await?;
     let token = auth::issue_token(&state.config.jwt_secret, &updated)?;
     Ok(Json(LoginResponse {
         token,

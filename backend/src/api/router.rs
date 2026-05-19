@@ -21,7 +21,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/users/auth", get(handlers::koreader::kosync_auth_user));
 
     let kosync_protected = Router::new()
-        .route("/syncs/progress", put(handlers::koreader::kosync_update_progress))
+        .route(
+            "/syncs/progress",
+            put(handlers::koreader::kosync_update_progress),
+        )
         .route(
             "/syncs/progress/{document}",
             get(handlers::koreader::kosync_get_progress),
@@ -56,7 +59,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/auth/register", post(handlers::auth::register))
         .route("/auth/me", get(handlers::auth::me))
         .route("/home", get(handlers::home::get_home))
-        .route("/books", get(handlers::books::list_books).post(handlers::books::upload_book))
+        .route(
+            "/books",
+            get(handlers::books::list_books).post(handlers::books::upload_book),
+        )
         .route(
             "/books/{id}",
             get(handlers::books::get_book)
@@ -64,24 +70,32 @@ pub fn build_router(state: AppState) -> Router {
                 .delete(handlers::books::delete_book),
         )
         .route("/books/{id}/download", get(handlers::books::download_book))
-        .route("/books/{id}/progress", patch(handlers::books::update_progress))
+        .route(
+            "/books/{id}/progress",
+            patch(handlers::books::update_progress),
+        )
         .route("/books/{id}/cover", put(handlers::books::update_cover))
         .route("/search", get(handlers::search::search))
         .route(
             "/libraries",
             get(handlers::libraries::list_libraries).post(handlers::libraries::create_library),
         )
-        .route("/libraries/{id}", delete(handlers::libraries::delete_library))
+        .route(
+            "/libraries/{id}",
+            delete(handlers::libraries::delete_library),
+        )
         .route(
             "/libraries/{id}/categories",
-            get(handlers::categories::list_categories)
-                .post(handlers::categories::create_category),
+            get(handlers::categories::list_categories).post(handlers::categories::create_category),
         )
         .route(
             "/libraries/{id}/categories/{name}",
             delete(handlers::categories::delete_category),
         )
-        .route("/libraries/{id}/members", get(handlers::libraries::list_members).post(handlers::libraries::add_member))
+        .route(
+            "/libraries/{id}/members",
+            get(handlers::libraries::list_members).post(handlers::libraries::add_member),
+        )
         .route(
             "/libraries/{id}/members/{user_id}/permissions",
             patch(handlers::libraries::update_permissions),
@@ -90,7 +104,10 @@ pub fn build_router(state: AppState) -> Router {
             "/libraries/{id}/members/{user_id}",
             delete(handlers::libraries::remove_member),
         )
-        .route("/libraries/{id}/refresh", post(handlers::sync::refresh_library))
+        .route(
+            "/libraries/{id}/refresh",
+            post(handlers::sync::refresh_library),
+        )
         .route(
             "/libraries/{id}/refresh/{job_id}",
             get(handlers::sync::get_refresh_job),
@@ -109,7 +126,10 @@ pub fn build_router(state: AppState) -> Router {
             patch(handlers::users::change_password),
         )
         .route("/users/{user_id}", delete(handlers::users::delete_user))
-        .route("/koreader/progress", get(handlers::koreader::list_koreader_progress))
+        .route(
+            "/koreader/progress",
+            get(handlers::koreader::list_koreader_progress),
+        )
         .route(
             "/koreader/links",
             get(handlers::koreader::list_koreader_links).put(handlers::koreader::set_koreader_link),
@@ -121,10 +141,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/assets/covers/{id}", get(handlers::books::get_cover))
         .layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
-    let api = Router::new()
-        .merge(public)
-        .merge(opds)
-        .merge(protected);
+    let api = Router::new().merge(public).merge(opds).merge(protected);
 
     /// 图书上传需支持较大 PDF/EPUB（默认 2MB 会导致 multipart 解析失败）
     const UPLOAD_LIMIT: usize = 512 * 1024 * 1024;

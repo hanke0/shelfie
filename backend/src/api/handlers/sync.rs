@@ -33,5 +33,7 @@ pub async fn get_refresh_job(
     Extension(AuthContext(user)): Extension<AuthContext>,
     Path((id, job_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<Json<RefreshJobResponse>> {
-    Ok(Json(sync::get_refresh_job(&state, &user, &id, &job_id).await?))
+    Ok(Json(
+        sync::get_refresh_job(&state, &user, &id, &job_id).await?,
+    ))
 }

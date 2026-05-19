@@ -108,7 +108,9 @@ pub async fn list_koreader_progress(
     Extension(AuthContext(user)): Extension<AuthContext>,
     Query(q): Query<LibraryFilterQuery>,
 ) -> AppResult<Json<Vec<KoreaderProgressRow>>> {
-    Ok(Json(koreader::list_progress(&state, &user, q.library_id).await?))
+    Ok(Json(
+        koreader::list_progress(&state, &user, q.library_id).await?,
+    ))
 }
 
 #[utoipa::path(

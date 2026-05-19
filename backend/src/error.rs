@@ -49,9 +49,13 @@ impl AppError {
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
             AppError::NotFound(_) => StatusCode::NOT_FOUND,
             AppError::Conflict(_) => StatusCode::CONFLICT,
-            AppError::Sqlx(_) | AppError::Json(_) | AppError::Io(_) | AppError::Jwt(_) | AppError::Bcrypt(_) | AppError::Migrate(_) | AppError::Internal(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            AppError::Sqlx(_)
+            | AppError::Json(_)
+            | AppError::Io(_)
+            | AppError::Jwt(_)
+            | AppError::Bcrypt(_)
+            | AppError::Migrate(_)
+            | AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 

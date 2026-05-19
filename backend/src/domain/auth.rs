@@ -1,7 +1,7 @@
 use crate::error::{AppError, AppResult};
+use crate::infra::hash::md5_hex;
 use crate::state::AppState;
 use bcrypt::{hash, verify, DEFAULT_COST};
-use crate::infra::hash::md5_hex;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -29,14 +29,14 @@ pub async fn login(
     username: &str,
     password: &str,
 ) -> AppResult<(String, AuthUser)> {
-    let row: Option<(String, String, String)> = sqlx::query_as(
-        "SELECT id, password_hash, role FROM users WHERE username = ?",
-    )
-    .bind(username)
-    .fetch_optional(db)
-    .await?;
+    let row: Option<(String, String, String)> =
+        sqlx::query_as("SELECT id, password_hash, role FROM users WHERE username = ?")
+            .bind(username)
+            .fetch_optional(db)
+            .await?;
 
-    let (id, password_hash, role) = row.ok_or_else(|| AppError::Unauthorized("Invalid credentials".into()))?;
+    let (id, password_hash, role) =
+        row.ok_or_else(|| AppError::Unauthorized("Invalid credentials".into()))?;
 
     if !verify(password, &password_hash)? {
         return Err(AppError::Unauthorized("Invalid credentials".into()));
@@ -66,18 +66,16 @@ pub async fn change_password(
     new_password: &str,
     verify_current: bool,
 ) -> AppResult<()> {
-    let row: Option<(String,)> =
-        sqlx::query_as("SELECT password_hash FROM users WHERE id = ?")
-            .bind(user_id.to_string())
-            .fetch_optional(db)
-            .await?;
+    let row: Option<(String,)> = sqlx::query_as("SELECT password_hash FROM users WHERE id = ?")
+        .bind(user_id.to_string())
+        .fetch_optional(db)
+        .await?;
 
     let (password_hash,) = row.ok_or_else(|| AppError::NotFound("User not found".into()))?;
 
     if verify_current {
-        let current = current_password.ok_or_else(|| {
-            AppError::BadRequest("current_password is required".into())
-        })?;
+        let current = current_password
+            .ok_or_else(|| AppError::BadRequest("current_password is required".into()))?;
         if !verify(current, &password_hash)? {
             return Err(AppError::Unauthorized("Invalid current password".into()));
         }

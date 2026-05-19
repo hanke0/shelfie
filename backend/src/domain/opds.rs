@@ -11,7 +11,11 @@ use uuid::Uuid;
 const NAV_TYPE: &str = "application/atom+xml;profile=opds-catalog;kind=navigation";
 const ACQ_TYPE: &str = "application/atom+xml;profile=opds-catalog;kind=acquisition";
 
-pub fn resolve_base_url(configured: Option<&str>, forwarded_proto: Option<&str>, host: Option<&str>) -> String {
+pub fn resolve_base_url(
+    configured: Option<&str>,
+    forwarded_proto: Option<&str>,
+    host: Option<&str>,
+) -> String {
     if let Some(url) = configured.filter(|s| !s.is_empty()) {
         return url.trim_end_matches('/').to_string();
     }
@@ -52,7 +56,11 @@ fn feed_header(id: &str, title: &str, self_href: &str, kind: &str) -> String {
         title = xml_escape(title),
         updated = now_rfc3339(),
         self_href = xml_escape(self_href),
-        nav_type = if kind == "acquisition" { ACQ_TYPE } else { NAV_TYPE },
+        nav_type = if kind == "acquisition" {
+            ACQ_TYPE
+        } else {
+            NAV_TYPE
+        },
     )
 }
 
@@ -129,10 +137,7 @@ fn acquisition_entry(book: &OpdsBookRow, base: &str) -> String {
         ));
     }
     if let Some(summary) = book.summary.as_deref().filter(|s| !s.is_empty()) {
-        xml.push_str(&format!(
-            "    <summary>{}</summary>\n",
-            xml_escape(summary)
-        ));
+        xml.push_str(&format!("    <summary>{}</summary>\n", xml_escape(summary)));
     }
     xml.push_str("  </entry>\n");
     xml
@@ -193,10 +198,7 @@ pub async fn library_navigation_feed(
     let categories = category::list_categories(state, user, library_id).await?;
     for cat in categories {
         let encoded = urlencoding::encode(&cat.name);
-        let cat_href = absolute_url(
-            base,
-            &format!("{catalog_path}/books?category={encoded}"),
-        );
+        let cat_href = absolute_url(base, &format!("{catalog_path}/books?category={encoded}"));
         xml.push_str(&nav_entry(
             &cat.name,
             &format!("urn:uuid:{library_id}:cat:{encoded}"),

@@ -2,7 +2,10 @@ use crate::api::middleware::auth::AuthContext;
 use crate::domain::home;
 use crate::error::AppResult;
 use crate::state::AppState;
-use axum::{extract::{Query, State}, Extension, Json};
+use axum::{
+    extract::{Query, State},
+    Extension, Json,
+};
 use serde::Deserialize;
 use utoipa::IntoParams;
 use uuid::Uuid;

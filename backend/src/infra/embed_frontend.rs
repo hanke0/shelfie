@@ -20,7 +20,9 @@ fn asset_path(uri_path: &str) -> String {
     path.to_string()
 }
 
-fn response_for_path(path: &str) -> Option<(StatusCode, [(header::HeaderName, String); 1], Vec<u8>)> {
+fn response_for_path(
+    path: &str,
+) -> Option<(StatusCode, [(header::HeaderName, String); 1], Vec<u8>)> {
     let file = FrontendAssets::get(path)?;
     let mime = mime_guess::from_path(path)
         .first()

@@ -26,7 +26,7 @@ export function SearchPage() {
       {!activeLibraryId && <p>请先在顶栏选择图书馆</p>}
       {isLoading && <p>搜索中…</p>}
       {!data?.length && !isLoading && activeLibraryId && <p>没有找到相关图书</p>}
-      <div className="book-scroll" style={{ gridTemplateRows: "auto" }}>
+      <div className="book-scroll">
         {data?.map((book) => (
           <BookCard key={book.id} book={book} />
         ))}

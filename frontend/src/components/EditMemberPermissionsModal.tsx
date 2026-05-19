@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUpdatePermissions } from "@/api/generated/libraries/libraries";
 import { Modal } from "@/components/ui/Modal";
-import { Select } from "@/components/ui/Select";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 import { useApiAction } from "@/hooks/useApiAction";
@@ -103,10 +103,15 @@ export function EditMemberPermissionsModal({
         {error && <p className={formStyles.error}>{error}</p>}
         <label className={formStyles.field}>
           <FieldLabel>馆内角色</FieldLabel>
-          <Select value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="member">成员</option>
-            <option value="admin">馆管理员</option>
-          </Select>
+          <Dropdown
+            value={role}
+            onChange={setRole}
+            options={[
+              { value: "member", label: "成员" },
+              { value: "admin", label: "馆管理员" },
+            ]}
+            aria-label="馆内角色"
+          />
         </label>
         {isLibraryAdmin ? (
           <p className={formStyles.hint}>馆管理员在本馆拥有全部图书权限，并可拉人/踢人。</p>

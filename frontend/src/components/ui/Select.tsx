@@ -1,19 +1,18 @@
-import type { SelectHTMLAttributes } from "react";
-import styles from "./Select.module.css";
+import { Dropdown, type DropdownOption, type DropdownProps } from "./Dropdown";
 
-export function Select({
-  className,
-  children,
-  ...props
-}: SelectHTMLAttributes<HTMLSelectElement>) {
+/** @deprecated Prefer `Dropdown` with `options` prop. Kept for gradual migration. */
+export type SelectProps = Omit<DropdownProps, "options"> & {
+  options: DropdownOption[];
+  onChange: (e: { target: { value: string } }) => void;
+};
+
+export function Select({ onChange, ...props }: SelectProps) {
   return (
-    <div className={styles.wrap}>
-      <select className={[styles.select, className].filter(Boolean).join(" ")} {...props}>
-        {children}
-      </select>
-      <span className={styles.chevron} aria-hidden>
-        ▾
-      </span>
-    </div>
+    <Dropdown
+      {...props}
+      onChange={(value) => onChange({ target: { value } })}
+    />
   );
 }
+
+export { Dropdown, type DropdownOption, type DropdownProps };

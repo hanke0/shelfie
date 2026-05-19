@@ -98,7 +98,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
 
         <div className={styles.body}>
           <div className={styles.fileSection}>
-            <label>
+            <div className={styles.field}>
               <FieldLabel required>图书文件 (PDF / EPUB / MOBI)</FieldLabel>
               <FileInput
                 accept=".pdf,.epub,.mobi"
@@ -107,9 +107,9 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                 required
                 placeholder="点击选择或拖拽图书文件到此处"
               />
-            </label>
+            </div>
 
-            <label>
+            <div className={styles.field}>
               <FieldLabel>封面 (JPG / PNG，可选)</FieldLabel>
               <FileInput
                 accept=".jpg,.jpeg,.png"
@@ -120,7 +120,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
               <span className={styles.hint}>
                 未上传时由前端根据书名{metadata.author?.trim() ? "与作者" : ""}生成展示封面（不保存到服务器）
               </span>
-            </label>
+            </div>
           </div>
 
           <div className={styles.metadataSection}>

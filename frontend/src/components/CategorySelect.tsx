@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useListCategories } from "@/api/generated/categories/categories";
-import { Select } from "@/components/ui/Select";
+import { Dropdown } from "@/components/ui/Dropdown";
 
 const DEFAULT_CATEGORY = "未分类";
 
@@ -17,6 +17,7 @@ interface CategorySelectProps {
   value: string;
   onChange: (name: string) => void;
   required?: boolean;
+  includeAllOption?: boolean;
 }
 
 export function CategorySelect({
@@ -24,6 +25,7 @@ export function CategorySelect({
   value,
   onChange,
   required,
+  includeAllOption,
 }: CategorySelectProps) {
   const { data: categories, isLoading } = useListCategories(libraryId ?? "", {
     query: { enabled: !!libraryId },
@@ -32,8 +34,13 @@ export function CategorySelect({
   const options = useMemo(() => {
     const names = new Set(categories?.map((c) => c.name) ?? []);
     if (value.trim()) names.add(value.trim());
-    return sortCategories([...names]);
-  }, [categories, value]);
+    const sorted = sortCategories([...names]);
+    const items = sorted.map((name) => ({ value: name, label: name }));
+    if (includeAllOption) {
+      return [{ value: "", label: "全部分类" }, ...items];
+    }
+    return items;
+  }, [categories, value, includeAllOption]);
 
   if (!libraryId) {
     return <p className="muted-hint">请先在顶栏选择图书馆</p>;
@@ -41,20 +48,16 @@ export function CategorySelect({
 
   return (
     <>
-      <Select
+      <Dropdown
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
+        options={options}
+        placeholder={isLoading ? "加载分类…" : includeAllOption ? "全部分类" : "选择分类"}
+        disabled={isLoading || (!includeAllOption && options.length === 0)}
         required={required}
-        disabled={isLoading || options.length === 0}
-      >
-        <option value="">{isLoading ? "加载分类…" : "选择分类"}</option>
-        {options.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </Select>
-      {!isLoading && options.length === 0 ? (
+        aria-label="分类"
+      />
+      {!isLoading && !includeAllOption && options.length === 0 ? (
         <span className="muted-hint">请先在图书馆管理中添加分类</span>
       ) : null}
     </>

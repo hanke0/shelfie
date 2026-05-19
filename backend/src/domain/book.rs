@@ -221,6 +221,7 @@ pub async fn list_books(
     db: &SqlitePool,
     user: &AuthUser,
     library_id: Option<Uuid>,
+    category: Option<&str>,
     sort: Option<&str>,
     limit: i64,
 ) -> AppResult<Vec<BookCard>> {
@@ -247,6 +248,10 @@ pub async fn list_books(
         query = format!("{query} AND library_id = ?");
     }
 
+    if category.is_some() {
+        query = format!("{query} AND category = ?");
+    }
+
     query = format!("{query} ORDER BY {order} LIMIT ?");
 
     let mut q = sqlx::query_as::<_, (
@@ -268,6 +273,9 @@ pub async fn list_books(
     }
     if let Some(lid) = library_id {
         q = q.bind(lid.to_string());
+    }
+    if let Some(cat) = category {
+        q = q.bind(cat);
     }
     q = q.bind(limit);
 

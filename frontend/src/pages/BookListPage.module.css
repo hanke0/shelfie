@@ -1,0 +1,35 @@
+.back {
+  display: inline-block;
+  margin: 1rem 0;
+  color: var(--accent);
+}
+
+.title {
+  font-family: var(--font-display);
+  margin: 0 0 0.75rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: min(280px, 100%);
+}
+
+.filterLabel {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.empty {
+  color: var(--ink-muted);
+  margin: 0;
+}

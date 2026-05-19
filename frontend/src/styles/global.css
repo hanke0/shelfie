@@ -158,20 +158,6 @@ textarea {
 
 .book-scroll {
   display: grid;
-  grid-template-rows: repeat(2, auto);
-  grid-auto-flow: column;
-  grid-auto-columns: 140px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 0.75rem;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  scroll-snap-type: x proximity;
-}
-
-.book-scroll::-webkit-scrollbar {
-  height: 6px;
-}
-
-.book-scroll::-webkit-scrollbar-thumb {
-  background: var(--accent-soft);
-  border-radius: 999px;
 }

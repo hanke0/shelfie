@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRegister } from "@/api/generated/auth/auth";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
 import { Modal } from "@/components/ui/Modal";
-import { Select } from "@/components/ui/Select";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 import { useApiAction } from "@/hooks/useApiAction";
@@ -116,34 +116,40 @@ export function CreateUserModal({ open, onClose }: CreateUserModalProps) {
         </label>
         <label className={formStyles.field}>
           <FieldLabel>系统角色</FieldLabel>
-          <Select value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="user">普通用户</option>
-            <option value="system_admin">系统管理员</option>
-          </Select>
+          <Dropdown
+            value={role}
+            onChange={setRole}
+            options={[
+              { value: "user", label: "普通用户" },
+              { value: "system_admin", label: "系统管理员" },
+            ]}
+            aria-label="系统角色"
+          />
         </label>
         {isRegularUser ? (
           <>
             <label className={formStyles.field}>
               <FieldLabel required>所属图书馆</FieldLabel>
-              <Select
+              <Dropdown
                 value={libraryId}
-                onChange={(e) => setLibraryId(e.target.value)}
+                onChange={setLibraryId}
                 required
-              >
-                <option value="">选择图书馆…</option>
-                {libraries?.map((lib) => (
-                  <option key={lib.id} value={lib.id}>
-                    {lib.name}
-                  </option>
-                ))}
-              </Select>
+                placeholder="选择图书馆…"
+                options={libraries?.map((lib) => ({ value: lib.id, label: lib.name })) ?? []}
+                aria-label="所属图书馆"
+              />
             </label>
             <label className={formStyles.field}>
               <FieldLabel>馆内角色</FieldLabel>
-              <Select value={libraryRole} onChange={(e) => setLibraryRole(e.target.value)}>
-                <option value="member">成员</option>
-                <option value="admin">馆管理员</option>
-              </Select>
+              <Dropdown
+                value={libraryRole}
+                onChange={setLibraryRole}
+                options={[
+                  { value: "member", label: "成员" },
+                  { value: "admin", label: "馆管理员" },
+                ]}
+                aria-label="馆内角色"
+              />
             </label>
             {isLibraryAdmin ? (
               <p className={formStyles.hint}>

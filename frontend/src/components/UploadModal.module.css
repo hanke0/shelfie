@@ -42,7 +42,7 @@
   border-top: 1px solid var(--border);
 }
 
-.fileSection label {
+.fileSection .field {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;

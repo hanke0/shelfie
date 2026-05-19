@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAddMember } from "@/api/generated/libraries/libraries";
 import { useListUsers } from "@/api/generated/users/users";
 import { Modal } from "@/components/ui/Modal";
-import { Select } from "@/components/ui/Select";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 import { useApiAction } from "@/hooks/useApiAction";
@@ -103,18 +103,14 @@ export function AddMemberModal({
         {isSystemAdmin && users ? (
           <label className={formStyles.field}>
             <FieldLabel required>用户</FieldLabel>
-            <Select
+            <Dropdown
               value={memberUserId}
-              onChange={(e) => setMemberUserId(e.target.value)}
+              onChange={setMemberUserId}
               required
-            >
-              <option value="">选择用户…</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.username}
-                </option>
-              ))}
-            </Select>
+              placeholder="选择用户…"
+              options={users.map((u) => ({ value: u.id, label: u.username }))}
+              aria-label="用户"
+            />
           </label>
         ) : (
           <label className={formStyles.field}>

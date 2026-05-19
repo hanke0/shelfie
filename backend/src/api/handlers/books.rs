@@ -62,6 +62,7 @@ fn parse_metadata_field(data: &[u8]) -> AppResult<BookMetadata> {
 #[derive(Deserialize, IntoParams)]
 pub struct ListBooksQuery {
     pub library_id: Option<Uuid>,
+    pub category: Option<String>,
     pub sort: Option<String>,
     #[param(default = 50)]
     pub limit: Option<i64>,
@@ -79,6 +80,7 @@ pub async fn list_books(
             &state.db,
             &user,
             q.library_id,
+            q.category.as_deref(),
             q.sort.as_deref(),
             limit,
         )

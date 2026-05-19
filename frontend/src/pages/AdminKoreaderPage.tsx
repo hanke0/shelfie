@@ -8,7 +8,7 @@ import {
 } from "@/api/generated/koreader/koreader";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
 import { KoreaderLinkModal } from "@/components/KoreaderLinkModal";
-import { Select } from "@/components/ui/Select";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { useLibrary } from "@/context/LibraryContext";
 import { useConfirmTwice } from "@/context/ConfirmContext";
 import { useApiAction } from "@/hooks/useApiAction";
@@ -75,20 +75,19 @@ export function AdminKoreaderPage() {
         </div>
         <label className={`${styles.filterRow} ${styles.fieldInline}`}>
           <span className={styles.muted}>图书馆</span>
-          <Select
+          <Dropdown
             value={libraryFilter}
-            onChange={(e) => {
-              setLibraryFilter(e.target.value);
-              if (e.target.value) setLibraryId(e.target.value);
+            onChange={(id) => {
+              setLibraryFilter(id);
+              if (id) setLibraryId(id);
             }}
-          >
-            <option value="">全部</option>
-            {libraries?.map((lib) => (
-              <option key={lib.id} value={lib.id}>
-                {lib.name}
-              </option>
-            ))}
-          </Select>
+            placeholder="全部"
+            options={[
+              { value: "", label: "全部" },
+              ...(libraries?.map((lib) => ({ value: lib.id, label: lib.name })) ?? []),
+            ]}
+            aria-label="图书馆"
+          />
         </label>
       </div>
 

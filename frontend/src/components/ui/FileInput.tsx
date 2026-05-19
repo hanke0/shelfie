@@ -132,10 +132,15 @@ export function FileInput({
         tabIndex={0}
         className={zoneClass}
         aria-label={placeholder}
-        onClick={() => inputRef.current?.click()}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          inputRef.current?.click();
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
+            e.stopPropagation();
             inputRef.current?.click();
           }
         }}

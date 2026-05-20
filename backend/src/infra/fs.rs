@@ -27,7 +27,7 @@ pub fn category_dir(library_root: &Path, category: &str) -> AppResult<PathBuf> {
     Ok(library_root.join(seg))
 }
 
-/// 图书文件名基底：`{书名}_{作者}`（保留 i18n，去除非法路径字符）
+/// 图书文件名基底：`{书名}_{作者}`（元数据可含任意非控制字符，磁盘名经消毒）
 pub fn book_base_name(title: &str, author: &str) -> String {
     let title = safe_name::sanitize_path_segment(title);
     let author = safe_name::sanitize_path_segment(author);
@@ -37,6 +37,10 @@ pub fn book_base_name(title: &str, author: &str) -> String {
         (false, true) => title,
         (false, false) => format!("{title}_{author}"),
     };
+    let base = safe_name::avoid_windows_reserved_base(&base);
+    if base.is_empty() {
+        return "untitled".to_string();
+    }
     truncate_base(&base, 180)
 }
 
@@ -473,6 +477,8 @@ mod tests {
             book_base_name("Hello World", "Author"),
             "Hello_World_Author"
         );
+        assert_eq!(book_base_name("A/B", "C:D"), "A_B_C_D");
+        assert_eq!(book_base_name("三体—续", "作者@example"), "三体—续_作者@example");
     }
 
     #[test]

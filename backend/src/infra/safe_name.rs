@@ -11,17 +11,17 @@ const WINDOWS_RESERVED: &[&str] = &[
     "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
 ];
 
-/// 与 `[\p{L}\p{N}\s\-_.,()（）【】《》「」『』·':;+&]` 等价的字符级校验（支持 i18n）
+/// 与 `[\p{L}\p{N}\s\-_.,()（）【】《》「」『』·':;+&]` 等价的字符级校验（图书馆名、分类）
 static SEGMENT_CHAR_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"^[\p{L}\p{N}\-_.,()（）【】《》「」『』·':;+&]$")
         .expect("segment char regex")
 });
 
-/// Windows / POSIX 路径中非法、且不在注释字符类内的符号（`:` `;` 等标点由 SEGMENT_CHAR_RE 处理）
-const FORBIDDEN_PATH_CHARS: &str = "/\\*?\"<>|";
+/// 磁盘文件名中必须剔除的字符（Windows / POSIX）
+const FILENAME_UNSAFE_CHARS: &str = "/\\:*?\"<>|";
 
 fn is_allowed_segment_char(c: char) -> bool {
-    if c.is_control() || FORBIDDEN_PATH_CHARS.contains(c) {
+    if c.is_control() || FILENAME_UNSAFE_CHARS.contains(c) {
         return false;
     }
     if c.is_whitespace() {
@@ -34,6 +34,34 @@ fn is_allowed_segment_char(c: char) -> bool {
 
 fn is_valid_slug_char(c: char) -> bool {
     matches!(c, 'a'..='z' | '0'..='9' | '-' | '_')
+}
+
+fn has_control_char(s: &str) -> bool {
+    s.chars().any(|c| c.is_control())
+}
+
+fn validate_book_metadata_text(value: &str, field: &str, allow_empty: bool) -> AppResult<()> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        if allow_empty {
+            return Ok(());
+        }
+        return Err(AppError::BadRequest(format!("{field} cannot be empty")));
+    }
+    if trimmed == "." || trimmed == ".." {
+        return Err(AppError::BadRequest(format!("{field} cannot be empty")));
+    }
+    if trimmed.chars().count() > MAX_BOOK_FIELD_LEN {
+        return Err(AppError::BadRequest(format!(
+            "{field} must be at most {MAX_BOOK_FIELD_LEN} characters"
+        )));
+    }
+    if has_control_char(trimmed) {
+        return Err(AppError::BadRequest(format!(
+            "{field} contains invalid control characters"
+        )));
+    }
+    Ok(())
 }
 
 fn validate_segment(value: &str, field: &str, max_len: usize) -> AppResult<()> {
@@ -84,29 +112,31 @@ pub fn validate_slug(slug: &str) -> AppResult<()> {
     Ok(())
 }
 
+/// 书名元数据：允许除控制字符外的任意 Unicode（含 `@`、`—` 等）
 pub fn validate_book_title(title: &str) -> AppResult<()> {
-    validate_segment(title, "title", MAX_BOOK_FIELD_LEN)
+    validate_book_metadata_text(title, "title", false)
 }
 
+/// 作者元数据：允许为空；非空时同书名规则
 pub fn validate_book_author(author: &str) -> AppResult<()> {
-    let trimmed = author.trim();
-    if trimmed.is_empty() {
-        return Ok(());
-    }
-    validate_segment(trimmed, "author", MAX_BOOK_FIELD_LEN)
+    validate_book_metadata_text(author, "author", true)
 }
 
 pub fn validate_category(category: &str) -> AppResult<()> {
     validate_segment(category, "category", MAX_CATEGORY_LEN)
 }
 
-/// 将用户输入转为安全的路径段，保留 i18n 字母与数字
+/// 将用户输入转为安全的文件名/路径段（剔除路径非法字符，空白与非法符号变为 `_`）
 pub fn sanitize_path_segment(s: &str) -> String {
     let mut out = String::new();
     let mut prev_underscore = false;
 
     for c in s.trim().chars() {
-        if c.is_control() || FORBIDDEN_PATH_CHARS.contains(c) {
+        if c.is_control() || FILENAME_UNSAFE_CHARS.contains(c) {
+            if !prev_underscore && !out.is_empty() {
+                out.push('_');
+                prev_underscore = true;
+            }
             continue;
         }
         if c.is_whitespace() {
@@ -125,6 +155,19 @@ pub fn sanitize_path_segment(s: &str) -> String {
         return String::new();
     }
     truncate_chars(&trimmed, MAX_BOOK_FIELD_LEN)
+}
+
+/// 避免 Windows 保留设备名作为文件基底
+pub fn avoid_windows_reserved_base(base: &str) -> String {
+    if base.is_empty() {
+        return String::new();
+    }
+    let upper = base.to_ascii_uppercase();
+    let stem = upper.split('.').next().unwrap_or(&upper);
+    if WINDOWS_RESERVED.contains(&stem) {
+        return "untitled".to_string();
+    }
+    base.to_string()
 }
 
 fn truncate_chars(s: &str, max_len: usize) -> String {
@@ -177,27 +220,39 @@ mod tests {
     }
 
     #[test]
-    fn rejects_path_separators() {
-        assert!(validate_book_title("foo/bar").is_err());
+    fn book_title_allows_special_chars_in_metadata() {
+        assert!(validate_book_title("hello@world").is_ok());
+        assert!(validate_book_title("三体—续").is_ok());
+        assert!(validate_book_title("A&B: Vol.1").is_ok());
+        assert!(validate_book_title("ः").is_ok());
     }
 
     #[test]
-    fn sanitize_preserves_cjk() {
+    fn book_title_rejects_control_chars() {
+        assert!(validate_book_title("foo\u{0000}bar").is_err());
+        assert!(validate_book_title("line\nbreak").is_err());
+    }
+
+    #[test]
+    fn book_title_still_rejects_path_like_empty() {
+        assert!(validate_book_title("   ").is_err());
+    }
+
+    #[test]
+    fn sanitize_strips_unsafe_path_chars() {
         assert_eq!(sanitize_path_segment("三体"), "三体");
         assert_eq!(sanitize_path_segment("Hello World"), "Hello_World");
+        assert_eq!(sanitize_path_segment("A/B:C"), "A_B_C");
     }
 
     #[test]
-    fn allows_punctuation_from_comment_regex() {
-        assert!(validate_book_title("三体（全集）").is_ok());
-        assert!(validate_book_title("A&B: Vol.1").is_ok());
+    fn sanitize_avoids_windows_reserved() {
+        assert_eq!(avoid_windows_reserved_base("CON"), "untitled");
+        assert_eq!(avoid_windows_reserved_base("三体"), "三体");
     }
 
     #[test]
-    fn rejects_chars_outside_comment_regex() {
-        // Alphabetic (Lo) but not \p{L} in this property set — old is_alphanumeric() allowed it
-        assert!(validate_book_title("ः").is_err());
-        assert!(validate_book_title("hello@world").is_err());
-        assert!(validate_book_title("三体—续").is_err());
+    fn category_still_rejects_path_separators() {
+        assert!(validate_category("foo/bar").is_err());
     }
 }

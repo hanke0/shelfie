@@ -15,13 +15,14 @@ pub struct OpdsBooksQuery {
     pub category: Option<String>,
 }
 
-fn opds_response(xml: String) -> Response {
+fn opds_response(xml: String, kind: &str) -> Response {
+    let content_type = match kind {
+        "acquisition" => "application/atom+xml;profile=opds-catalog;kind=acquisition;charset=utf-8",
+        _ => "application/atom+xml;profile=opds-catalog;kind=navigation;charset=utf-8",
+    };
     (
         StatusCode::OK,
-        [(
-            header::CONTENT_TYPE,
-            "application/atom+xml;profile=opds-catalog;charset=utf-8",
-        )],
+        [(header::CONTENT_TYPE, content_type)],
         xml,
     )
         .into_response()
@@ -42,7 +43,7 @@ pub async fn opds_root(
 ) -> AppResult<Response> {
     let base = request_base_url(&state, &headers);
     let xml = opds::root_navigation_feed(&state, &user, &base).await?;
-    Ok(opds_response(xml))
+    Ok(opds_response(xml, "navigation"))
 }
 
 pub async fn opds_library(
@@ -54,7 +55,7 @@ pub async fn opds_library(
     let id = opds::parse_library_id(&library_id)?;
     let base = request_base_url(&state, &headers);
     let xml = opds::library_navigation_feed(&state, &user, &id, &base).await?;
-    Ok(opds_response(xml))
+    Ok(opds_response(xml, "navigation"))
 }
 
 pub async fn opds_library_books(
@@ -68,5 +69,5 @@ pub async fn opds_library_books(
     let base = request_base_url(&state, &headers);
     let category = query.category.as_deref();
     let xml = opds::library_acquisition_feed(&state, &user, &id, category, &base).await?;
-    Ok(opds_response(xml))
+    Ok(opds_response(xml, "acquisition"))
 }

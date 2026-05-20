@@ -5,6 +5,7 @@ pub mod content_disposition;
 pub mod db;
 pub mod fs;
 pub mod hash;
+pub mod http_cache;
 pub mod metadata;
 pub mod safe_name;
 pub mod thumbnail;

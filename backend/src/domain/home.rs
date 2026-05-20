@@ -1,38 +1,18 @@
 use crate::domain::auth::AuthUser;
-use crate::domain::book::{BookCard, BookDbRow};
+use crate::domain::book::{list_row_to_card, BookListRow};
 use crate::error::AppResult;
-use crate::infra::BookMetadata;
 use crate::state::AppState;
 use serde::Serialize;
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct HomeResponse {
-    /// 最近阅读：按 last_read_at 降序，有阅读进度的优先展示
-    pub recent: Vec<BookCard>,
+    /// 最近阅读：按当前用户阅读时间降序
+    pub recent: Vec<crate::domain::book::BookCard>,
     /// 新书速递：按 uploaded_at 降序
-    pub new_arrivals: Vec<BookCard>,
+    pub new_arrivals: Vec<crate::domain::book::BookCard>,
     /// 啊哈时刻：随机推荐
-    pub aha_moment: Vec<BookCard>,
-}
-
-fn map_rows(rows: Vec<BookDbRow>) -> Result<Vec<BookCard>, serde_json::Error> {
-    rows.into_iter()
-        .map(|r| {
-            let meta: BookMetadata = serde_json::from_str(&r.6)?;
-            let id = r.0.clone();
-            Ok(BookCard {
-                id: id.clone(),
-                library_id: r.1,
-                title: meta.title,
-                author: meta.author,
-                category: r.2,
-                cover_url: format!("/api/v1/assets/covers/{id}"),
-                reading_percent: meta.reading_progress.and_then(|p| p.percent),
-                last_read_at: r.8,
-            })
-        })
-        .collect()
+    pub aha_moment: Vec<crate::domain::book::BookCard>,
 }
 
 async fn accessible_ids(state: &AppState, user: &AuthUser) -> AppResult<Vec<String>> {
@@ -77,103 +57,72 @@ pub async fn get_home(
     }
 
     let placeholders = libs.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+    let user_id = user.id.to_string();
 
     let recent_sql = format!(
         r#"
-        SELECT id, library_id, category, book_file_path, metadata_file_path, cover_path,
-               metadata, sync_status, last_read_at, uploaded_at, updated_at
-        FROM books
-        WHERE library_id IN ({placeholders}) AND last_read_at IS NOT NULL
-        ORDER BY last_read_at DESC
+        SELECT b.id, b.library_id, b.category, b.book_file_path, b.metadata_file_path, b.cover_path,
+               b.metadata, b.sync_status, b.last_read_at, b.uploaded_at, b.updated_at,
+               urp.percent, urp.current_page, urp.last_position, urp.updated_at
+        FROM user_reading_progress urp
+        JOIN books b ON b.id = urp.book_id
+        WHERE urp.user_id = ? AND urp.library_id IN ({placeholders})
+        ORDER BY urp.updated_at DESC
         LIMIT ?
         "#
     );
-    let mut recent_q = sqlx::query_as::<
-        _,
-        (
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            Option<String>,
-            String,
-            String,
-        ),
-    >(&recent_sql);
+    let mut recent_q = sqlx::query_as::<_, BookListRow>(&recent_sql);
+    recent_q = recent_q.bind(&user_id);
     for id in &libs {
         recent_q = recent_q.bind(id);
     }
     recent_q = recent_q.bind(limit);
-    let recent = map_rows(recent_q.fetch_all(&state.db).await?)?;
+    let recent = recent_q
+        .fetch_all(&state.db)
+        .await?
+        .into_iter()
+        .map(list_row_to_card)
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let new_sql = format!(
+    let list_sql = format!(
         r#"
-        SELECT id, library_id, category, book_file_path, metadata_file_path, cover_path,
-               metadata, sync_status, last_read_at, uploaded_at, updated_at
-        FROM books
-        WHERE library_id IN ({placeholders})
-        ORDER BY uploaded_at DESC
-        LIMIT ?
+        SELECT b.id, b.library_id, b.category, b.book_file_path, b.metadata_file_path, b.cover_path,
+               b.metadata, b.sync_status, b.last_read_at, b.uploaded_at, b.updated_at,
+               urp.percent, urp.current_page, urp.last_position, urp.updated_at
+        FROM books b
+        LEFT JOIN user_reading_progress urp
+            ON urp.book_id = b.id AND urp.user_id = ?
+        WHERE b.library_id IN ({placeholders})
         "#
     );
-    let mut new_q = sqlx::query_as::<
-        _,
-        (
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            Option<String>,
-            String,
-            String,
-        ),
-    >(&new_sql);
+
+    let new_sql = format!("{list_sql} ORDER BY b.uploaded_at DESC LIMIT ?");
+    let mut new_q = sqlx::query_as::<_, BookListRow>(&new_sql);
+    new_q = new_q.bind(&user_id);
     for id in &libs {
         new_q = new_q.bind(id);
     }
     new_q = new_q.bind(limit);
-    let new_arrivals = map_rows(new_q.fetch_all(&state.db).await?)?;
+    let new_arrivals = new_q
+        .fetch_all(&state.db)
+        .await?
+        .into_iter()
+        .map(list_row_to_card)
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let random_sql = format!(
-        r#"
-        SELECT id, library_id, category, book_file_path, metadata_file_path, cover_path,
-               metadata, sync_status, last_read_at, uploaded_at, updated_at
-        FROM books
-        WHERE library_id IN ({placeholders})
-        ORDER BY RANDOM()
-        LIMIT ?
-        "#
-    );
-
-    let mut aha_q = sqlx::query_as::<
-        _,
-        (
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            String,
-            Option<String>,
-            String,
-            String,
-        ),
-    >(&random_sql);
+    let random_sql = format!("{list_sql} ORDER BY RANDOM() LIMIT ?");
+    let mut aha_q = sqlx::query_as::<_, BookListRow>(&random_sql);
+    aha_q = aha_q.bind(&user_id);
     for id in &libs {
         aha_q = aha_q.bind(id);
     }
     aha_q = aha_q.bind(limit);
-    let aha_moment = map_rows(aha_q.fetch_all(&state.db).await?)?;
+    let aha_moment = aha_q
+        .fetch_all(&state.db)
+        .await?
+        .into_iter()
+        .map(list_row_to_card)
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(HomeResponse {
         recent,

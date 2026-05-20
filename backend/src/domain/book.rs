@@ -54,6 +54,7 @@ struct BookRow {
     cover_path: String,
     metadata: String,
     sync_status: String,
+    #[allow(dead_code)]
     last_read_at: Option<String>,
     uploaded_at: String,
     updated_at: String,
@@ -73,6 +74,24 @@ pub(crate) type BookDbRow = (
     String,
 );
 
+pub(crate) type BookListRow = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    Option<String>,
+    String,
+    String,
+    Option<f64>,
+    Option<i32>,
+    Option<String>,
+    Option<String>,
+);
+
 fn book_row_from_db(r: BookDbRow) -> BookRow {
     BookRow {
         id: r.0,
@@ -89,9 +108,24 @@ fn book_row_from_db(r: BookDbRow) -> BookRow {
     }
 }
 
+pub(crate) fn list_row_to_card(r: BookListRow) -> AppResult<BookCard> {
+    let row = book_row_from_db((r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10));
+    let up = crate::domain::user_reading_progress::UserProgressView {
+        progress: crate::domain::user_reading_progress::progress_from_columns(
+            r.11,
+            r.12,
+            r.13.clone(),
+        ),
+        updated_at: r.14.clone(),
+    };
+    row_to_card(&row, &up)
+}
+
 pub(crate) struct BookRowInternal {
     pub library_id: String,
+    #[allow(dead_code)]
     pub metadata: String,
+    #[allow(dead_code)]
     pub metadata_file_path: String,
 }
 
@@ -123,7 +157,10 @@ async fn fetch_row(db: &SqlitePool, book_id: &Uuid) -> AppResult<BookRow> {
     Ok(book_row_from_db(r))
 }
 
-fn row_to_card(row: &BookRow) -> AppResult<BookCard> {
+fn row_to_card(
+    row: &BookRow,
+    up: &crate::domain::user_reading_progress::UserProgressView,
+) -> AppResult<BookCard> {
     let meta = BookMetadata::from_json(&row.metadata)?;
     Ok(BookCard {
         id: row.id.clone(),
@@ -132,8 +169,8 @@ fn row_to_card(row: &BookRow) -> AppResult<BookCard> {
         author: meta.author,
         category: row.category.clone(),
         cover_url: format!("/api/v1/assets/covers/{}", row.id),
-        reading_percent: meta.reading_progress.as_ref().and_then(|p| p.percent),
-        last_read_at: row.last_read_at.clone(),
+        reading_percent: up.reading_percent(),
+        last_read_at: up.updated_at.clone(),
     })
 }
 
@@ -144,8 +181,11 @@ pub async fn get_book(state: &AppState, user: &AuthUser, book_id: &Uuid) -> AppR
     let perm = library::resolve_permission(&state.db, user, &library_id).await?;
     library::require_view(&perm)?;
 
-    let meta = BookMetadata::from_json(&row.metadata)?;
-    let card = row_to_card(&row)?;
+    let mut meta = BookMetadata::from_json(&row.metadata)?;
+    meta.clear_reading_progress();
+    let up = crate::domain::user_reading_progress::get(&state.db, &user.id, book_id).await?;
+    meta.reading_progress = up.progress.clone();
+    let card = row_to_card(&row, &up)?;
 
     Ok(BookDetail {
         card,
@@ -238,29 +278,38 @@ pub async fn list_books(
 
     let placeholders = accessible.iter().map(|_| "?").collect::<Vec<_>>().join(",");
     let order = match sort {
-        Some("recent") => "last_read_at DESC NULLS LAST",
-        Some("new") => "uploaded_at DESC",
-        _ => "uploaded_at DESC",
+        Some("recent") => "urp.updated_at DESC NULLS LAST",
+        Some("new") => "b.uploaded_at DESC",
+        _ => "b.uploaded_at DESC",
     };
 
     let mut query = format!(
-        "SELECT id, library_id, category, book_file_path, metadata_file_path, cover_path, metadata, sync_status, last_read_at, uploaded_at, updated_at FROM books WHERE library_id IN ({placeholders})"
+        r#"
+        SELECT b.id, b.library_id, b.category, b.book_file_path, b.metadata_file_path, b.cover_path,
+               b.metadata, b.sync_status, b.last_read_at, b.uploaded_at, b.updated_at,
+               urp.percent, urp.current_page, urp.last_position, urp.updated_at
+        FROM books b
+        LEFT JOIN user_reading_progress urp
+            ON urp.book_id = b.id AND urp.user_id = ?
+        WHERE b.library_id IN ({placeholders})
+        "#
     );
 
     if let Some(lid) = library_id {
         if !accessible.contains(&lid.to_string()) {
             return Err(AppError::Forbidden("No access to library".into()));
         }
-        query = format!("{query} AND library_id = ?");
+        query = format!("{query} AND b.library_id = ?");
     }
 
     if category.is_some() {
-        query = format!("{query} AND category = ?");
+        query = format!("{query} AND b.category = ?");
     }
 
     query = format!("{query} ORDER BY {order} LIMIT ?");
 
-    let mut q = sqlx::query_as::<_, BookDbRow>(&query);
+    let mut q = sqlx::query_as::<_, BookListRow>(&query);
+    q = q.bind(user.id.to_string());
 
     for id in &accessible {
         q = q.bind(id);
@@ -274,9 +323,7 @@ pub async fn list_books(
     q = q.bind(limit);
 
     let rows = q.fetch_all(db).await?;
-    rows.into_iter()
-        .map(|r| row_to_card(&book_row_from_db(r)))
-        .collect()
+    rows.into_iter().map(list_row_to_card).collect()
 }
 
 pub(crate) async fn accessible_library_ids(
@@ -367,6 +414,7 @@ pub async fn upload_book(
     if metadata.title.is_empty() {
         metadata.title = format!("Untitled {}", &book_id.to_string()[..8]);
     }
+    metadata.clear_reading_progress();
     metadata.normalize_fields()?;
     fs::validate_book_path_fields(&metadata.title, &metadata.author, &category)?;
 
@@ -425,6 +473,7 @@ pub async fn update_book(
     library::require_edit(&perm)?;
 
     let mut metadata = metadata;
+    metadata.clear_reading_progress();
     metadata.normalize_fields()?;
 
     let lib_root = library::get_library_root(&state.db, &library_id).await?;
@@ -524,42 +573,31 @@ pub async fn update_progress(
     book_id: &Uuid,
     progress: ReadingProgress,
 ) -> AppResult<BookDetail> {
-    let mut detail = get_book(state, user, book_id).await?;
+    let detail = get_book(state, user, book_id).await?;
     if !detail.permissions.can_edit {
         return Err(AppError::Forbidden("Edit permission required".into()));
     }
 
-    let old_progress = detail.metadata.reading_progress.clone();
-
-    detail.metadata.reading_progress = Some(progress.clone());
     let row = fetch_row(&state.db, book_id).await?;
     let library_id =
         Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
-    let now = Utc::now().to_rfc3339();
+    let old_up = crate::domain::user_reading_progress::get(&state.db, &user.id, book_id).await?;
 
-    sqlx::query(
-        "UPDATE books SET metadata = ?, last_read_at = ?, updated_at = ?, sync_status = 'pending' WHERE id = ?",
+    crate::domain::user_reading_progress::upsert(
+        &state.db,
+        &user.id,
+        book_id,
+        &library_id,
+        &progress,
     )
-    .bind(detail.metadata.to_json()?)
-    .bind(&now)
-    .bind(&now)
-    .bind(book_id.to_string())
-    .execute(&state.db)
     .await?;
-
-    let meta_path = PathBuf::from(&row.metadata_file_path);
-    if let Some(dir) = meta_path.parent() {
-        if let Some(base) = meta_path.file_stem().and_then(|s| s.to_str()) {
-            let _ = fs::write_metadata_file(dir, base, &detail.metadata).await;
-        }
-    }
 
     crate::domain::reading_history::append_if_changed(
         &state.db,
         &user.id,
         book_id,
         &library_id,
-        old_progress.as_ref(),
+        old_up.progress.as_ref(),
         &progress,
         "web",
     )
@@ -696,21 +734,25 @@ pub async fn search_books(
             }
         }
 
-        let rows: Vec<BookDbRow> = sqlx::query_as(
+        let rows: Vec<BookListRow> = sqlx::query_as(
             r#"
-            SELECT id, library_id, category, book_file_path, metadata_file_path, cover_path,
-                   metadata, sync_status, last_read_at, uploaded_at, updated_at
-            FROM books
-            WHERE library_id = ?
+            SELECT b.id, b.library_id, b.category, b.book_file_path, b.metadata_file_path, b.cover_path,
+                   b.metadata, b.sync_status, b.last_read_at, b.uploaded_at, b.updated_at,
+                   urp.percent, urp.current_page, urp.last_position, urp.updated_at
+            FROM books b
+            LEFT JOIN user_reading_progress urp
+                ON urp.book_id = b.id AND urp.user_id = ?
+            WHERE b.library_id = ?
               AND (
-                json_extract(metadata, '$.title') LIKE ?
-                OR json_extract(metadata, '$.author') LIKE ?
-                OR json_extract(metadata, '$.language') LIKE ?
-                OR json_extract(metadata, '$.isbn') LIKE ?
+                json_extract(b.metadata, '$.title') LIKE ?
+                OR json_extract(b.metadata, '$.author') LIKE ?
+                OR json_extract(b.metadata, '$.language') LIKE ?
+                OR json_extract(b.metadata, '$.isbn') LIKE ?
               )
             LIMIT ?
             "#,
         )
+        .bind(user.id.to_string())
         .bind(&lid)
         .bind(&pattern)
         .bind(&pattern)
@@ -721,7 +763,7 @@ pub async fn search_books(
         .await?;
 
         for r in rows {
-            results.push(row_to_card(&book_row_from_db(r))?);
+            results.push(list_row_to_card(r)?);
         }
     }
 
@@ -758,6 +800,7 @@ pub async fn upsert_from_fs(
     };
 
     metadata.refresh_book_file_hashes(book_file).await?;
+    metadata.clear_reading_progress();
 
     let metadata_json = metadata.to_json()?;
     let now = Utc::now().to_rfc3339();

@@ -12,6 +12,7 @@ frontend/src/api/generated/
 
 # Data & secrets
 /data/
+/backend/data/
 *.db
 *.db-shm
 *.db-wal

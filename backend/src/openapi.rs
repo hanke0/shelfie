@@ -112,7 +112,7 @@ use utoipa::{Modify, OpenApi};
     ),
     info(
         title = "Shelfie API",
-        version = "0.2.1",
+        version = "0.2.2",
         description = "图书管理 API。Metadata 写路径：PATCH 更新 DB 后异步写回 metadata.json；refresh 默认以 FS 为准。"
     )
 )]

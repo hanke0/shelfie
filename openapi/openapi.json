@@ -1648,6 +1648,13 @@
             ],
             "description": "图书文件 MD5（小写 hex），用于 KOReader document 关联"
           },
+          "file_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "图书文件 SHA-256（小写 hex）"
+          },
           "isbn": {
             "type": "string"
           },

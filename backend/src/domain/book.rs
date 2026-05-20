@@ -1,7 +1,7 @@
 use crate::domain::auth::AuthUser;
 use crate::domain::library;
 use crate::error::{AppError, AppResult};
-use crate::infra::{fs, hash, thumbnail, BookMetadata, ReadingProgress};
+use crate::infra::{fs, thumbnail, BookMetadata, ReadingProgress};
 use crate::state::AppState;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -342,7 +342,7 @@ pub async fn upload_book(
     fs::validate_book_path_fields(&metadata.title, &metadata.author, &category)?;
 
     let dir = fs::category_dir(&lib_root, &category)?;
-    metadata.file_md5 = Some(hash::md5_hex(&book_bytes));
+    metadata.set_book_bytes_hashes(&book_bytes);
 
     let base = fs::ensure_unique_base(&dir, &fs::book_base_name(&metadata.title, &metadata.author));
     let book_path = fs::write_book_file(&dir, &base, &book_ext, &book_bytes).await?;
@@ -460,6 +460,7 @@ pub async fn update_book(
     )
     .await?;
     let base = fs::file_stem(&new_book).unwrap_or_default();
+    metadata.refresh_book_file_hashes(&new_book).await?;
     fs::write_metadata_file(&target_dir, &base, &metadata).await?;
 
     let metadata_json = metadata.to_json()?;
@@ -497,6 +498,7 @@ pub async fn update_progress(
     }
 
     detail.metadata.reading_progress = Some(progress);
+    let row = fetch_row(&state.db, book_id).await?;
     let now = Utc::now().to_rfc3339();
 
     sqlx::query(
@@ -509,7 +511,6 @@ pub async fn update_progress(
     .execute(&state.db)
     .await?;
 
-    let row = fetch_row(&state.db, book_id).await?;
     let meta_path = PathBuf::from(&row.metadata_file_path);
     if let Some(dir) = meta_path.parent() {
         if let Some(base) = meta_path.file_stem().and_then(|s| s.to_str()) {
@@ -709,9 +710,7 @@ pub async fn upsert_from_fs(
         }
     };
 
-    if book_file.is_file() {
-        metadata.file_md5 = Some(hash::md5_hex_file(book_file).await?);
-    }
+    metadata.refresh_book_file_hashes(book_file).await?;
 
     let metadata_json = metadata.to_json()?;
     let now = Utc::now().to_rfc3339();
@@ -741,6 +740,12 @@ pub async fn upsert_from_fs(
     .bind(&now)
     .execute(db)
     .await?;
+
+    if let Some(dir) = metadata_path.parent() {
+        if let Some(base) = metadata_path.file_stem().and_then(|s| s.to_str()) {
+            let _ = fs::write_metadata_file(dir, base, &metadata).await;
+        }
+    }
 
     Ok(())
 }

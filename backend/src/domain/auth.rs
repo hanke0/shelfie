@@ -49,6 +49,29 @@ pub async fn authenticate_basic_credentials(
     })
 }
 
+/// Decode JWT and load the user from DB (role/username from DB, not stale claims).
+pub async fn authenticate_bearer_token(
+    db: &SqlitePool,
+    jwt_secret: &str,
+    token: &str,
+) -> AppResult<AuthUser> {
+    let claims = decode_token(jwt_secret, token)?;
+    let row: Option<(String, String)> =
+        sqlx::query_as("SELECT username, role FROM users WHERE id = ?")
+            .bind(&claims.sub)
+            .fetch_optional(db)
+            .await?;
+
+    let (username, role) =
+        row.ok_or_else(|| AppError::Unauthorized("Session invalid: user no longer exists".into()))?;
+
+    Ok(AuthUser {
+        id: Uuid::parse_str(&claims.sub).map_err(|e| AppError::Unauthorized(e.to_string()))?,
+        username,
+        role,
+    })
+}
+
 pub async fn login(
     db: &SqlitePool,
     jwt_secret: &str,

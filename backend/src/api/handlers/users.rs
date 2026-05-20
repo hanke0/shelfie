@@ -2,11 +2,12 @@ use crate::api::handlers::auth::{LoginResponse, UserInfo};
 use crate::api::middleware::auth::AuthContext;
 use crate::domain::auth;
 use crate::domain::library::{self, UserLibraryMembershipDto};
+use crate::domain::reading_history::{self, ReadingHistoryEntry};
 use crate::domain::user::{self, ChangePasswordParams, UserDto};
 use crate::error::AppResult;
 use crate::state::AppState;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     Extension, Json,
 };
 use serde::Deserialize;
@@ -16,6 +17,42 @@ use uuid::Uuid;
 #[derive(Deserialize, ToSchema)]
 pub struct UpdateUsernameRequest {
     pub username: String,
+}
+
+#[derive(Deserialize, utoipa::IntoParams)]
+pub struct ReadingHistoryQuery {
+    pub library_id: Option<String>,
+    #[param(default = 50, minimum = 1, maximum = 200)]
+    pub limit: Option<i64>,
+    #[param(default = 0, minimum = 0)]
+    pub offset: Option<i64>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/users/me/reading-history",
+    tag = "Users",
+    params(ReadingHistoryQuery),
+    responses((status = 200, body = [ReadingHistoryEntry])),
+    security(("bearer_auth" = []))
+)]
+pub async fn list_my_reading_history(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Query(q): Query<ReadingHistoryQuery>,
+) -> AppResult<Json<Vec<ReadingHistoryEntry>>> {
+    let library_id = match q.library_id {
+        None => None,
+        Some(s) => Some(
+            Uuid::parse_str(&s)
+                .map_err(|_| crate::error::AppError::BadRequest("Invalid library id".into()))?,
+        ),
+    };
+    let limit = q.limit.unwrap_or(50).clamp(1, 200);
+    let offset = q.offset.unwrap_or(0).max(0);
+    Ok(Json(
+        reading_history::list_for_user(&state.db, &user, library_id, limit, offset).await?,
+    ))
 }
 
 #[derive(Deserialize, ToSchema)]

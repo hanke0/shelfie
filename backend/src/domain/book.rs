@@ -529,8 +529,12 @@ pub async fn update_progress(
         return Err(AppError::Forbidden("Edit permission required".into()));
     }
 
-    detail.metadata.reading_progress = Some(progress);
+    let old_progress = detail.metadata.reading_progress.clone();
+
+    detail.metadata.reading_progress = Some(progress.clone());
     let row = fetch_row(&state.db, book_id).await?;
+    let library_id =
+        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
     let now = Utc::now().to_rfc3339();
 
     sqlx::query(
@@ -549,6 +553,17 @@ pub async fn update_progress(
             let _ = fs::write_metadata_file(dir, base, &detail.metadata).await;
         }
     }
+
+    crate::domain::reading_history::append_if_changed(
+        &state.db,
+        &user.id,
+        book_id,
+        &library_id,
+        old_progress.as_ref(),
+        &progress,
+        "web",
+    )
+    .await?;
 
     get_book(state, user, book_id).await
 }

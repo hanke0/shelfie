@@ -10,6 +10,7 @@ use crate::domain::library::{
     AddMemberRequest, CreateLibraryRequest, LibraryDto, LibraryMemberDto, PermissionFlags,
     UpdateMemberPermissionsRequest, UserLibraryMembershipDto,
 };
+use crate::domain::reading_history::ReadingHistoryEntry;
 use crate::domain::sync::{RefreshDiff, RefreshJobResponse};
 use crate::domain::user::UserDto;
 use crate::error::ApiErrorBody;
@@ -47,6 +48,7 @@ use utoipa::{Modify, OpenApi};
         handlers::sync::refresh_library,
         handlers::sync::get_refresh_job,
         handlers::users::list_users,
+        handlers::users::list_my_reading_history,
         handlers::users::list_user_memberships,
         handlers::users::update_username,
         handlers::users::change_password,
@@ -84,6 +86,7 @@ use utoipa::{Modify, OpenApi};
         UserLibraryMembershipDto,
         handlers::users::UpdateUsernameRequest,
         handlers::users::ChangePasswordRequest,
+        ReadingHistoryEntry,
         UserDto,
         RefreshJobResponse,
         RefreshDiff,

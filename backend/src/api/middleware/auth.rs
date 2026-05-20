@@ -8,7 +8,6 @@ use axum::{
     response::Response,
 };
 use base64::Engine;
-use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub struct AuthContext(pub AuthUser);
@@ -22,12 +21,8 @@ pub async fn resolve_user_from_authorization(
         .ok_or_else(|| AppError::Unauthorized("Missing Authorization header".into()))?;
 
     if let Some(token) = header.strip_prefix("Bearer ") {
-        let claims = auth::decode_token(&state.config.jwt_secret, token.trim())?;
-        return Ok(AuthUser {
-            id: Uuid::parse_str(&claims.sub).map_err(|e| AppError::Unauthorized(e.to_string()))?,
-            username: claims.username,
-            role: claims.role,
-        });
+        return auth::authenticate_bearer_token(&state.db, &state.config.jwt_secret, token.trim())
+            .await;
     }
 
     if let Some(encoded) = header.strip_prefix("Basic ") {

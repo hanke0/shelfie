@@ -196,7 +196,7 @@ pub async fn list_books_for_opds(
     if category.is_some() {
         query.push_str(" AND category = ?");
     }
-    query.push_str(" ORDER BY title COLLATE NOCASE LIMIT ?");
+    query.push_str(" ORDER BY json_extract(metadata, '$.title') COLLATE NOCASE LIMIT ?");
 
     let mut q = sqlx::query_as::<_, (String, String, String, String, String)>(&query);
     q = q.bind(library_id.to_string());

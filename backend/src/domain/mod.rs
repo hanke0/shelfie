@@ -8,3 +8,4 @@ pub mod opds;
 pub mod reading_history;
 pub mod sync;
 pub mod user;
+pub mod user_reading_progress;

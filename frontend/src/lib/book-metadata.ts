@@ -11,6 +11,7 @@ export function prepareMetadataForSave(
 
   return {
     ...form,
+    reading_progress: undefined,
     title: form.title?.trim() ?? "",
     author: form.author?.trim() ?? "",
     language: form.language?.trim() ?? "",

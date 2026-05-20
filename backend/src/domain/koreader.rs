@@ -2,12 +2,11 @@ use crate::domain::auth::AuthUser;
 use crate::domain::book;
 use crate::domain::library;
 use crate::error::{AppError, AppResult};
-use crate::infra::{BookMetadata, ReadingProgress};
+use crate::infra::ReadingProgress;
 use crate::state::AppState;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use std::path::PathBuf;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -368,8 +367,7 @@ async fn apply_progress_to_book(
         return Ok(());
     }
 
-    let mut metadata = BookMetadata::from_json(&row.metadata)?;
-    let old_progress = metadata.reading_progress.clone();
+    let old_up = crate::domain::user_reading_progress::get(&state.db, &user.id, book_id).await?;
     let shelfie_percent = percentage * 100.0;
     let current_page = progress_str.parse::<i32>().ok();
     let new_progress = ReadingProgress {
@@ -377,34 +375,22 @@ async fn apply_progress_to_book(
         percent: Some(shelfie_percent),
         last_position: Some(progress_str.to_string()),
     };
-    metadata.reading_progress = Some(new_progress.clone());
 
-    let now = Utc::now().to_rfc3339();
-    let metadata_json = metadata.to_json()?;
-
-    sqlx::query(
-        "UPDATE books SET metadata = ?, last_read_at = ?, updated_at = ?, sync_status = 'pending' WHERE id = ?",
+    crate::domain::user_reading_progress::upsert(
+        &state.db,
+        &user.id,
+        book_id,
+        &library_id,
+        &new_progress,
     )
-    .bind(&metadata_json)
-    .bind(&now)
-    .bind(&now)
-    .bind(book_id.to_string())
-    .execute(&state.db)
     .await?;
-
-    let meta_path = PathBuf::from(&row.metadata_file_path);
-    if let Some(dir) = meta_path.parent() {
-        if let Some(base) = meta_path.file_stem().and_then(|s| s.to_str()) {
-            let _ = crate::infra::fs::write_metadata_file(dir, base, &metadata).await;
-        }
-    }
 
     crate::domain::reading_history::append_if_changed(
         &state.db,
         &user.id,
         book_id,
         &library_id,
-        old_progress.as_ref(),
+        old_up.progress.as_ref(),
         &new_progress,
         "koreader",
     )

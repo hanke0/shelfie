@@ -97,6 +97,11 @@ impl BookMetadata {
         Ok(())
     }
 
+    /// 阅读进度按用户存 DB，不写入共享 metadata / metadata.json。
+    pub fn clear_reading_progress(&mut self) {
+        self.reading_progress = None;
+    }
+
     /// 根据内存中的图书文件内容设置 MD5 / SHA-256
     pub fn set_book_bytes_hashes(&mut self, bytes: &[u8]) {
         self.file_md5 = Some(hash::md5_hex(bytes));

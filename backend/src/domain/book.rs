@@ -1,7 +1,7 @@
 use crate::domain::auth::AuthUser;
 use crate::domain::library;
 use crate::error::{AppError, AppResult};
-use crate::infra::{fs, hash, BookMetadata, ReadingProgress};
+use crate::infra::{fs, hash, thumbnail, BookMetadata, ReadingProgress};
 use crate::state::AppState;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -549,6 +549,7 @@ pub async fn update_cover(
             tokio::fs::remove_file(&old_cover).await.ok();
         }
     }
+    thumbnail::remove_for_cover(&PathBuf::from(&row.cover_path)).await;
 
     let cover_path = fs::write_cover_file(&dir, &base, &cover_ext, &cover_bytes).await?;
     let now = Utc::now().to_rfc3339();

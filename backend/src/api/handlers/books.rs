@@ -1,7 +1,7 @@
 use crate::api::middleware::auth::AuthContext;
 use crate::domain::book::{self, BookCard, BookDetail, UpdateBookRequest, UpdateProgressRequest};
 use crate::error::{AppError, AppResult};
-use crate::infra::{fs, BookMetadata};
+use crate::infra::{fs, thumbnail, BookMetadata};
 use crate::state::AppState;
 use axum::{
     body::Body,
@@ -275,17 +275,31 @@ pub async fn download_book(
         .unwrap())
 }
 
-#[utoipa::path(get, path = "/assets/covers/{id}", tag = "Covers", params(("id" = Uuid, Path)), responses((status = 200, content_type = "image/jpeg")), security(("bearer_auth" = [])))]
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct CoverQuery {
+    /// Pass `thumb` to return a resized thumbnail.
+    #[param(example = "thumb")]
+    pub size: Option<String>,
+}
+
+#[utoipa::path(get, path = "/assets/covers/{id}", tag = "Covers", params(("id" = Uuid, Path), CoverQuery), responses((status = 200, content_type = "image/jpeg")), security(("bearer_auth" = [])))]
 pub async fn get_cover(
     State(state): State<AppState>,
     Extension(AuthContext(user)): Extension<AuthContext>,
     Path(id): Path<Uuid>,
+    Query(query): Query<CoverQuery>,
 ) -> AppResult<Response> {
     let path = book::get_cover_path(&state, &user, &id).await?;
-    let bytes = tokio::fs::read(&path).await?;
-    let mime = mime_guess::from_path(&path)
-        .first_or_octet_stream()
-        .to_string();
+    let (bytes, mime) = if query.size.as_deref() == Some("thumb") {
+        let bytes = thumbnail::read_or_create_thumbnail(&path).await?;
+        (bytes, "image/jpeg".to_string())
+    } else {
+        let bytes = tokio::fs::read(&path).await?;
+        let mime = mime_guess::from_path(&path)
+            .first_or_octet_stream()
+            .to_string();
+        (bytes, mime)
+    };
 
     Ok(Response::builder()
         .status(StatusCode::OK)

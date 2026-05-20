@@ -4,7 +4,7 @@ use crate::domain::category;
 use crate::domain::library;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use std::path::Path;
 use uuid::Uuid;
 
@@ -43,20 +43,27 @@ fn now_rfc3339() -> String {
     Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
+fn format_opds_updated(raw: &str) -> String {
+    if let Ok(dt) = DateTime::parse_from_rfc3339(raw) {
+        return dt.with_timezone(&Utc).format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    }
+    now_rfc3339()
+}
+
 fn feed_header(id: &str, title: &str, self_href: &str, kind: &str) -> String {
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog">
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:dc="http://purl.org/dc/terms/">
   <id>{id}</id>
   <title>{title}</title>
   <updated>{updated}</updated>
-  <link rel="self" href="{self_href}" type="{nav_type}"/>
+  <link rel="self" href="{self_href}" type="{feed_type}"/>
 "#,
         id = xml_escape(id),
         title = xml_escape(title),
         updated = now_rfc3339(),
         self_href = xml_escape(self_href),
-        nav_type = if kind == "acquisition" {
+        feed_type = if kind == "acquisition" {
             ACQ_TYPE
         } else {
             NAV_TYPE
@@ -64,7 +71,8 @@ fn feed_header(id: &str, title: &str, self_href: &str, kind: &str) -> String {
     )
 }
 
-fn nav_entry(title: &str, id: &str, subsection: &str, acquisition: Option<&str>) -> String {
+/// Link to another navigation catalog (e.g. a library).
+fn nav_entry_to_navigation(title: &str, id: &str, subsection: &str, acquisition: Option<&str>) -> String {
     let mut xml = format!(
         r#"  <entry>
     <title>{title}</title>
@@ -88,6 +96,25 @@ fn nav_entry(title: &str, id: &str, subsection: &str, acquisition: Option<&str>)
     }
     xml.push_str("  </entry>\n");
     xml
+}
+
+/// Link directly to an acquisition feed (e.g. 全部图书 / category). Readest and OPDS 1.2
+/// expect `subsection` with `kind=acquisition`, not `kind=navigation`.
+fn nav_entry_to_acquisition_feed(title: &str, id: &str, acquisition_href: &str) -> String {
+    format!(
+        r#"  <entry>
+    <title>{title}</title>
+    <id>{id}</id>
+    <updated>{updated}</updated>
+    <link rel="subsection" href="{href}" type="{acq_type}"/>
+  </entry>
+"#,
+        title = xml_escape(title),
+        id = xml_escape(id),
+        updated = now_rfc3339(),
+        href = xml_escape(acquisition_href),
+        acq_type = ACQ_TYPE,
+    )
 }
 
 fn mime_for_ext(ext: &str) -> &'static str {
@@ -115,6 +142,13 @@ fn acquisition_entry(book: &OpdsBookRow, base: &str) -> String {
         base,
         &format!("/api/v1/assets/covers/{}?size=thumb", book.id),
     );
+    let author = if book.author.trim().is_empty() {
+        "Unknown"
+    } else {
+        book.author.as_str()
+    };
+    let updated = format_opds_updated(&book.updated_at);
+
     let mut xml = format!(
         r#"  <entry>
     <title>{title}</title>
@@ -122,23 +156,24 @@ fn acquisition_entry(book: &OpdsBookRow, base: &str) -> String {
     <updated>{updated}</updated>
     <author><name>{author}</name></author>
     <category term="{category}" label="{category}"/>
+    <link rel="http://opds-spec.org/acquisition" href="{download}" type="{mime}"/>
+    <link rel="http://opds-spec.org/acquisition/open-access" href="{download}" type="{mime}"/>
     <link rel="http://opds-spec.org/image/thumbnail" href="{cover_thumb}" type="image/jpeg"/>
     <link rel="http://opds-spec.org/image" href="{cover}" type="image/jpeg"/>
-    <link rel="http://opds-spec.org/acquisition/open-access" href="{download}" type="{mime}"/>
 "#,
         title = xml_escape(&book.title),
         id = xml_escape(&book.id),
-        updated = xml_escape(&book.updated_at),
-        author = xml_escape(&book.author),
+        updated = xml_escape(&updated),
+        author = xml_escape(author),
         category = xml_escape(&book.category),
+        download = xml_escape(&download),
         cover = xml_escape(&cover),
         cover_thumb = xml_escape(&cover_thumb),
-        download = xml_escape(&download),
         mime = mime,
     );
     if let Some(lang) = book.language.as_deref().filter(|s| !s.is_empty()) {
         xml.push_str(&format!(
-            "    <dc:language xmlns:dc=\"http://purl.org/dc/terms/\">{}</dc:language>\n",
+            "    <dc:language>{}</dc:language>\n",
             xml_escape(lang)
         ));
     }
@@ -163,7 +198,7 @@ pub async fn root_navigation_feed(
             base,
             &format!("{}/books", lib.opds_url.trim_end_matches('/')),
         );
-        xml.push_str(&nav_entry(
+        xml.push_str(&nav_entry_to_navigation(
             &lib.name,
             &format!("urn:uuid:{}", lib.id),
             &nav,
@@ -194,22 +229,20 @@ pub async fn library_navigation_feed(
         &self_href,
         "navigation",
     );
-    xml.push_str(&nav_entry(
+    xml.push_str(&nav_entry_to_acquisition_feed(
         "全部图书",
         &format!("urn:uuid:{library_id}:all"),
         &all_books,
-        Some(&all_books),
     ));
 
     let categories = category::list_categories(state, user, library_id).await?;
     for cat in categories {
         let encoded = urlencoding::encode(&cat.name);
         let cat_href = absolute_url(base, &format!("{catalog_path}/books?category={encoded}"));
-        xml.push_str(&nav_entry(
+        xml.push_str(&nav_entry_to_acquisition_feed(
             &cat.name,
             &format!("urn:uuid:{library_id}:cat:{encoded}"),
             &cat_href,
-            Some(&cat_href),
         ));
     }
 
@@ -234,6 +267,7 @@ pub async fn library_acquisition_feed(
         self_path.push_str(&format!("?category={}", urlencoding::encode(cat)));
     }
     let self_href = absolute_url(base, &self_path);
+    let up_href = absolute_url(base, &catalog_path);
 
     let title = match category {
         Some(c) => format!("{name} · {c}"),
@@ -248,6 +282,13 @@ pub async fn library_acquisition_feed(
         &self_href,
         "acquisition",
     );
+    xml.push_str(&format!(
+        r#"  <link rel="up" href="{up_href}" type="{nav_type}"/>
+  <link rel="start" href="{up_href}" type="{nav_type}"/>
+"#,
+        up_href = xml_escape(&up_href),
+        nav_type = NAV_TYPE,
+    ));
     for book in &books {
         xml.push_str(&acquisition_entry(book, base));
     }
@@ -257,4 +298,20 @@ pub async fn library_acquisition_feed(
 
 pub fn parse_library_id(id: &str) -> AppResult<Uuid> {
     Uuid::parse_str(id).map_err(|_| AppError::BadRequest("Invalid library id".into()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn acquisition_nav_entry_uses_acquisition_kind() {
+        let xml = nav_entry_to_acquisition_feed(
+            "全部图书",
+            "urn:uuid:test:all",
+            "http://example.com/books",
+        );
+        assert!(xml.contains("kind=acquisition"));
+        assert!(!xml.contains("kind=navigation"));
+    }
 }

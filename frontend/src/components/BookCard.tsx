@@ -11,7 +11,7 @@ export function BookCard({ book }: { book: BookCardType }) {
   useEffect(() => {
     let url: string | null = null;
     let cancelled = false;
-    fetchCoverBlob(book.id)
+    fetchCoverBlob(book.id, { thumbnail: true })
       .then((blobUrl) => {
         if (!cancelled) {
           url = blobUrl;

@@ -24,6 +24,19 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Pass `thumb` to return a resized thumbnail.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "example": "thumb"
           }
         ],
         "responses": {

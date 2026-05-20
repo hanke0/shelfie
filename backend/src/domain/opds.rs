@@ -111,6 +111,10 @@ fn acquisition_entry(book: &OpdsBookRow, base: &str) -> String {
     let mime = mime_for_ext(&ext);
     let download = absolute_url(base, &format!("/api/v1/books/{}/download", book.id));
     let cover = absolute_url(base, &format!("/api/v1/assets/covers/{}", book.id));
+    let cover_thumb = absolute_url(
+        base,
+        &format!("/api/v1/assets/covers/{}?size=thumb", book.id),
+    );
     let mut xml = format!(
         r#"  <entry>
     <title>{title}</title>
@@ -118,7 +122,8 @@ fn acquisition_entry(book: &OpdsBookRow, base: &str) -> String {
     <updated>{updated}</updated>
     <author><name>{author}</name></author>
     <category term="{category}" label="{category}"/>
-    <link rel="http://opds-spec.org/image/thumbnail" href="{cover}" type="image/jpeg"/>
+    <link rel="http://opds-spec.org/image/thumbnail" href="{cover_thumb}" type="image/jpeg"/>
+    <link rel="http://opds-spec.org/image" href="{cover}" type="image/jpeg"/>
     <link rel="http://opds-spec.org/acquisition/open-access" href="{download}" type="{mime}"/>
 "#,
         title = xml_escape(&book.title),
@@ -127,6 +132,7 @@ fn acquisition_entry(book: &OpdsBookRow, base: &str) -> String {
         author = xml_escape(&book.author),
         category = xml_escape(&book.category),
         cover = xml_escape(&cover),
+        cover_thumb = xml_escape(&cover_thumb),
         download = xml_escape(&download),
         mime = mime,
     );

@@ -1,6 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::infra::metadata::BookMetadata;
 use crate::infra::safe_name;
+use super::thumbnail;
 use std::path::{Path, PathBuf};
 
 const BOOK_EXTENSIONS: &[&str] = &["pdf", "epub", "mobi"];
@@ -159,6 +160,9 @@ pub async fn remove_book_files(book: &Path, metadata: &Path, cover: &Path) -> Ap
         if path.is_file() {
             tokio::fs::remove_file(path).await.ok();
         }
+    }
+    if !cover.as_os_str().is_empty() {
+        thumbnail::remove_for_cover(cover).await;
     }
     Ok(())
 }

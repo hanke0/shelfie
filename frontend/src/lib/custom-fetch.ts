@@ -85,9 +85,13 @@ export const customFetch = async <T>(
   return response as unknown as T;
 };
 
-export async function fetchCoverBlob(bookId: string): Promise<string> {
+export async function fetchCoverBlob(
+  bookId: string,
+  options?: { thumbnail?: boolean },
+): Promise<string> {
   const token = getToken();
-  const res = await fetch(`${API_BASE}/assets/covers/${bookId}`, {
+  const qs = options?.thumbnail ? "?size=thumb" : "";
+  const res = await fetch(`${API_BASE}/assets/covers/${bookId}${qs}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("Failed to load cover");

@@ -83,11 +83,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let cover = dir.join("sample.png");
         let img = ImageBuffer::from_fn(800, 1200, |x, y| {
-            Rgb([
-                (x % 255) as u8,
-                (y % 255) as u8,
-                ((x + y) % 255) as u8,
-            ])
+            Rgb([(x % 255) as u8, (y % 255) as u8, ((x + y) % 255) as u8])
         });
         img.save(&cover).unwrap();
 

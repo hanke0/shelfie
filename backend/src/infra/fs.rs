@@ -1,7 +1,7 @@
+use super::thumbnail;
 use crate::error::{AppError, AppResult};
 use crate::infra::metadata::BookMetadata;
 use crate::infra::safe_name;
-use super::thumbnail;
 use std::path::{Path, PathBuf};
 
 const BOOK_EXTENSIONS: &[&str] = &["pdf", "epub", "mobi"];

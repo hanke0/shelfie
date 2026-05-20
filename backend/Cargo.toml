@@ -38,6 +38,7 @@ md5 = "0.7"
 base64 = "0.22"
 urlencoding = "2"
 rust-embed = { version = "8", optional = true }
+regex = { version = "1", default-features = false, features = ["std", "unicode-gencat"] }
 
 [[bin]]
 name = "shelfie-backend"

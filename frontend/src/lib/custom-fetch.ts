@@ -93,6 +93,7 @@ export async function fetchCoverBlob(
   const qs = options?.thumbnail ? "?size=thumb" : "";
   const res = await fetch(`${API_BASE}/assets/covers/${bookId}${qs}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: "default",
   });
   if (!res.ok) throw new Error("Failed to load cover");
   const blob = await res.blob();

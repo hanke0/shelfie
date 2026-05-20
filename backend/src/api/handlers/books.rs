@@ -1,12 +1,12 @@
 use crate::api::middleware::auth::AuthContext;
 use crate::domain::book::{self, BookCard, BookDetail, UpdateBookRequest, UpdateProgressRequest};
 use crate::error::{AppError, AppResult};
-use crate::infra::{fs, thumbnail, BookMetadata};
+use crate::infra::{fs, http_cache, thumbnail, BookMetadata};
 use crate::state::AppState;
 use axum::{
     body::Body,
     extract::{multipart::Multipart, Path, Query, State},
-    http::{header, StatusCode},
+    http::{header, HeaderMap, StatusCode},
     response::Response,
     Extension, Json,
 };
@@ -288,22 +288,37 @@ pub async fn get_cover(
     Extension(AuthContext(user)): Extension<AuthContext>,
     Path(id): Path<Uuid>,
     Query(query): Query<CoverQuery>,
+    headers: HeaderMap,
 ) -> AppResult<Response> {
     let path = book::get_cover_path(&state, &user, &id).await?;
-    let (bytes, mime) = if query.size.as_deref() == Some("thumb") {
-        let bytes = thumbnail::read_or_create_thumbnail(&path).await?;
-        (bytes, "image/jpeg".to_string())
+    let thumb = query.size.as_deref() == Some("thumb");
+    let mime = if thumb {
+        "image/jpeg".to_string()
     } else {
-        let bytes = tokio::fs::read(&path).await?;
-        let mime = mime_guess::from_path(&path)
+        mime_guess::from_path(&path)
             .first_or_octet_stream()
-            .to_string();
-        (bytes, mime)
+            .to_string()
+    };
+
+    let etag = http_cache::cover_etag(&path, thumb).await?;
+    if http_cache::if_none_match(&headers, &etag) {
+        return Ok(http_cache::not_modified_response(&etag, &mime));
+    }
+
+    let bytes = if thumb {
+        thumbnail::read_or_create_thumbnail(&path).await?
+    } else {
+        tokio::fs::read(&path).await?
     };
 
     Ok(Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, mime)
+        .header(
+            header::CACHE_CONTROL,
+            http_cache::cover_cache_control_value(),
+        )
+        .header(header::ETAG, etag)
         .body(Body::from(bytes))
         .unwrap())
 }

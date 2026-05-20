@@ -88,3 +88,15 @@ npm run codegen
 
 - `cargo test` — 后端单元/集成测试
 - 前端 vitest 占位，后续补充
+
+## Lint（改完代码必做）
+
+Agent 完成代码修改后须跑 lint 并修到通过，再收尾：
+
+```bash
+cargo fmt --all
+cargo clippy --workspace -- -D warnings
+npm run typecheck
+```
+
+详见 `.cursor/rules/lint-after-changes.mdc`。

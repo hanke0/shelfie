@@ -1,5 +1,6 @@
 use crate::error::{AppError, AppResult};
 use std::path::Path;
+use std::sync::LazyLock;
 
 const MAX_LIBRARY_NAME_LEN: usize = 80;
 const MAX_BOOK_FIELD_LEN: usize = 120;
@@ -11,36 +12,24 @@ const WINDOWS_RESERVED: &[&str] = &[
 ];
 
 /// 与 `[\p{L}\p{N}\s\-_.,()（）【】《》「」『』·':;+&]` 等价的字符级校验（支持 i18n）
+static SEGMENT_CHAR_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^[\p{L}\p{N}\-_.,()（）【】《》「」『』·':;+&]$")
+        .expect("segment char regex")
+});
+
+/// Windows / POSIX 路径中非法、且不在注释字符类内的符号（`:` `;` 等标点由 SEGMENT_CHAR_RE 处理）
+const FORBIDDEN_PATH_CHARS: &str = "/\\*?\"<>|";
+
 fn is_allowed_segment_char(c: char) -> bool {
-    if c.is_control() || "/\\:*?\"<>|".contains(c) {
+    if c.is_control() || FORBIDDEN_PATH_CHARS.contains(c) {
         return false;
     }
-    c.is_alphanumeric()
-        || c.is_whitespace()
-        || matches!(
-            c,
-            '-' | '_'
-                | '.'
-                | ','
-                | '('
-                | ')'
-                | '（'
-                | '）'
-                | '【'
-                | '】'
-                | '《'
-                | '》'
-                | '「'
-                | '」'
-                | '『'
-                | '』'
-                | '·'
-                | '\''
-                | ':'
-                | ';'
-                | '+'
-                | '&'
-        )
+    if c.is_whitespace() {
+        return true;
+    }
+    let mut buf = [0u8; 4];
+    let s = c.encode_utf8(&mut buf);
+    SEGMENT_CHAR_RE.is_match(s)
 }
 
 fn is_valid_slug_char(c: char) -> bool {
@@ -117,7 +106,7 @@ pub fn sanitize_path_segment(s: &str) -> String {
     let mut prev_underscore = false;
 
     for c in s.trim().chars() {
-        if c.is_control() || "/\\:*?\"<>|".contains(c) {
+        if c.is_control() || FORBIDDEN_PATH_CHARS.contains(c) {
             continue;
         }
         if c.is_whitespace() {
@@ -196,5 +185,19 @@ mod tests {
     fn sanitize_preserves_cjk() {
         assert_eq!(sanitize_path_segment("三体"), "三体");
         assert_eq!(sanitize_path_segment("Hello World"), "Hello_World");
+    }
+
+    #[test]
+    fn allows_punctuation_from_comment_regex() {
+        assert!(validate_book_title("三体（全集）").is_ok());
+        assert!(validate_book_title("A&B: Vol.1").is_ok());
+    }
+
+    #[test]
+    fn rejects_chars_outside_comment_regex() {
+        // Alphabetic (Lo) but not \p{L} in this property set — old is_alphanumeric() allowed it
+        assert!(validate_book_title("ः").is_err());
+        assert!(validate_book_title("hello@world").is_err());
+        assert!(validate_book_title("三体—续").is_err());
     }
 }

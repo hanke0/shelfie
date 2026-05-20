@@ -478,7 +478,10 @@ mod tests {
             "Hello_World_Author"
         );
         assert_eq!(book_base_name("A/B", "C:D"), "A_B_C_D");
-        assert_eq!(book_base_name("三体—续", "作者@example"), "三体—续_作者@example");
+        assert_eq!(
+            book_base_name("三体—续", "作者@example"),
+            "三体—续_作者@example"
+        );
     }
 
     #[test]

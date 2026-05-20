@@ -104,7 +104,10 @@ impl BookMetadata {
     }
 
     /// 根据磁盘上的电子书文件刷新 MD5 / SHA-256
-    pub async fn refresh_book_file_hashes(&mut self, book_path: &Path) -> crate::error::AppResult<()> {
+    pub async fn refresh_book_file_hashes(
+        &mut self,
+        book_path: &Path,
+    ) -> crate::error::AppResult<()> {
         if book_path.is_file() {
             self.file_md5 = Some(hash::md5_hex_file(book_path).await?);
             self.file_sha256 = Some(hash::sha256_hex_file(book_path).await?);

@@ -45,7 +45,10 @@ fn now_rfc3339() -> String {
 
 fn format_opds_updated(raw: &str) -> String {
     if let Ok(dt) = DateTime::parse_from_rfc3339(raw) {
-        return dt.with_timezone(&Utc).format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        return dt
+            .with_timezone(&Utc)
+            .format("%Y-%m-%dT%H:%M:%SZ")
+            .to_string();
     }
     now_rfc3339()
 }
@@ -72,7 +75,12 @@ fn feed_header(id: &str, title: &str, self_href: &str, kind: &str) -> String {
 }
 
 /// Link to another navigation catalog (e.g. a library).
-fn nav_entry_to_navigation(title: &str, id: &str, subsection: &str, acquisition: Option<&str>) -> String {
+fn nav_entry_to_navigation(
+    title: &str,
+    id: &str,
+    subsection: &str,
+    acquisition: Option<&str>,
+) -> String {
     let mut xml = format!(
         r#"  <entry>
     <title>{title}</title>

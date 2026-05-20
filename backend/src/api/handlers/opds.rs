@@ -20,12 +20,7 @@ fn opds_response(xml: String, kind: &str) -> Response {
         "acquisition" => "application/atom+xml;profile=opds-catalog;kind=acquisition;charset=utf-8",
         _ => "application/atom+xml;profile=opds-catalog;kind=navigation;charset=utf-8",
     };
-    (
-        StatusCode::OK,
-        [(header::CONTENT_TYPE, content_type)],
-        xml,
-    )
-        .into_response()
+    (StatusCode::OK, [(header::CONTENT_TYPE, content_type)], xml).into_response()
 }
 
 fn request_base_url(state: &AppState, headers: &HeaderMap) -> String {

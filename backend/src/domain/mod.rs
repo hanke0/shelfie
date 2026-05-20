@@ -5,5 +5,6 @@ pub mod home;
 pub mod koreader;
 pub mod library;
 pub mod opds;
+pub mod reading_history;
 pub mod sync;
 pub mod user;

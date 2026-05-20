@@ -369,13 +369,15 @@ async fn apply_progress_to_book(
     }
 
     let mut metadata = BookMetadata::from_json(&row.metadata)?;
+    let old_progress = metadata.reading_progress.clone();
     let shelfie_percent = percentage * 100.0;
     let current_page = progress_str.parse::<i32>().ok();
-    metadata.reading_progress = Some(ReadingProgress {
+    let new_progress = ReadingProgress {
         current_page,
         percent: Some(shelfie_percent),
         last_position: Some(progress_str.to_string()),
-    });
+    };
+    metadata.reading_progress = Some(new_progress.clone());
 
     let now = Utc::now().to_rfc3339();
     let metadata_json = metadata.to_json()?;
@@ -396,6 +398,17 @@ async fn apply_progress_to_book(
             let _ = crate::infra::fs::write_metadata_file(dir, base, &metadata).await;
         }
     }
+
+    crate::domain::reading_history::append_if_changed(
+        &state.db,
+        &user.id,
+        book_id,
+        &library_id,
+        old_progress.as_ref(),
+        &new_progress,
+        "koreader",
+    )
+    .await?;
 
     Ok(())
 }

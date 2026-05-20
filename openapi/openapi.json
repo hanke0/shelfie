@@ -1347,6 +1347,76 @@
         }
       }
     },
+    "/users/me/reading-history": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "list_my_reading_history",
+        "parameters": [
+          {
+            "name": "library_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64",
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64",
+              "default": 0,
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReadingHistoryEntry"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/users/{user_id}": {
       "delete": {
         "tags": [
@@ -2099,6 +2169,63 @@
           },
           "can_view": {
             "type": "boolean"
+          }
+        }
+      },
+      "ReadingHistoryEntry": {
+        "type": "object",
+        "required": [
+          "id",
+          "book_id",
+          "book_title",
+          "book_author",
+          "library_id",
+          "library_name",
+          "cover_url",
+          "source",
+          "recorded_at"
+        ],
+        "properties": {
+          "book_author": {
+            "type": "string"
+          },
+          "book_id": {
+            "type": "string"
+          },
+          "book_title": {
+            "type": "string"
+          },
+          "cover_url": {
+            "type": "string"
+          },
+          "current_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "id": {
+            "type": "string"
+          },
+          "library_id": {
+            "type": "string"
+          },
+          "library_name": {
+            "type": "string"
+          },
+          "percent": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "recorded_at": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
           }
         }
       },

@@ -11,7 +11,8 @@ use axum::{
     Router,
 };
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::TraceLayer;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnFailure, TraceLayer};
+use tracing::Level;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -114,6 +115,10 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/users", get(handlers::users::list_users))
         .route(
+            "/users/me/reading-history",
+            get(handlers::users::list_my_reading_history),
+        )
+        .route(
             "/users/{user_id}/memberships",
             get(handlers::users::list_user_memberships),
         )
@@ -156,7 +161,15 @@ pub fn build_router(state: AppState) -> Router {
                 .allow_methods(Any)
                 .allow_headers(Any),
         )
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(
+                    DefaultMakeSpan::new()
+                        .level(Level::INFO)
+                        .include_headers(false),
+                )
+                .on_failure(DefaultOnFailure::new().level(Level::ERROR)),
+        )
         .with_state(state);
 
     #[cfg(feature = "embed-frontend")]

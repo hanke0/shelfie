@@ -103,6 +103,14 @@ export function UserMenu({ className }: UserMenuProps) {
             >
               从 Calibre 导入
             </button>
+            <Link
+              to="/reading-history"
+              className={styles.item}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              阅读记录
+            </Link>
             <button
               type="button"
               className={styles.item}

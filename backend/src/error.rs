@@ -77,9 +77,29 @@ impl AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let status = self.status();
+        let code = self.code();
+        let message = self.to_string();
+
+        if status.is_server_error() {
+            tracing::error!(
+                status = %status.as_u16(),
+                error_code = code,
+                message = %message,
+                err = ?self,
+                "internal server error"
+            );
+        } else if status.is_client_error() {
+            tracing::warn!(
+                status = %status.as_u16(),
+                error_code = code,
+                message = %message,
+                "client error"
+            );
+        }
+
         let body = ApiErrorBody {
-            code: self.code().to_string(),
-            message: self.to_string(),
+            code: code.to_string(),
+            message,
         };
         if matches!(&self, AppError::Unauthorized(_)) {
             return (

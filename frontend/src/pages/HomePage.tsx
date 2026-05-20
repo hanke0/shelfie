@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetHome, getGetHomeQueryKey } from "@/api/generated/home/home";
 import { useLibrary } from "@/context/LibraryContext";
 import { Header } from "@/components/Header";
 import { BookSection } from "@/components/BookSection";
 import { UploadModal } from "@/components/UploadModal";
+import { extractBookMetadataLocal } from "@/lib/extract-book-metadata";
+import {
+  isAcceptedBookFile,
+  metadataFormFromExtract,
+  type UploadDraft,
+} from "@/lib/book-upload-state";
+import { useApiAction } from "@/hooks/useApiAction";
+
+const BOOK_ACCEPT = ".pdf,.epub,.mobi";
 
 export function HomePage() {
   const [search, setSearch] = useState("");
-  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadDraft, setUploadDraft] = useState<UploadDraft | null>(null);
   const [ahaSeed, setAhaSeed] = useState<number | undefined>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
+  const run = useApiAction();
 
   const { libraryId } = useLibrary();
   const { data, isLoading, error } = useGetHome(
@@ -25,12 +36,68 @@ export function HomePage() {
     });
   };
 
+  const beginUpload = useCallback(
+    async (file: File) => {
+      if (!libraryId) {
+        await run(async () => {
+          throw new Error("请先在顶栏选择图书馆");
+        });
+        return;
+      }
+      if (!isAcceptedBookFile(file)) {
+        await run(async () => {
+          throw new Error("仅支持 PDF、EPUB、MOBI 格式");
+        });
+        return;
+      }
+
+      setUploadDraft({ phase: "extracting", file });
+
+      try {
+        const extracted = await extractBookMetadataLocal(file);
+        setUploadDraft({
+          phase: "form",
+          file,
+          metadata: metadataFormFromExtract(extracted.metadata, file),
+          cover: extracted.cover,
+        });
+      } catch {
+        setUploadDraft({
+          phase: "form",
+          file,
+          metadata: metadataFormFromExtract({}, file),
+          extractError: "元数据识别失败，请手动填写",
+        });
+      }
+    },
+    [libraryId, run],
+  );
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) void beginUpload(file);
+  };
+
   return (
     <div className="app-shell">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={BOOK_ACCEPT}
+        hidden
+        onChange={handleFileInputChange}
+      />
+
       <Header
         search={search}
         onSearchChange={setSearch}
-        onUploadClick={() => setUploadOpen(true)}
+        onUploadClick={handleUploadClick}
+        onUploadDrop={(file) => void beginUpload(file)}
       />
 
       {!libraryId && <p>请先在顶栏选择图书馆</p>}
@@ -61,7 +128,7 @@ export function HomePage() {
         </>
       )}
 
-      <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} />
+      <UploadModal draft={uploadDraft} onClose={() => setUploadDraft(null)} />
     </div>
   );
 }

@@ -35,6 +35,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png"]
 futures-util = "0.3"
 http-body-util = "0.1"
 md5 = "0.7"
+sha2 = "0.10"
 base64 = "0.22"
 urlencoding = "2"
 rust-embed = { version = "8", optional = true }

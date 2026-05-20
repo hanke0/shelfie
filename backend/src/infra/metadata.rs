@@ -1,4 +1,6 @@
+use crate::infra::hash;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
@@ -44,6 +46,9 @@ pub struct BookMetadata {
     /// 图书文件 MD5（小写 hex），用于 KOReader document 关联
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_md5: Option<String>,
+    /// 图书文件 SHA-256（小写 hex）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_sha256: Option<String>,
 }
 
 impl BookMetadata {
@@ -91,6 +96,21 @@ impl BookMetadata {
         self.rating = Self::normalize_rating(self.rating)?;
         Ok(())
     }
+
+    /// 根据内存中的图书文件内容设置 MD5 / SHA-256
+    pub fn set_book_bytes_hashes(&mut self, bytes: &[u8]) {
+        self.file_md5 = Some(hash::md5_hex(bytes));
+        self.file_sha256 = Some(hash::sha256_hex(bytes));
+    }
+
+    /// 根据磁盘上的电子书文件刷新 MD5 / SHA-256
+    pub async fn refresh_book_file_hashes(&mut self, book_path: &Path) -> crate::error::AppResult<()> {
+        if book_path.is_file() {
+            self.file_md5 = Some(hash::md5_hex_file(book_path).await?);
+            self.file_sha256 = Some(hash::sha256_hex_file(book_path).await?);
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -113,6 +133,19 @@ mod tests {
         let parsed = BookMetadata::from_json(&json).unwrap();
         assert_eq!(parsed.title, "测试");
         assert_eq!(parsed.reading_progress.unwrap().current_page, Some(10));
+    }
+
+    #[test]
+    fn file_sha256_serializes() {
+        let meta = BookMetadata {
+            title: "T".into(),
+            file_sha256: Some("abc".into()),
+            ..Default::default()
+        };
+        let json = meta.to_json().unwrap();
+        assert!(json.contains("file_sha256"));
+        assert!(!json.contains("cover_sha256"));
+        assert!(!json.contains("metadata_sha256"));
     }
 
     #[test]

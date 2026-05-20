@@ -192,17 +192,21 @@ pub async fn root_navigation_feed(
     let libraries = library::list_libraries(&state.db, user).await?;
     let self_href = absolute_url(base, "/api/v1/opds");
     let mut xml = feed_header("urn:shelfie:opds:root", "Shelfie", &self_href, "navigation");
+    xml.push_str(&format!(
+        r#"  <link rel="start" href="{self_href}" type="{nav_type}"/>
+"#,
+        self_href = xml_escape(&self_href),
+        nav_type = NAV_TYPE,
+    ));
     for lib in libraries {
         let nav = absolute_url(base, &lib.opds_url);
-        let acq = absolute_url(
-            base,
-            &format!("{}/books", lib.opds_url.trim_end_matches('/')),
-        );
+        // Do not add acquisition links here: foliate-js / Readest treat any entry with
+        // opds-spec.org/acquisition as a publication, not a navigation folder.
         xml.push_str(&nav_entry_to_navigation(
             &lib.name,
             &format!("urn:uuid:{}", lib.id),
             &nav,
-            Some(&acq),
+            None,
         ));
     }
     xml.push_str("</feed>\n");
@@ -313,5 +317,17 @@ mod tests {
         );
         assert!(xml.contains("kind=acquisition"));
         assert!(!xml.contains("kind=navigation"));
+    }
+
+    #[test]
+    fn root_library_entry_is_navigation_only() {
+        let xml = nav_entry_to_navigation(
+            "默认",
+            "urn:uuid:test",
+            "http://example.com/api/v1/opds/libraries/abc",
+            None,
+        );
+        assert!(xml.contains("rel=\"subsection\""));
+        assert!(!xml.contains("opds-spec.org/acquisition"));
     }
 }

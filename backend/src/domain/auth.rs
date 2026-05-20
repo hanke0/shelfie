@@ -23,12 +23,12 @@ pub struct AuthUser {
     pub role: String,
 }
 
-pub async fn login(
+/// Verify username/password and return the user (no JWT, no side effects).
+pub async fn authenticate_basic_credentials(
     db: &SqlitePool,
-    jwt_secret: &str,
     username: &str,
     password: &str,
-) -> AppResult<(String, AuthUser)> {
+) -> AppResult<AuthUser> {
     let row: Option<(String, String, String)> =
         sqlx::query_as("SELECT id, password_hash, role FROM users WHERE username = ?")
             .bind(username)
@@ -42,18 +42,27 @@ pub async fn login(
         return Err(AppError::Unauthorized("Invalid credentials".into()));
     }
 
-    let password_md5 = md5_hex(password.as_bytes());
-    sqlx::query("UPDATE users SET password_md5 = ? WHERE id = ?")
-        .bind(&password_md5)
-        .bind(&id)
-        .execute(db)
-        .await?;
-
-    let user = AuthUser {
+    Ok(AuthUser {
         id: Uuid::parse_str(&id).map_err(|e| AppError::Internal(e.to_string()))?,
         username: username.to_string(),
         role,
-    };
+    })
+}
+
+pub async fn login(
+    db: &SqlitePool,
+    jwt_secret: &str,
+    username: &str,
+    password: &str,
+) -> AppResult<(String, AuthUser)> {
+    let user = authenticate_basic_credentials(db, username, password).await?;
+
+    let password_md5 = md5_hex(password.as_bytes());
+    sqlx::query("UPDATE users SET password_md5 = ? WHERE id = ?")
+        .bind(&password_md5)
+        .bind(user.id.to_string())
+        .execute(db)
+        .await?;
 
     let token = issue_token(jwt_secret, &user)?;
     Ok((token, user))

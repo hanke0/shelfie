@@ -47,9 +47,7 @@ async fn authenticate_opds_request(
         let (username, password) = creds
             .split_once(':')
             .ok_or_else(|| AppError::Unauthorized("Invalid Basic credentials".into()))?;
-        let (_, user) =
-            auth::login(&state.db, &state.config.jwt_secret, username, password).await?;
-        return Ok(user);
+        return auth::authenticate_basic_credentials(&state.db, username, password).await;
     }
 
     Err(AppError::Unauthorized(

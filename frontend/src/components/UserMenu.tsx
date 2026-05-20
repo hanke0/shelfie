@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearAuth, useStoredUser } from "@/lib/auth";
 import { AccountSettingsModal } from "@/components/AccountSettingsModal";
+import { CalibreImportModal } from "@/components/CalibreImportModal";
 import styles from "./UserMenu.module.css";
 
 interface UserMenuProps {
@@ -13,6 +14,7 @@ export function UserMenu({ className }: UserMenuProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [calibreOpen, setCalibreOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -96,6 +98,17 @@ export function UserMenu({ className }: UserMenuProps) {
               role="menuitem"
               onClick={() => {
                 setOpen(false);
+                setCalibreOpen(true);
+              }}
+            >
+              从 Calibre 导入
+            </button>
+            <button
+              type="button"
+              className={styles.item}
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
                 setSettingsOpen(true);
               }}
             >
@@ -109,6 +122,7 @@ export function UserMenu({ className }: UserMenuProps) {
       </div>
 
       <AccountSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <CalibreImportModal open={calibreOpen} onClose={() => setCalibreOpen(false)} />
     </>
   );
 }

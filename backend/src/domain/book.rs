@@ -307,6 +307,35 @@ pub struct UploadBookInput {
     pub metadata: BookMetadata,
 }
 
+async fn ensure_unique_file_sha256_in_library(
+    db: &SqlitePool,
+    library_id: &Uuid,
+    file_sha256: &str,
+) -> AppResult<()> {
+    let sha = file_sha256.trim().to_lowercase();
+    if sha.is_empty() {
+        return Ok(());
+    }
+    let existing: Option<(String,)> = sqlx::query_as(
+        r#"
+        SELECT id FROM books
+        WHERE library_id = ?
+          AND lower(json_extract(metadata, '$.file_sha256')) = ?
+        LIMIT 1
+        "#,
+    )
+    .bind(library_id.to_string())
+    .bind(&sha)
+    .fetch_optional(db)
+    .await?;
+    if existing.is_some() {
+        return Err(AppError::BadRequest(
+            "该电子书已在本图书馆中存在，请勿重复上传".into(),
+        ));
+    }
+    Ok(())
+}
+
 pub async fn upload_book(
     state: &AppState,
     user: &AuthUser,
@@ -341,9 +370,12 @@ pub async fn upload_book(
     metadata.normalize_fields()?;
     fs::validate_book_path_fields(&metadata.title, &metadata.author, &category)?;
 
-    let dir = fs::category_dir(&lib_root, &category)?;
     metadata.set_book_bytes_hashes(&book_bytes);
+    if let Some(ref sha) = metadata.file_sha256 {
+        ensure_unique_file_sha256_in_library(&state.db, &library_id, sha).await?;
+    }
 
+    let dir = fs::category_dir(&lib_root, &category)?;
     let base = fs::ensure_unique_base(&dir, &fs::book_base_name(&metadata.title, &metadata.author));
     let book_path = fs::write_book_file(&dir, &base, &book_ext, &book_bytes).await?;
     let cover_path = match (cover_bytes.as_ref(), cover_ext.as_ref()) {

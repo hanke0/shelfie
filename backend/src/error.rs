@@ -1,5 +1,5 @@
 use axum::{
-    http::StatusCode,
+    http::{header::WWW_AUTHENTICATE, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -41,6 +41,9 @@ pub struct ApiErrorBody {
     pub message: String,
 }
 
+/// Prompts OPDS / HTTP Basic clients to show a login dialog.
+pub const WWW_AUTH_BASIC_REALM: &str = r#"Basic realm="Authentication Required""#;
+
 impl AppError {
     fn status(&self) -> StatusCode {
         match self {
@@ -78,6 +81,14 @@ impl IntoResponse for AppError {
             code: self.code().to_string(),
             message: self.to_string(),
         };
+        if matches!(&self, AppError::Unauthorized(_)) {
+            return (
+                status,
+                [(WWW_AUTHENTICATE, WWW_AUTH_BASIC_REALM)],
+                Json(body),
+            )
+                .into_response();
+        }
         (status, Json(body)).into_response()
     }
 }

@@ -8,9 +8,10 @@ interface HeaderProps {
   search: string;
   onSearchChange: (v: string) => void;
   onUploadClick: () => void;
+  onUploadDrop?: (file: File) => void;
 }
 
-export function Header({ search, onSearchChange, onUploadClick }: HeaderProps) {
+export function Header({ search, onSearchChange, onUploadClick, onUploadDrop }: HeaderProps) {
   const navigate = useNavigate();
   const { libraryId } = useLibrary();
 
@@ -46,7 +47,23 @@ export function Header({ search, onSearchChange, onUploadClick }: HeaderProps) {
       </div>
 
       <div className={styles.actions}>
-        <button type="button" className={`btn ${styles.headerBtn}`} onClick={onUploadClick}>
+        <button
+          type="button"
+          className={`btn ${styles.headerBtn} ${styles.uploadBtn}`}
+          onClick={onUploadClick}
+          onDragOver={(e) => {
+            if (!onUploadDrop) return;
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDrop={(e) => {
+            if (!onUploadDrop) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const file = e.dataTransfer.files[0];
+            if (file) onUploadDrop(file);
+          }}
+        >
           上传
         </button>
         <UserMenu className={styles.headerControl} />

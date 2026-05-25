@@ -225,6 +225,41 @@
         ]
       }
     },
+    "/books/batch-move-category": {
+      "post": {
+        "tags": [
+          "Books"
+        ],
+        "operationId": "batch_move_category",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchMoveCategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchMoveCategoryResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/books/{id}": {
       "get": {
         "tags": [
@@ -1617,6 +1652,65 @@
           }
         }
       },
+      "BatchMoveCategoryFailure": {
+        "type": "object",
+        "required": [
+          "book_id",
+          "message"
+        ],
+        "properties": {
+          "book_id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "BatchMoveCategoryRequest": {
+        "type": "object",
+        "required": [
+          "library_id",
+          "book_ids",
+          "category"
+        ],
+        "properties": {
+          "book_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "category": {
+            "type": "string"
+          },
+          "library_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BatchMoveCategoryResponse": {
+        "type": "object",
+        "required": [
+          "moved",
+          "failures"
+        ],
+        "properties": {
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchMoveCategoryFailure"
+            }
+          },
+          "moved": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "BookCard": {
         "type": "object",
         "required": [
@@ -1785,9 +1879,15 @@
       "CategoryDto": {
         "type": "object",
         "required": [
-          "name"
+          "name",
+          "book_count"
         ],
         "properties": {
+          "book_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "该分类下图书数量（数据库索引）"
+          },
           "name": {
             "type": "string"
           }
@@ -1875,7 +1975,7 @@
             "items": {
               "$ref": "#/components/schemas/BookCard"
             },
-            "description": "最近阅读：按 last_read_at 降序，有阅读进度的优先展示"
+            "description": "最近阅读：按当前用户阅读时间降序"
           }
         }
       },

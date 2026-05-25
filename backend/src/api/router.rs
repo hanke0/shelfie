@@ -65,6 +65,10 @@ pub fn build_router(state: AppState) -> Router {
             get(handlers::books::list_books).post(handlers::books::upload_book),
         )
         .route(
+            "/books/batch-move-category",
+            post(handlers::books::batch_move_category),
+        )
+        .route(
             "/books/{id}",
             get(handlers::books::get_book)
                 .patch(handlers::books::update_book)

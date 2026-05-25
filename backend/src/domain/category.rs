@@ -5,7 +5,7 @@ use crate::infra::{fs, safe_name};
 use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -15,6 +15,8 @@ pub const DEFAULT_CATEGORY: &str = "未分类";
 #[derive(Debug, Serialize, ToSchema)]
 pub struct CategoryDto {
     pub name: String,
+    /// 该分类下图书数量（数据库索引）
+    pub book_count: i64,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -69,7 +71,21 @@ pub async fn list_categories(
     let lib_root = library::get_library_root(&state.db, library_id).await?;
     let names = collect_category_names(&state.db, library_id, &lib_root).await?;
 
-    Ok(names.into_iter().map(|name| CategoryDto { name }).collect())
+    let counts: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT category, COUNT(*) FROM books WHERE library_id = ? GROUP BY category",
+    )
+    .bind(library_id.to_string())
+    .fetch_all(&state.db)
+    .await?;
+    let count_map: HashMap<String, i64> = counts.into_iter().collect();
+
+    Ok(names
+        .into_iter()
+        .map(|name| CategoryDto {
+            book_count: *count_map.get(&name).unwrap_or(&0),
+            name,
+        })
+        .collect())
 }
 
 pub async fn create_category(
@@ -87,7 +103,10 @@ pub async fn create_category(
 
     if dir.exists() {
         if dir.is_dir() {
-            return Ok(CategoryDto { name });
+            return Ok(CategoryDto {
+                name,
+                book_count: 0,
+            });
         }
         return Err(AppError::Conflict(
             "A file exists at the category path".into(),
@@ -95,7 +114,10 @@ pub async fn create_category(
     }
 
     tokio::fs::create_dir_all(&dir).await?;
-    Ok(CategoryDto { name })
+    Ok(CategoryDto {
+        name,
+        book_count: 0,
+    })
 }
 
 pub async fn delete_category(
@@ -108,9 +130,7 @@ pub async fn delete_category(
     library::require_edit(&perm)?;
 
     if category == DEFAULT_CATEGORY {
-        return Err(AppError::BadRequest(
-            "Cannot delete the default category".into(),
-        ));
+        return Err(AppError::BadRequest("不能删除默认分类「未分类」".into()));
     }
 
     let name = canonical_category_name(category)?;
@@ -125,22 +145,34 @@ pub async fn delete_category(
             .await?;
 
     if book_count.0 > 0 {
-        return Err(AppError::Conflict(
-            "Cannot delete category while it contains books".into(),
-        ));
+        return Err(AppError::Conflict(format!(
+            "该分类下仍有 {} 本图书，请先将图书移至其他分类或删除后再删分类",
+            book_count.0
+        )));
     }
 
     if dir.exists() && fs::dir_has_any_files(&dir).await? {
         return Err(AppError::Conflict(
-            "Cannot delete category while its directory contains files".into(),
+            "该分类目录下仍有文件，请清理后再删除（不会自动删除图书）".into(),
         ));
     }
 
+    // 仅删除空目录；数据库中的图书记录不会被删除
     if dir.exists() {
         tokio::fs::remove_dir(&dir).await?;
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_category_cannot_be_deleted_message() {
+        assert_eq!(DEFAULT_CATEGORY, "未分类");
+    }
 }
 
 pub async fn ensure_default_category(lib_root: &Path) -> AppResult<()> {

@@ -460,39 +460,32 @@ pub async fn upload_book(
     get_book(state, user, &book_id).await
 }
 
-pub async fn update_book(
+async fn relocate_book_with_metadata(
     state: &AppState,
     user: &AuthUser,
     book_id: &Uuid,
-    metadata: BookMetadata,
+    row: BookRow,
+    library_id: &Uuid,
+    lib_root: &Path,
+    mut metadata: BookMetadata,
 ) -> AppResult<BookDetail> {
-    let row = fetch_row(&state.db, book_id).await?;
-    let library_id =
-        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
-    let perm = library::resolve_permission(&state.db, user, &library_id).await?;
-    library::require_edit(&perm)?;
-
-    let mut metadata = metadata;
-    metadata.clear_reading_progress();
-    metadata.normalize_fields()?;
-
-    let lib_root = library::get_library_root(&state.db, &library_id).await?;
     let target_category = if metadata.category.is_empty() {
         row.category.clone()
     } else {
         crate::domain::category::canonical_category_name(&metadata.category)?
     };
+    metadata.category = target_category.clone();
     fs::validate_book_path_fields(&metadata.title, &metadata.author, &target_category)?;
     if target_category != row.category {
         crate::domain::category::require_category_exists(
             &state.db,
-            &library_id,
-            &lib_root,
+            library_id,
+            lib_root,
             &target_category,
         )
         .await?;
     }
-    let target_dir = fs::category_dir(&lib_root, &target_category)?;
+    let target_dir = fs::category_dir(lib_root, &target_category)?;
     fs::ensure_dir(&target_dir).await?;
 
     let mut book_path = PathBuf::from(&row.book_file_path);
@@ -565,6 +558,144 @@ pub async fn update_book(
     .await?;
 
     get_book(state, user, book_id).await
+}
+
+pub async fn update_book(
+    state: &AppState,
+    user: &AuthUser,
+    book_id: &Uuid,
+    metadata: BookMetadata,
+) -> AppResult<BookDetail> {
+    let row = fetch_row(&state.db, book_id).await?;
+    let library_id =
+        Uuid::parse_str(&row.library_id).map_err(|e| AppError::Internal(e.to_string()))?;
+    let perm = library::resolve_permission(&state.db, user, &library_id).await?;
+    library::require_edit(&perm)?;
+
+    let mut metadata = metadata;
+    metadata.clear_reading_progress();
+    metadata.normalize_fields()?;
+
+    let lib_root = library::get_library_root(&state.db, &library_id).await?;
+    relocate_book_with_metadata(
+        state,
+        user,
+        book_id,
+        row,
+        &library_id,
+        &lib_root,
+        metadata,
+    )
+    .await
+}
+
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct BatchMoveCategoryRequest {
+    pub library_id: Uuid,
+    pub book_ids: Vec<Uuid>,
+    pub category: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BatchMoveCategoryFailure {
+    pub book_id: String,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BatchMoveCategoryResponse {
+    pub moved: u32,
+    pub failures: Vec<BatchMoveCategoryFailure>,
+}
+
+const BATCH_MOVE_MAX: usize = 100;
+
+async fn move_book_to_category(
+    state: &AppState,
+    user: &AuthUser,
+    library_id: &Uuid,
+    book_id: &Uuid,
+    target_category: &str,
+    lib_root: &Path,
+) -> AppResult<()> {
+    let row = fetch_row(&state.db, book_id).await?;
+    if row.library_id != library_id.to_string() {
+        return Err(AppError::BadRequest(
+            "Book does not belong to this library".into(),
+        ));
+    }
+    let perm = library::resolve_permission(&state.db, user, library_id).await?;
+    library::require_edit(&perm)?;
+
+    let mut metadata = BookMetadata::from_json(&row.metadata)?;
+    metadata.clear_reading_progress();
+    metadata.category = target_category.to_string();
+    metadata.normalize_fields()?;
+
+    let _ = relocate_book_with_metadata(
+        state,
+        user,
+        book_id,
+        row,
+        library_id,
+        lib_root,
+        metadata,
+    )
+    .await?;
+    Ok(())
+}
+
+pub async fn batch_move_category(
+    state: &AppState,
+    user: &AuthUser,
+    library_id: &Uuid,
+    book_ids: Vec<Uuid>,
+    category: &str,
+) -> AppResult<BatchMoveCategoryResponse> {
+    if book_ids.is_empty() {
+        return Err(AppError::BadRequest("book_ids cannot be empty".into()));
+    }
+    if book_ids.len() > BATCH_MOVE_MAX {
+        return Err(AppError::BadRequest(format!(
+            "At most {BATCH_MOVE_MAX} books per batch"
+        )));
+    }
+
+    let perm = library::resolve_permission(&state.db, user, library_id).await?;
+    library::require_edit(&perm)?;
+
+    let target_category = crate::domain::category::canonical_category_name(category)?;
+    let lib_root = library::get_library_root(&state.db, library_id).await?;
+    crate::domain::category::require_category_exists(
+        &state.db,
+        library_id,
+        &lib_root,
+        &target_category,
+    )
+    .await?;
+
+    let mut moved = 0u32;
+    let mut failures = Vec::new();
+    for book_id in book_ids {
+        match move_book_to_category(
+            state,
+            user,
+            library_id,
+            &book_id,
+            &target_category,
+            &lib_root,
+        )
+        .await
+        {
+            Ok(()) => moved += 1,
+            Err(e) => failures.push(BatchMoveCategoryFailure {
+                book_id: book_id.to_string(),
+                message: e.to_string(),
+            }),
+        }
+    }
+
+    Ok(BatchMoveCategoryResponse { moved, failures })
 }
 
 pub async fn update_progress(

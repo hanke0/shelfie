@@ -120,10 +120,8 @@ mod tests {
 
     #[tokio::test]
     async fn relocate_for_cover_moves_thumb_with_cover() {
-        let dir = std::env::temp_dir().join(format!(
-            "shelfie-thumb-relocate-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("shelfie-thumb-relocate-{}", std::process::id()));
         let old_cat = dir.join("fiction");
         let new_cat = dir.join("sci-fi");
         std::fs::create_dir_all(&old_cat).unwrap();

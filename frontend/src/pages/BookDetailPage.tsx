@@ -24,6 +24,12 @@ import styles from "./BookDetailPage.module.css";
 
 type ActionKind = "save" | "download" | "progress" | "cover" | "delete" | null;
 
+function fileFormatLabel(path: string): string {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  if (!ext) return "—";
+  return ext.toUpperCase();
+}
+
 export function BookDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -385,6 +391,10 @@ export function BookDetailPage() {
                     "—"
                   )}
                 </td>
+              </tr>
+              <tr>
+                <th>文件格式</th>
+                <td>{fileFormatLabel(book.book_file_path)}</td>
               </tr>
               <tr>
                 <th>MD5</th>

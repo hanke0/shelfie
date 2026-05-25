@@ -15,6 +15,8 @@ pub struct RefreshDiff {
     pub added: Vec<String>,
     pub updated: Vec<String>,
     pub removed: Vec<String>,
+    /// 已从磁盘删除的无主附属文件（metadata / 封面 / 缩略图）路径
+    pub cleaned: Vec<String>,
     pub errors: Vec<String>,
 }
 
@@ -94,6 +96,7 @@ async fn run_refresh(state: &AppState, library_id: &Uuid, prefer_db: bool) -> Re
         added: vec![],
         updated: vec![],
         removed: vec![],
+        cleaned: vec![],
         errors: vec![],
     };
 
@@ -115,7 +118,7 @@ async fn run_refresh(state: &AppState, library_id: &Uuid, prefer_db: bool) -> Re
 
     let mut fs_paths = HashSet::new();
 
-    for entry in scanned {
+    for entry in &scanned {
         let path_str = entry.book_file.to_string_lossy().to_string();
         fs_paths.insert(path_str.clone());
 
@@ -196,6 +199,16 @@ async fn run_refresh(state: &AppState, library_id: &Uuid, prefer_db: bool) -> Re
                 }
             }
         }
+    }
+
+    match fs::cleanup_dangling_files(&lib_root, &scanned).await {
+        Ok(removed) => {
+            diff.cleaned = removed
+                .into_iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect();
+        }
+        Err(e) => diff.errors.push(format!("cleanup: {e}")),
     }
 
     diff

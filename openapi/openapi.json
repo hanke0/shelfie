@@ -2360,6 +2360,7 @@
           "added",
           "updated",
           "removed",
+          "cleaned",
           "errors"
         ],
         "properties": {
@@ -2368,6 +2369,13 @@
             "items": {
               "type": "string"
             }
+          },
+          "cleaned": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "已从磁盘删除的无主附属文件（metadata / 封面 / 缩略图）路径"
           },
           "errors": {
             "type": "array",

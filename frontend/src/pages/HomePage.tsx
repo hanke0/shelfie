@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetHome, getGetHomeQueryKey } from "@/api/generated/home/home";
 import { useLibrary } from "@/context/LibraryContext";
@@ -23,7 +24,7 @@ export function HomePage() {
   const qc = useQueryClient();
   const run = useApiAction();
 
-  const { libraryId } = useLibrary();
+  const { libraryId, libraries } = useLibrary();
   const { data, isLoading, error } = useGetHome(
     { library_id: libraryId ?? undefined, limit: 12, seed: ahaSeed },
     { query: { enabled: !!libraryId } },
@@ -100,7 +101,12 @@ export function HomePage() {
         onUploadDrop={(file) => void beginUpload(file)}
       />
 
-      {!libraryId && <p>请先在顶栏选择图书馆</p>}
+      {libraries.length === 0 && (
+        <p>
+          暂无图书馆，请前往{" "}
+          <Link to="/admin/libraries">图书馆管理</Link> 创建。
+        </p>
+      )}
       {isLoading && libraryId && <p>加载中…</p>}
       {error != null && <p>加载失败：{String(error)}</p>}
 

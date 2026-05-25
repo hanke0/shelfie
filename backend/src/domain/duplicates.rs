@@ -50,9 +50,7 @@ pub fn normalize_title(raw: &str) -> String {
 }
 
 fn is_meaningful_title(normalized: &str) -> bool {
-    !normalized.is_empty()
-        && normalized != "untitled"
-        && normalized.chars().count() >= 2
+    !normalized.is_empty() && normalized != "untitled" && normalized.chars().count() >= 2
 }
 
 pub async fn find_duplicates(

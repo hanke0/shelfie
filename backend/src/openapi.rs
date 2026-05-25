@@ -4,6 +4,7 @@ use crate::domain::book::{
     UpdateProgressRequest,
 };
 use crate::domain::category::{CategoryDto, CreateCategoryRequest};
+use crate::domain::duplicates::{DuplicateGroup, DuplicateMatchKind, FindDuplicatesResponse};
 use crate::domain::home::HomeResponse;
 use crate::domain::koreader::{
     KoreaderDocumentLink, KoreaderProgressRow, KosyncAuthResponse, KosyncProgressResponse,
@@ -14,9 +15,6 @@ use crate::domain::library::{
     UpdateMemberPermissionsRequest, UserLibraryMembershipDto,
 };
 use crate::domain::reading_history::ReadingHistoryEntry;
-use crate::domain::duplicates::{
-    DuplicateGroup, DuplicateMatchKind, FindDuplicatesResponse,
-};
 use crate::domain::sync::{RefreshDiff, RefreshJobResponse};
 use crate::domain::user::UserDto;
 use crate::error::ApiErrorBody;

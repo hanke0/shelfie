@@ -95,8 +95,6 @@ Agent 完成代码修改后须跑 lint 并修到通过，再收尾：
 
 ```bash
 cargo fmt --all
-cargo clippy --workspace -- -D warnings
+cargo clippy --workspace --all-targets -- -D warnings
 npm run typecheck
 ```
-
-详见 `.cursor/rules/lint-after-changes.mdc`。

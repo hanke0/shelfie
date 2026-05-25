@@ -1,9 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { useListBooks } from "@/api/generated/books/books";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useListBooks,
+  getListBooksQueryKey,
+  useBatchMoveCategory,
+} from "@/api/generated/books/books";
 import { useLibrary } from "@/context/LibraryContext";
 import { BookCard } from "@/components/BookCard";
 import { CategorySelect } from "@/components/CategorySelect";
+import { useApiAction } from "@/hooks/useApiAction";
 import styles from "./BookListPage.module.css";
 
 export function BookListPage() {
@@ -13,6 +19,14 @@ export function BookListPage() {
   const { libraryId } = useLibrary();
   const libFromUrl = params.get("library_id");
   const activeLibraryId = libFromUrl ?? libraryId ?? undefined;
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [targetCategory, setTargetCategory] = useState("");
+
+  const qc = useQueryClient();
+  const run = useApiAction();
+  const batchMove = useBatchMoveCategory();
 
   const { data, isLoading } = useListBooks(
     {
@@ -42,6 +56,65 @@ export function BookListPage() {
     setParams(next, { replace: true });
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    setTargetCategory("");
+  };
+
+  const selectAllVisible = () => {
+    if (!data?.length) return;
+    setSelectedIds(new Set(data.map((b) => b.id)));
+  };
+
+  const handleBatchMove = async () => {
+    if (!activeLibraryId || selectedIds.size === 0 || !targetCategory.trim()) {
+      await run(async () => {
+        throw new Error("请选择图书和目标分类");
+      });
+      return;
+    }
+
+    await run(
+      async () => {
+        const res = await batchMove.mutateAsync({
+          data: {
+            library_id: activeLibraryId,
+            book_ids: [...selectedIds],
+            category: targetCategory.trim(),
+          },
+        });
+        await qc.invalidateQueries({ queryKey: getListBooksQueryKey() });
+        await qc.invalidateQueries({ queryKey: ["/home"] });
+
+        if (res.failures.length > 0) {
+          throw new Error(
+            `已移动 ${res.moved} 本，${res.failures.length} 本失败：${res.failures[0]?.message ?? ""}`,
+          );
+        }
+        exitSelectMode();
+        if (category && category !== targetCategory.trim()) {
+          const next = new URLSearchParams(params);
+          next.delete("category");
+          setParams(next, { replace: true });
+        }
+      },
+      {
+        successMessage: `已将 ${selectedIds.size} 本图书移至「${targetCategory.trim()}」`,
+        errorMessage: "批量移动失败",
+      },
+    );
+  };
+
   return (
     <div className="app-shell">
       <Link to="/" className={styles.back}>
@@ -62,6 +135,50 @@ export function BookListPage() {
               includeAllOption
             />
           </label>
+
+          {!selectMode ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setSelectMode(true)}
+            >
+              批量移动
+            </button>
+          ) : (
+            <div className={styles.batchBar}>
+              <span className={styles.batchHint}>已选 {selectedIds.size} 本</span>
+              <button type="button" className="btn btn-ghost" onClick={selectAllVisible}>
+                全选本页
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                清空
+              </button>
+              <label className={styles.batchTarget}>
+                <span className={styles.filterLabel}>移至</span>
+                <CategorySelect
+                  libraryId={activeLibraryId}
+                  value={targetCategory}
+                  onChange={setTargetCategory}
+                  required
+                />
+              </label>
+              <button
+                type="button"
+                className="btn"
+                disabled={selectedIds.size === 0 || !targetCategory || batchMove.isPending}
+                onClick={() => void handleBatchMove()}
+              >
+                {batchMove.isPending ? "移动中…" : "确认移动"}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={exitSelectMode}>
+                取消
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -71,7 +188,13 @@ export function BookListPage() {
       )}
       <div className="book-scroll">
         {data?.map((book) => (
-          <BookCard key={book.id} book={book} />
+          <BookCard
+            key={book.id}
+            book={book}
+            selectable={selectMode}
+            selected={selectedIds.has(book.id)}
+            onSelectToggle={() => toggleSelect(book.id)}
+          />
         ))}
       </div>
     </div>

@@ -51,7 +51,7 @@ export function LibraryCategoryManager({ libraryId, canEdit }: LibraryCategoryMa
     if (
       !(await confirmTwice(
         `确定删除分类「${name}」？`,
-        "再次确认：仅当该分类下无图书且目录为空时可删除。",
+        "再次确认：仅当该分类下没有任何图书时才能删除；不会删除图书，只移除空文件夹。",
       ))
     ) {
       return;
@@ -80,21 +80,36 @@ export function LibraryCategoryManager({ libraryId, canEdit }: LibraryCategoryMa
         <p className={styles.muted}>加载中…</p>
       ) : (
         <ul className={styles.categoryList}>
-          {categories?.map((c) => (
-            <li key={c.name} className={styles.categoryRow}>
-              <span>{c.name}</span>
-              {canEdit && c.name !== DEFAULT_CATEGORY ? (
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={deleteCategory.isPending}
-                  onClick={() => void handleDelete(c.name)}
-                >
-                  删除
-                </button>
-              ) : null}
-            </li>
-          ))}
+          {categories?.map((c) => {
+            const count = c.book_count ?? 0;
+            const canDelete = canEdit && c.name !== DEFAULT_CATEGORY && count === 0;
+            return (
+              <li key={c.name} className={styles.categoryRow}>
+                <span>
+                  {c.name}
+                  {count > 0 ? (
+                    <span className={styles.muted}>（{count} 本）</span>
+                  ) : null}
+                </span>
+                {canEdit && c.name !== DEFAULT_CATEGORY ? (
+                  canDelete ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={deleteCategory.isPending}
+                      onClick={() => void handleDelete(c.name)}
+                    >
+                      删除
+                    </button>
+                  ) : (
+                    <span className={styles.muted} title="请先将图书移出该分类">
+                      有图书
+                    </span>
+                  )
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
       {canEdit && (

@@ -1,5 +1,8 @@
 use crate::api::middleware::auth::AuthContext;
-use crate::domain::book::{self, BookCard, BookDetail, UpdateBookRequest, UpdateProgressRequest};
+use crate::domain::book::{
+    self, BatchMoveCategoryRequest, BatchMoveCategoryResponse, BookCard, BookDetail,
+    UpdateBookRequest, UpdateProgressRequest,
+};
 use crate::error::{AppError, AppResult};
 use crate::infra::{fs, http_cache, thumbnail, BookMetadata};
 use crate::state::AppState;
@@ -184,6 +187,31 @@ pub async fn update_book(
 ) -> AppResult<Json<BookDetail>> {
     Ok(Json(
         book::update_book(&state, &user, &id, req.metadata).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    path = "/books/batch-move-category",
+    tag = "Books",
+    request_body = BatchMoveCategoryRequest,
+    responses((status = 200, body = BatchMoveCategoryResponse)),
+    security(("bearer_auth" = []))
+)]
+pub async fn batch_move_category(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Json(req): Json<BatchMoveCategoryRequest>,
+) -> AppResult<Json<BatchMoveCategoryResponse>> {
+    Ok(Json(
+        book::batch_move_category(
+            &state,
+            &user,
+            &req.library_id,
+            req.book_ids,
+            &req.category,
+        )
+        .await?,
     ))
 }
 

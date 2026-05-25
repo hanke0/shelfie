@@ -1,11 +1,18 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import type { BookCard as BookCardType } from "@/api/generated/models";
 import { fetchCoverBlob } from "@/lib/custom-fetch";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
 import styles from "./BookCard.module.css";
 
-export function BookCard({ book }: { book: BookCardType }) {
+interface BookCardProps {
+  book: BookCardType;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectToggle?: () => void;
+}
+
+export function BookCard({ book, selectable, selected, onSelectToggle }: BookCardProps) {
   const [coverSrc, setCoverSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,8 +34,21 @@ export function BookCard({ book }: { book: BookCardType }) {
 
   const percent = book.reading_percent ?? 0;
 
-  return (
-    <Link to={`/books/${book.id}`} className={styles.card}>
+  const handleClick = (e: MouseEvent) => {
+    if (!selectable || !onSelectToggle) return;
+    e.preventDefault();
+    onSelectToggle();
+  };
+
+  const body = (
+    <>
+      {selectable && (
+        <span
+          className={[styles.check, selected ? styles.checkOn : ""].filter(Boolean).join(" ")}
+          aria-checked={selected}
+          role="checkbox"
+        />
+      )}
       <div className={styles.cover}>
         {coverSrc ? (
           <img src={coverSrc} alt={book.title} />
@@ -49,6 +69,27 @@ export function BookCard({ book }: { book: BookCardType }) {
           </div>
         )}
       </div>
+    </>
+  );
+
+  if (selectable) {
+    return (
+      <button
+        type="button"
+        className={[styles.card, styles.cardSelectable, selected ? styles.cardSelected : ""]
+          .filter(Boolean)
+          .join(" ")}
+        onClick={handleClick}
+        aria-pressed={selected}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={`/books/${book.id}`} className={styles.card}>
+      {body}
     </Link>
   );
 }

@@ -1,5 +1,8 @@
 use crate::api::handlers;
-use crate::domain::book::{BookCard, BookDetail, UpdateBookRequest, UpdateProgressRequest};
+use crate::domain::book::{
+    BatchMoveCategoryRequest, BatchMoveCategoryResponse, BookCard, BookDetail, UpdateBookRequest,
+    UpdateProgressRequest,
+};
 use crate::domain::category::{CategoryDto, CreateCategoryRequest};
 use crate::domain::home::HomeResponse;
 use crate::domain::koreader::{
@@ -28,6 +31,7 @@ use utoipa::{Modify, OpenApi};
         handlers::books::list_books,
         handlers::books::get_book,
         handlers::books::upload_book,
+        handlers::books::batch_move_category,
         handlers::books::update_book,
         handlers::books::update_progress,
         handlers::books::delete_book,
@@ -75,6 +79,9 @@ use utoipa::{Modify, OpenApi};
         ReadingProgress,
         UpdateBookRequest,
         UpdateProgressRequest,
+        BatchMoveCategoryRequest,
+        BatchMoveCategoryResponse,
+        crate::domain::book::BatchMoveCategoryFailure,
         LibraryDto,
         LibraryMemberDto,
         PermissionFlags,

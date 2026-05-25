@@ -577,16 +577,7 @@ pub async fn update_book(
     metadata.normalize_fields()?;
 
     let lib_root = library::get_library_root(&state.db, &library_id).await?;
-    relocate_book_with_metadata(
-        state,
-        user,
-        book_id,
-        row,
-        &library_id,
-        &lib_root,
-        metadata,
-    )
-    .await
+    relocate_book_with_metadata(state, user, book_id, row, &library_id, &lib_root, metadata).await
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -632,16 +623,8 @@ async fn move_book_to_category(
     metadata.category = target_category.to_string();
     metadata.normalize_fields()?;
 
-    let _ = relocate_book_with_metadata(
-        state,
-        user,
-        book_id,
-        row,
-        library_id,
-        lib_root,
-        metadata,
-    )
-    .await?;
+    let _ = relocate_book_with_metadata(state, user, book_id, row, library_id, lib_root, metadata)
+        .await?;
     Ok(())
 }
 

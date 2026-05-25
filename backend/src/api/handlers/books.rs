@@ -204,14 +204,8 @@ pub async fn batch_move_category(
     Json(req): Json<BatchMoveCategoryRequest>,
 ) -> AppResult<Json<BatchMoveCategoryResponse>> {
     Ok(Json(
-        book::batch_move_category(
-            &state,
-            &user,
-            &req.library_id,
-            req.book_ids,
-            &req.category,
-        )
-        .await?,
+        book::batch_move_category(&state, &user, &req.library_id, req.book_ids, &req.category)
+            .await?,
     ))
 }
 

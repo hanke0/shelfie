@@ -2,6 +2,7 @@ use super::thumbnail;
 use crate::error::{AppError, AppResult};
 use crate::infra::metadata::BookMetadata;
 use crate::infra::safe_name;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 const BOOK_EXTENSIONS: &[&str] = &["pdf", "epub", "mobi"];
@@ -467,6 +468,127 @@ pub async fn scan_library_books(library_root: &Path) -> AppResult<Vec<ScannedBoo
     Ok(results)
 }
 
+/// 删除分类目录内无对应图书文件的 metadata、封面与缩略图缓存。
+pub async fn cleanup_dangling_files(
+    library_root: &Path,
+    scanned: &[ScannedBookFile],
+) -> AppResult<Vec<PathBuf>> {
+    let mut stems_by_category: HashMap<String, HashSet<String>> = HashMap::new();
+    for entry in scanned {
+        if let Some(stem) = file_stem(&entry.book_file) {
+            stems_by_category
+                .entry(entry.category.clone())
+                .or_default()
+                .insert(stem);
+        }
+    }
+
+    let mut removed = Vec::new();
+    if !library_root.exists() {
+        return Ok(removed);
+    }
+
+    let mut categories = tokio::fs::read_dir(library_root).await?;
+    while let Some(cat_entry) = categories.next_entry().await? {
+        if !cat_entry.file_type().await?.is_dir() {
+            continue;
+        }
+        let category = cat_entry.file_name().to_string_lossy().to_string();
+        if category.starts_with('.') {
+            continue;
+        }
+        let cat_path = cat_entry.path();
+        let valid_stems = stems_by_category.get(&category);
+        let book_count = valid_stems.map(|s| s.len()).unwrap_or(0);
+
+        let mut entries = tokio::fs::read_dir(&cat_path).await?;
+        while let Some(entry) = entries.next_entry().await? {
+            if !entry.file_type().await?.is_file() {
+                continue;
+            }
+            let path = entry.path();
+            if is_owned_book_asset(&path, valid_stems, book_count) {
+                continue;
+            }
+            if path
+                .extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(is_book_extension)
+            {
+                continue;
+            }
+            if is_cover_path(&path) {
+                thumbnail::remove_for_cover(&path).await;
+            } else if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if let Some(base) = name.strip_suffix(".thumb.jpg") {
+                    for ext in COVER_EXTENSIONS {
+                        thumbnail::remove_for_cover(&cat_path.join(format!("{base}.{ext}"))).await;
+                    }
+                }
+            }
+            if tokio::fs::remove_file(&path).await.is_ok() {
+                removed.push(path);
+            }
+        }
+    }
+
+    Ok(removed)
+}
+
+fn is_owned_book_asset(
+    path: &Path,
+    valid_stems: Option<&HashSet<String>>,
+    book_count: usize,
+) -> bool {
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    let Some(valid) = valid_stems else {
+        return false;
+    };
+
+    if name.ends_with(".thumb.jpg") {
+        return name
+            .strip_suffix(".thumb.jpg")
+            .is_some_and(|base| valid.contains(base));
+    }
+
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        if ext == "json" {
+            if name == "metadata.json" {
+                return book_count == 1 && valid.len() == 1;
+            }
+            return path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .is_some_and(|stem| valid.contains(stem));
+        }
+        if COVER_EXTENSIONS.contains(&ext.to_lowercase().as_str()) {
+            if name.starts_with("cover.") {
+                return book_count == 1 && valid.len() == 1;
+            }
+            return path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .is_some_and(|stem| valid.contains(stem));
+        }
+    }
+
+    false
+}
+
+fn is_cover_path(path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    if name.ends_with(".thumb.jpg") {
+        return false;
+    }
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|ext| COVER_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -508,6 +630,41 @@ mod tests {
         assert!(!library_has_any_files(&tmp).await.unwrap());
         std::fs::write(cat.join("book.pdf"), b"x").unwrap();
         assert!(library_has_any_files(&tmp).await.unwrap());
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[tokio::test]
+    async fn cleanup_dangling_files_removes_orphan_sidecars() {
+        let tmp = std::env::temp_dir().join(format!(
+            "shelfie_cleanup_test_{}",
+            std::process::id()
+        ));
+        let cat = tmp.join("fiction");
+        std::fs::create_dir_all(&cat).unwrap();
+        std::fs::write(cat.join("book.pdf"), b"pdf").unwrap();
+        std::fs::write(cat.join("book.json"), b"{}").unwrap();
+        std::fs::write(cat.join("orphan.json"), b"{}").unwrap();
+        std::fs::write(cat.join("orphan.jpg"), b"jpg").unwrap();
+        std::fs::write(cat.join("orphan.thumb.jpg"), b"thumb").unwrap();
+
+        let scanned = vec![ScannedBookFile {
+            category: "fiction".to_string(),
+            book_file: cat.join("book.pdf"),
+        }];
+        let removed = cleanup_dangling_files(&tmp, &scanned).await.unwrap();
+        let removed_names: HashSet<_> = removed
+            .iter()
+            .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
+            .collect();
+
+        assert!(cat.join("book.pdf").is_file());
+        assert!(cat.join("book.json").is_file());
+        assert!(!cat.join("orphan.json").exists());
+        assert!(!cat.join("orphan.jpg").exists());
+        assert!(!cat.join("orphan.thumb.jpg").exists());
+        assert!(removed_names.contains("orphan.json"));
+        assert!(removed_names.contains("orphan.jpg"));
+
         let _ = std::fs::remove_dir_all(&tmp);
     }
 }

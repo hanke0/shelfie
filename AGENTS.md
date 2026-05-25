@@ -78,6 +78,7 @@ npm run codegen
 - FS 有、DB 无 → INSERT（从 `metadata.json`）
 - DB 有、FS 无 → 标记 `orphan`（不自动删 DB）
 - 不一致 → 默认以 FS `metadata.json` 为准（`?prefer=db` 可选）
+- 同步结束 → 删除分类目录内无对应图书文件的 metadata / 封面 / `.thumb.jpg`（`RefreshDiff.cleaned`）
 
 ## 禁止提交
 

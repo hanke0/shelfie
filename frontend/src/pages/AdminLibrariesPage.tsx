@@ -105,7 +105,11 @@ export function AdminLibrariesPage() {
         const res = await refreshLibrary.mutateAsync({ id: selectedLib });
         setRefreshResult(
           res.result
-            ? `新增 ${res.result.added.length}，更新 ${res.result.updated.length}，孤儿 ${res.result.removed.length}`
+            ? `新增 ${res.result.added.length}，更新 ${res.result.updated.length}，孤儿 ${res.result.removed.length}${
+                res.result.cleaned.length
+                  ? `，清理文件 ${res.result.cleaned.length}`
+                  : ""
+              }`
             : "完成",
         );
       },

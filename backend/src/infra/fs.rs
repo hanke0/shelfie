@@ -635,10 +635,7 @@ mod tests {
 
     #[tokio::test]
     async fn cleanup_dangling_files_removes_orphan_sidecars() {
-        let tmp = std::env::temp_dir().join(format!(
-            "shelfie_cleanup_test_{}",
-            std::process::id()
-        ));
+        let tmp = std::env::temp_dir().join(format!("shelfie_cleanup_test_{}", std::process::id()));
         let cat = tmp.join("fiction");
         std::fs::create_dir_all(&cat).unwrap();
         std::fs::write(cat.join("book.pdf"), b"pdf").unwrap();

@@ -334,6 +334,7 @@ pub async fn rename_book_assets(
         if new_cover.exists() {
             tokio::fs::remove_file(&new_cover).await.ok();
         }
+        thumbnail::relocate_for_cover(cover_path, &new_cover).await;
         tokio::fs::rename(cover_path, &new_cover).await?;
     }
 

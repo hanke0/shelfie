@@ -63,6 +63,26 @@ pub async fn remove_for_cover(cover_path: &Path) {
     }
 }
 
+/// Move cached thumbnail when the cover file path changes (category move or rename).
+pub async fn relocate_for_cover(old_cover: &Path, new_cover: &Path) {
+    if old_cover == new_cover {
+        return;
+    }
+    let old_thumb = thumbnail_path(old_cover);
+    let new_thumb = thumbnail_path(new_cover);
+    if old_thumb == new_thumb {
+        return;
+    }
+    remove_for_cover(new_cover).await;
+    if !old_thumb.is_file() {
+        return;
+    }
+    if let Some(parent) = new_thumb.parent() {
+        tokio::fs::create_dir_all(parent).await.ok();
+    }
+    tokio::fs::rename(&old_thumb, &new_thumb).await.ok();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,6 +114,34 @@ mod tests {
         assert!(decoded.width() <= THUMB_MAX_EDGE);
         assert!(decoded.height() <= THUMB_MAX_EDGE);
         assert!(thumbnail_path(&cover).is_file());
+
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[tokio::test]
+    async fn relocate_for_cover_moves_thumb_with_cover() {
+        let dir = std::env::temp_dir().join(format!(
+            "shelfie-thumb-relocate-{}",
+            std::process::id()
+        ));
+        let old_cat = dir.join("fiction");
+        let new_cat = dir.join("sci-fi");
+        std::fs::create_dir_all(&old_cat).unwrap();
+        std::fs::create_dir_all(&new_cat).unwrap();
+
+        let cover = old_cat.join("book.jpg");
+        std::fs::write(&cover, b"not-a-real-jpeg").unwrap();
+        let thumb = thumbnail_path(&cover);
+        std::fs::write(&thumb, b"cached-thumb").unwrap();
+
+        let new_cover = new_cat.join("book.jpg");
+        relocate_for_cover(&cover, &new_cover).await;
+
+        assert!(!thumb.is_file());
+        assert_eq!(
+            std::fs::read(thumbnail_path(&new_cover)).unwrap(),
+            b"cached-thumb"
+        );
 
         let _ = std::fs::remove_dir_all(dir);
     }

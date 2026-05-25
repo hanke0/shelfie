@@ -7,12 +7,20 @@ import styles from "./BookCard.module.css";
 
 interface BookCardProps {
   book: BookCardType;
+  /** 首页横滑：封面圆角阴影，下方轻量标题 */
+  variant?: "default" | "shelf";
   selectable?: boolean;
   selected?: boolean;
   onSelectToggle?: () => void;
 }
 
-export function BookCard({ book, selectable, selected, onSelectToggle }: BookCardProps) {
+export function BookCard({
+  book,
+  variant = "default",
+  selectable,
+  selected,
+  onSelectToggle,
+}: BookCardProps) {
   const [coverSrc, setCoverSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,13 +80,20 @@ export function BookCard({ book, selectable, selected, onSelectToggle }: BookCar
     </>
   );
 
+  const cardClass = [
+    styles.card,
+    variant === "shelf" ? styles.cardShelf : "",
+    selectable ? styles.cardSelectable : "",
+    selected ? styles.cardSelected : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   if (selectable) {
     return (
       <button
         type="button"
-        className={[styles.card, styles.cardSelectable, selected ? styles.cardSelected : ""]
-          .filter(Boolean)
-          .join(" ")}
+        className={cardClass}
         onClick={handleClick}
         aria-pressed={selected}
       >
@@ -88,7 +103,7 @@ export function BookCard({ book, selectable, selected, onSelectToggle }: BookCar
   }
 
   return (
-    <Link to={`/books/${book.id}`} className={styles.card}>
+    <Link to={`/books/${book.id}`} className={cardClass}>
       {body}
     </Link>
   );

@@ -1,0 +1,76 @@
+.section {
+  margin-bottom: 0.25rem;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2rem 0 0.85rem;
+}
+
+.sectionTitle h2 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.sectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+}
+
+.sectionActions a {
+  font-size: 0.85rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.sectionActions a:hover {
+  text-decoration: underline;
+}
+
+.rowScroll {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.85rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.15rem 0.1rem;
+}
+
+.rowScroll:hover {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-soft) transparent;
+  padding-bottom: 0.35rem;
+}
+
+.rowScroll::-webkit-scrollbar {
+  height: 0;
+}
+
+.rowScroll:hover::-webkit-scrollbar {
+  height: 6px;
+}
+
+.rowScroll::-webkit-scrollbar-thumb {
+  background: var(--accent-soft);
+  border-radius: 999px;
+}
+
+.rowScroll > a,
+.rowScroll > button {
+  flex: 0 0 132px;
+  width: 132px;
+  max-width: 132px;
+  scroll-snap-align: start;
+}

@@ -61,6 +61,8 @@ pub struct ListBooksQuery {
     pub sort: Option<String>,
     #[param(default = 50)]
     pub limit: Option<i64>,
+    #[param(default = 0)]
+    pub offset: Option<i64>,
 }
 
 #[utoipa::path(get, path = "/books", tag = "Books", params(ListBooksQuery), responses((status = 200, body = [BookCard])), security(("bearer_auth" = [])))]
@@ -69,7 +71,8 @@ pub async fn list_books(
     Extension(AuthContext(user)): Extension<AuthContext>,
     Query(q): Query<ListBooksQuery>,
 ) -> AppResult<Json<Vec<BookCard>>> {
-    let limit = q.limit.unwrap_or(50);
+    let limit = q.limit.unwrap_or(50).clamp(1, 200);
+    let offset = q.offset.unwrap_or(0).max(0);
     Ok(Json(
         book::list_books(
             &state.db,
@@ -78,6 +81,7 @@ pub async fn list_books(
             q.category.as_deref(),
             q.sort.as_deref(),
             limit,
+            offset,
         )
         .await?,
     ))

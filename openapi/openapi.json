@@ -172,6 +172,19 @@
               "format": "int64",
               "default": 50
             }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64",
+              "default": 0
+            }
           }
         ],
         "responses": {

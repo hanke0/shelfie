@@ -1,16 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  listBooks,
   useListBooks,
   getListBooksQueryKey,
   useBatchMoveCategory,
 } from "@/api/generated/books/books";
+import type { BookCard as BookCardType } from "@/api/generated/models";
 import { useLibrary } from "@/context/LibraryContext";
 import { BookCard } from "@/components/BookCard";
 import { CategorySelect } from "@/components/CategorySelect";
 import { useApiAction } from "@/hooks/useApiAction";
 import styles from "./BookListPage.module.css";
+
+const PAGE_SIZE = 50;
 
 export function BookListPage() {
   const [params, setParams] = useSearchParams();
@@ -23,19 +27,41 @@ export function BookListPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [targetCategory, setTargetCategory] = useState("");
+  const [extraBooks, setExtraBooks] = useState<BookCardType[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const qc = useQueryClient();
   const run = useApiAction();
   const batchMove = useBatchMoveCategory();
 
-  const { data, isLoading } = useListBooks(
-    {
+  const listParams = useMemo(
+    () => ({
       sort: sort ?? undefined,
       library_id: activeLibraryId,
       category: category || undefined,
-      limit: 50,
-    },
-    { query: { enabled: !!activeLibraryId } },
+      limit: PAGE_SIZE,
+      offset: 0,
+    }),
+    [sort, activeLibraryId, category],
+  );
+
+  const { data, isLoading } = useListBooks(listParams, {
+    query: { enabled: !!activeLibraryId },
+  });
+
+  useEffect(() => {
+    setExtraBooks([]);
+    setSelectedIds(new Set());
+  }, [listParams]);
+
+  useEffect(() => {
+    setHasMore((data?.length ?? 0) === PAGE_SIZE);
+  }, [data]);
+
+  const books = useMemo(
+    () => [...(data ?? []), ...extraBooks],
+    [data, extraBooks],
   );
 
   const baseTitle =
@@ -72,8 +98,26 @@ export function BookListPage() {
   };
 
   const selectAllVisible = () => {
-    if (!data?.length) return;
-    setSelectedIds(new Set(data.map((b) => b.id)));
+    if (!books.length) return;
+    setSelectedIds(new Set(books.map((b) => b.id)));
+  };
+
+  const loadMore = async () => {
+    if (!activeLibraryId || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const more = await listBooks({
+        ...listParams,
+        offset: books.length,
+      });
+      setExtraBooks((prev) => {
+        const seen = new Set([...(data ?? []), ...prev].map((b) => b.id));
+        return [...prev, ...more.filter((b) => !seen.has(b.id))];
+      });
+      setHasMore(more.length === PAGE_SIZE);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const handleBatchMove = async () => {
@@ -148,7 +192,7 @@ export function BookListPage() {
             <div className={styles.batchBar}>
               <span className={styles.batchHint}>已选 {selectedIds.size} 本</span>
               <button type="button" className="btn btn-ghost" onClick={selectAllVisible}>
-                全选本页
+                全选当前列表
               </button>
               <button
                 type="button"
@@ -183,11 +227,17 @@ export function BookListPage() {
       )}
 
       {isLoading && activeLibraryId && <p>加载中…</p>}
-      {!isLoading && activeLibraryId && data?.length === 0 && (
+      {!isLoading && activeLibraryId && books.length === 0 && (
         <p className={styles.empty}>该分类下暂无图书</p>
       )}
+      {!isLoading && books.length > 0 && (
+        <p className={styles.count}>
+          已显示 {books.length} 本
+          {category ? `（分类：${category}）` : ""}
+        </p>
+      )}
       <div className="book-scroll">
-        {data?.map((book) => (
+        {books.map((book) => (
           <BookCard
             key={book.id}
             book={book}
@@ -197,6 +247,18 @@ export function BookListPage() {
           />
         ))}
       </div>
+      {hasMore && !isLoading && (
+        <div className={styles.loadMore}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={loadingMore}
+            onClick={() => void loadMore()}
+          >
+            {loadingMore ? "加载中…" : "加载更多"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

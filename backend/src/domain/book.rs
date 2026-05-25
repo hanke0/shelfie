@@ -270,6 +270,7 @@ pub async fn list_books(
     category: Option<&str>,
     sort: Option<&str>,
     limit: i64,
+    offset: i64,
 ) -> AppResult<Vec<BookCard>> {
     let accessible = accessible_library_ids(db, user).await?;
     if accessible.is_empty() {
@@ -306,7 +307,7 @@ pub async fn list_books(
         query = format!("{query} AND b.category = ?");
     }
 
-    query = format!("{query} ORDER BY {order} LIMIT ?");
+    query = format!("{query} ORDER BY {order} LIMIT ? OFFSET ?");
 
     let mut q = sqlx::query_as::<_, BookListRow>(&query);
     q = q.bind(user.id.to_string());
@@ -320,7 +321,7 @@ pub async fn list_books(
     if let Some(cat) = category {
         q = q.bind(cat);
     }
-    q = q.bind(limit);
+    q = q.bind(limit).bind(offset);
 
     let rows = q.fetch_all(db).await?;
     rows.into_iter().map(list_row_to_card).collect()

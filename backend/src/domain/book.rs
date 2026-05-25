@@ -520,6 +520,7 @@ async fn relocate_book_with_metadata(
             if new_cover.exists() {
                 tokio::fs::remove_file(&new_cover).await.ok();
             }
+            thumbnail::relocate_for_cover(&cover_path, &new_cover).await;
             tokio::fs::rename(&cover_path, &new_cover).await?;
             cover_path = new_cover;
         }

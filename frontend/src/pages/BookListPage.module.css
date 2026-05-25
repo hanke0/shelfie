@@ -17,6 +17,13 @@
   margin-bottom: 1.25rem;
 }
 
+.toolbarActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .filter {
   display: flex;
   flex-direction: column;

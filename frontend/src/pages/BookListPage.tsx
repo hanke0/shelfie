@@ -181,7 +181,7 @@ export function BookListPage() {
           </label>
 
           {!selectMode ? (
-            <>
+            <div className={styles.toolbarActions}>
               <Link to="/duplicates" className="btn btn-ghost">
                 查重
               </Link>
@@ -192,7 +192,7 @@ export function BookListPage() {
               >
                 批量移动
               </button>
-            </>
+            </div>
           ) : (
             <div className={styles.batchBar}>
               <span className={styles.batchHint}>已选 {selectedIds.size} 本</span>

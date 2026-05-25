@@ -111,15 +111,27 @@ textarea {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
+  box-sizing: border-box;
   padding: 0.55rem 1rem;
   border-radius: 999px;
   border: 1px solid transparent;
   background: var(--accent);
   color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
+}
+
+button.btn {
+  margin: 0;
+  appearance: none;
 }
 
 .btn:hover {

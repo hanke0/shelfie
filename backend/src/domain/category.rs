@@ -165,16 +165,6 @@ pub async fn delete_category(
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn default_category_cannot_be_deleted_message() {
-        assert_eq!(DEFAULT_CATEGORY, "未分类");
-    }
-}
-
 pub async fn ensure_default_category(lib_root: &Path) -> AppResult<()> {
     let dir = fs::category_dir(lib_root, DEFAULT_CATEGORY)?;
     if !dir.exists() {
@@ -197,4 +187,14 @@ pub async fn require_category_exists(
     Err(AppError::BadRequest(format!(
         "Category '{name}' does not exist; create it in library settings first"
     )))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_category_cannot_be_deleted_message() {
+        assert_eq!(DEFAULT_CATEGORY, "未分类");
+    }
 }

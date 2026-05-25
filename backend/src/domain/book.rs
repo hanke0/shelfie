@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct BookCard {
     pub id: String,
     pub library_id: String,

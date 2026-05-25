@@ -1,0 +1,57 @@
+.back {
+  display: inline-block;
+  margin: 1rem 0;
+  color: var(--accent);
+}
+
+.heading {
+  font-family: var(--font-display);
+  margin: 0.5rem 0 0.35rem;
+}
+
+.hint {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  margin: 0 0 1.25rem;
+}
+
+.group {
+  margin-bottom: 2rem;
+}
+
+.groupHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badgeTitle {
+  background: rgba(120, 140, 180, 0.2);
+  color: var(--ink);
+}
+
+.groupKey {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.groupCount {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.empty {
+  color: var(--ink-muted);
+}

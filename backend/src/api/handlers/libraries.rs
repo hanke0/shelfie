@@ -1,4 +1,5 @@
 use crate::api::middleware::auth::AuthContext;
+use crate::domain::duplicates::FindDuplicatesResponse;
 use crate::domain::library::{
     self, AddMemberRequest, CreateLibraryRequest, LibraryDto, LibraryMemberDto,
     UpdateMemberPermissionsRequest,
@@ -99,4 +100,22 @@ pub async fn remove_member(
     library::require_view(&perm)?;
     library::remove_member(&state.db, &id, &user, &user_id).await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(
+    get,
+    path = "/libraries/{id}/duplicates",
+    tag = "Libraries",
+    params(("id" = Uuid, Path)),
+    responses((status = 200, body = FindDuplicatesResponse)),
+    security(("bearer_auth" = []))
+)]
+pub async fn find_duplicate_books(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<FindDuplicatesResponse>> {
+    Ok(Json(
+        crate::domain::duplicates::find_duplicates(&state, &user, &id).await?,
+    ))
 }

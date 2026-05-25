@@ -962,6 +962,42 @@
         ]
       }
     },
+    "/libraries/{id}/duplicates": {
+      "get": {
+        "tags": [
+          "Libraries"
+        ],
+        "operationId": "find_duplicate_books",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindDuplicatesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/libraries/{id}/members": {
       "get": {
         "tags": [
@@ -1947,6 +1983,50 @@
           },
           "slug": {
             "type": "string"
+          }
+        }
+      },
+      "DuplicateGroup": {
+        "type": "object",
+        "required": [
+          "kind",
+          "key",
+          "books"
+        ],
+        "properties": {
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookCard"
+            }
+          },
+          "key": {
+            "type": "string",
+            "description": "归一化后的 ISBN 或书名，用于展示匹配依据"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DuplicateMatchKind"
+          }
+        }
+      },
+      "DuplicateMatchKind": {
+        "type": "string",
+        "enum": [
+          "isbn",
+          "title"
+        ]
+      },
+      "FindDuplicatesResponse": {
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateGroup"
+            }
           }
         }
       },

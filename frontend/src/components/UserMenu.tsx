@@ -111,6 +111,14 @@ export function UserMenu({ className }: UserMenuProps) {
             >
               阅读记录
             </Link>
+            <Link
+              to="/duplicates"
+              className={styles.item}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              重复图书
+            </Link>
             <button
               type="button"
               className={styles.item}

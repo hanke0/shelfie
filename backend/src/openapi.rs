@@ -14,6 +14,9 @@ use crate::domain::library::{
     UpdateMemberPermissionsRequest, UserLibraryMembershipDto,
 };
 use crate::domain::reading_history::ReadingHistoryEntry;
+use crate::domain::duplicates::{
+    DuplicateGroup, DuplicateMatchKind, FindDuplicatesResponse,
+};
 use crate::domain::sync::{RefreshDiff, RefreshJobResponse};
 use crate::domain::user::UserDto;
 use crate::error::ApiErrorBody;
@@ -42,6 +45,7 @@ use utoipa::{Modify, OpenApi};
         handlers::libraries::list_libraries,
         handlers::libraries::create_library,
         handlers::libraries::delete_library,
+        handlers::libraries::find_duplicate_books,
         handlers::libraries::list_members,
         handlers::libraries::add_member,
         handlers::libraries::update_permissions,
@@ -97,6 +101,9 @@ use utoipa::{Modify, OpenApi};
         UserDto,
         RefreshJobResponse,
         RefreshDiff,
+        FindDuplicatesResponse,
+        DuplicateGroup,
+        DuplicateMatchKind,
         KosyncAuthResponse,
         KosyncProgressResponse,
         KosyncUpdateRequest,

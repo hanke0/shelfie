@@ -9,6 +9,7 @@ import { AdminLibrariesPage } from "@/pages/AdminLibrariesPage";
 import { AdminUsersPage } from "@/pages/AdminUsersPage";
 import { AdminKoreaderPage } from "@/pages/AdminKoreaderPage";
 import { ReadingHistoryPage } from "@/pages/ReadingHistoryPage";
+import { DuplicatesPage } from "@/pages/DuplicatesPage";
 
 export default function App() {
   return (
@@ -76,6 +77,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ReadingHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/duplicates"
+          element={
+            <ProtectedRoute>
+              <DuplicatesPage />
             </ProtectedRoute>
           }
         />

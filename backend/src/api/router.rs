@@ -110,6 +110,10 @@ pub fn build_router(state: AppState) -> Router {
             delete(handlers::libraries::remove_member),
         )
         .route(
+            "/libraries/{id}/duplicates",
+            get(handlers::libraries::find_duplicate_books),
+        )
+        .route(
             "/libraries/{id}/refresh",
             post(handlers::sync::refresh_library),
         )

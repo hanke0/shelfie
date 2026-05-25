@@ -205,6 +205,56 @@ export function BookDetailPage() {
               className={styles.coverUpload}
             />
           )}
+
+          <section className={styles.progressSection}>
+            <h2>阅读进度</h2>
+            <div className={styles.progressFields}>
+              <label>
+                当前页
+                <input
+                  type="number"
+                  value={currentPage}
+                  onChange={(e) => setCurrentPage(e.target.value)}
+                  disabled={!canEdit}
+                />
+              </label>
+              <label>
+                百分比
+                <input
+                  type="number"
+                  step="0.1"
+                  value={percent}
+                  onChange={(e) => setPercent(e.target.value)}
+                  disabled={!canEdit}
+                />
+              </label>
+            </div>
+            {canEdit && (
+              <div className={styles.progressActions}>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={isBusy}
+                  onClick={() => void saveProgress()}
+                >
+                  {actionBusy === "progress" ? "更新中…" : "更新进度"}
+                </button>
+              </div>
+            )}
+          </section>
+
+          {canDelete && (
+            <section className={styles.dangerSection}>
+              <button
+                type="button"
+                className={`btn ${styles.deleteBtn}`}
+                disabled={isBusy}
+                onClick={() => void handleDelete()}
+              >
+                {actionBusy === "delete" ? "删除中…" : "删除图书"}
+              </button>
+            </section>
+          )}
         </div>
 
         <div className={styles.infoCol}>
@@ -336,6 +386,18 @@ export function BookDetailPage() {
                   )}
                 </td>
               </tr>
+              <tr>
+                <th>MD5</th>
+                <td className={styles.hashCell}>
+                  {metaForm.file_md5 ?? "—"}
+                </td>
+              </tr>
+              <tr>
+                <th>SHA-256</th>
+                <td className={styles.hashCell}>
+                  {metaForm.file_sha256 ?? "—"}
+                </td>
+              </tr>
             </tbody>
           </table>
 
@@ -359,52 +421,6 @@ export function BookDetailPage() {
               </button>
             )}
           </div>
-
-          <section className={styles.progressSection}>
-            <h2>阅读进度</h2>
-            <div className={styles.progressFields}>
-              <label>
-                当前页
-                <input
-                  type="number"
-                  value={currentPage}
-                  onChange={(e) => setCurrentPage(e.target.value)}
-                  disabled={!canEdit}
-                />
-              </label>
-              <label>
-                百分比
-                <input
-                  type="number"
-                  step="0.1"
-                  value={percent}
-                  onChange={(e) => setPercent(e.target.value)}
-                  disabled={!canEdit}
-                />
-              </label>
-            </div>
-            {canEdit && (
-              <button
-                type="button"
-                className="btn"
-                disabled={isBusy}
-                onClick={() => void saveProgress()}
-              >
-                {actionBusy === "progress" ? "更新中…" : "更新进度"}
-              </button>
-            )}
-          </section>
-
-          {canDelete && (
-            <button
-              type="button"
-              className={`btn ${styles.deleteBtn}`}
-              disabled={isBusy}
-              onClick={() => void handleDelete()}
-            >
-              {actionBusy === "delete" ? "删除中…" : "删除图书"}
-            </button>
-          )}
         </div>
       </div>
     </div>

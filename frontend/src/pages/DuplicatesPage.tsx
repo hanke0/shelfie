@@ -7,7 +7,10 @@ import styles from "./DuplicatesPage.module.css";
 
 function kindLabel(kind: string) {
   if (kind === DuplicateMatchKind.isbn) return "ISBN";
-  return "书名";
+  if (kind === DuplicateMatchKind.title) return "书名";
+  if (kind === DuplicateMatchKind.md5) return "MD5";
+  if (kind === DuplicateMatchKind.sha256) return "SHA-256";
+  return kind;
 }
 
 export function DuplicatesPage() {
@@ -26,7 +29,7 @@ export function DuplicatesPage() {
       </Link>
       <h1 className={styles.heading}>重复图书</h1>
       <p className={styles.hint}>
-        在当前图书馆中，按相同 ISBN 或相同书名（忽略大小写与多余空格）分组展示可能重复的图书。
+        在当前图书馆中，按相同 ISBN、书名、文件 MD5 或 SHA-256 分组展示可能重复的图书。
         {library ? ` 图书馆：${library.name}` : ""}
       </p>
 
@@ -51,7 +54,19 @@ export function DuplicatesPage() {
             >
               {kindLabel(group.kind)}
             </span>
-            <span className={styles.groupKey}>{group.key}</span>
+            <span
+              className={[
+                styles.groupKey,
+                group.kind === DuplicateMatchKind.md5 ||
+                group.kind === DuplicateMatchKind.sha256
+                  ? styles.groupKeyHash
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {group.key}
+            </span>
             <span className={styles.groupCount}>{group.books.length} 本</span>
           </div>
           <div className="book-scroll">

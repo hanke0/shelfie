@@ -14,12 +14,14 @@ use uuid::Uuid;
 pub enum DuplicateMatchKind {
     Isbn,
     Title,
+    Md5,
+    Sha256,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct DuplicateGroup {
     pub kind: DuplicateMatchKind,
-    /// 归一化后的 ISBN 或书名，用于展示匹配依据
+    /// 归一化后的 ISBN、书名或文件哈希，用于展示匹配依据
     pub key: String,
     pub books: Vec<BookCard>,
 }
@@ -53,6 +55,44 @@ fn is_meaningful_title(normalized: &str) -> bool {
     !normalized.is_empty() && normalized != "untitled" && normalized.chars().count() >= 2
 }
 
+pub fn normalize_md5(raw: &str) -> Option<String> {
+    let s = raw.trim().to_lowercase();
+    if s.len() == 32 && s.chars().all(|c| c.is_ascii_hexdigit()) {
+        Some(s)
+    } else {
+        None
+    }
+}
+
+pub fn normalize_sha256(raw: &str) -> Option<String> {
+    let s = raw.trim().to_lowercase();
+    if s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit()) {
+        Some(s)
+    } else {
+        None
+    }
+}
+
+fn push_groups(
+    groups: &mut Vec<DuplicateGroup>,
+    kind: DuplicateMatchKind,
+    mut map: HashMap<String, Vec<BookCard>>,
+    display_key: impl Fn(&str, &Vec<BookCard>) -> String,
+) {
+    let mut keys: Vec<_> = map.keys().cloned().collect();
+    keys.sort();
+    for key in keys {
+        let books = map.remove(&key).unwrap_or_default();
+        if books.len() >= 2 {
+            groups.push(DuplicateGroup {
+                kind,
+                key: display_key(&key, &books),
+                books,
+            });
+        }
+    }
+}
+
 pub async fn find_duplicates(
     state: &AppState,
     user: &AuthUser,
@@ -79,6 +119,8 @@ pub async fn find_duplicates(
 
     let mut by_isbn: HashMap<String, Vec<BookCard>> = HashMap::new();
     let mut by_title: HashMap<String, Vec<BookCard>> = HashMap::new();
+    let mut by_md5: HashMap<String, Vec<BookCard>> = HashMap::new();
+    let mut by_sha256: HashMap<String, Vec<BookCard>> = HashMap::new();
 
     for row in rows {
         let metadata_json = row.6.clone();
@@ -89,6 +131,14 @@ pub async fn find_duplicates(
             by_isbn.entry(isbn_key).or_default().push(card.clone());
         }
 
+        if let Some(md5) = meta.file_md5.as_deref().and_then(normalize_md5) {
+            by_md5.entry(md5).or_default().push(card.clone());
+        }
+
+        if let Some(sha) = meta.file_sha256.as_deref().and_then(normalize_sha256) {
+            by_sha256.entry(sha).or_default().push(card.clone());
+        }
+
         let title_key = normalize_title(&meta.title);
         if is_meaningful_title(&title_key) {
             by_title.entry(title_key).or_default().push(card);
@@ -97,31 +147,24 @@ pub async fn find_duplicates(
 
     let mut groups = Vec::new();
 
-    let mut isbn_keys: Vec<_> = by_isbn.keys().cloned().collect();
-    isbn_keys.sort();
-    for key in isbn_keys {
-        let books = by_isbn.remove(&key).unwrap_or_default();
-        if books.len() >= 2 {
-            groups.push(DuplicateGroup {
-                kind: DuplicateMatchKind::Isbn,
-                key,
-                books,
-            });
-        }
-    }
-
-    let mut title_keys: Vec<_> = by_title.keys().cloned().collect();
-    title_keys.sort();
-    for key in title_keys {
-        let books = by_title.remove(&key).unwrap_or_default();
-        if books.len() >= 2 {
-            groups.push(DuplicateGroup {
-                kind: DuplicateMatchKind::Title,
-                key: books[0].title.clone(),
-                books,
-            });
-        }
-    }
+    push_groups(&mut groups, DuplicateMatchKind::Isbn, by_isbn, |key, _| {
+        key.to_string()
+    });
+    push_groups(
+        &mut groups,
+        DuplicateMatchKind::Title,
+        by_title,
+        |_, books| books[0].title.clone(),
+    );
+    push_groups(&mut groups, DuplicateMatchKind::Md5, by_md5, |key, _| {
+        key.to_string()
+    });
+    push_groups(
+        &mut groups,
+        DuplicateMatchKind::Sha256,
+        by_sha256,
+        |key, _| key.to_string(),
+    );
 
     groups.sort_by(|a, b| {
         b.books
@@ -154,5 +197,17 @@ mod tests {
     #[test]
     fn normalize_title_collapses_whitespace() {
         assert_eq!(normalize_title("  Hello   World  "), "hello world");
+    }
+
+    #[test]
+    fn normalize_md5_requires_32_hex_chars() {
+        assert!(normalize_md5("a".repeat(32).as_str()).is_some());
+        assert!(normalize_md5("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz").is_none());
+    }
+
+    #[test]
+    fn normalize_sha256_requires_64_hex_chars() {
+        assert!(normalize_sha256(&"a".repeat(64)).is_some());
+        assert!(normalize_sha256(&"a".repeat(32)).is_none());
     }
 }

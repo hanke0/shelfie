@@ -2002,7 +2002,7 @@
           },
           "key": {
             "type": "string",
-            "description": "归一化后的 ISBN 或书名，用于展示匹配依据"
+            "description": "归一化后的 ISBN、书名或文件哈希，用于展示匹配依据"
           },
           "kind": {
             "$ref": "#/components/schemas/DuplicateMatchKind"
@@ -2013,7 +2013,9 @@
         "type": "string",
         "enum": [
           "isbn",
-          "title"
+          "title",
+          "md5",
+          "sha256"
         ]
       },
       "FindDuplicatesResponse": {

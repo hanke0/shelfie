@@ -47,6 +47,13 @@
   color: var(--ink);
 }
 
+.groupKeyHash {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  word-break: break-all;
+}
+
 .groupCount {
   font-size: 0.85rem;
   color: var(--ink-muted);

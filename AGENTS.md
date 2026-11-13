@@ -88,7 +88,7 @@ npm run codegen
 ## 测试
 
 - `cargo test` — 后端单元/集成测试
-- 前端 vitest 占位，后续补充
+- `npm run test:frontend` — 前端 vitest（jsdom + Testing Library），测试文件与源码同目录 `*.test.ts(x)`
 
 ## Lint（改完代码必做）
 

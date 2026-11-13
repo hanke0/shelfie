@@ -116,8 +116,8 @@ export function UploadModal({ draft, onClose }: UploadModalProps) {
 
   if (draft.phase === "extracting") {
     return (
-      <div className={styles.overlay} onClick={handleClose}>
-        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.overlay}>
+        <div className={styles.modal}>
           <h2>上传图书</h2>
           <p className={styles.libraryHint}>
             当前图书馆：<strong>{library?.name ?? "未选择"}</strong>
@@ -140,12 +140,8 @@ export function UploadModal({ draft, onClose }: UploadModalProps) {
   if (!metaForm) return null;
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
-      <form
-        className={styles.modal}
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-      >
+    <div className={styles.overlay}>
+      <form className={styles.modal} onSubmit={handleSubmit}>
         <h2>确认上传</h2>
         <p className={styles.libraryHint}>
           当前图书馆：<strong>{library?.name ?? "未选择"}</strong>

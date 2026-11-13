@@ -238,7 +238,8 @@ pub async fn list_books_for_opds(
     }
     query.push_str(" ORDER BY json_extract(metadata, '$.title') COLLATE NOCASE LIMIT ?");
 
-    let mut q = sqlx::query_as::<_, (String, String, String, String, String)>(&query);
+    let mut q =
+        sqlx::query_as::<_, (String, String, String, String, String)>(sqlx::AssertSqlSafe(query));
     q = q.bind(library_id.to_string());
     if let Some(cat) = category {
         q = q.bind(cat);
@@ -309,7 +310,7 @@ pub async fn list_books(
 
     query = format!("{query} ORDER BY {order} LIMIT ? OFFSET ?");
 
-    let mut q = sqlx::query_as::<_, BookListRow>(&query);
+    let mut q = sqlx::query_as::<_, BookListRow>(sqlx::AssertSqlSafe(query));
     q = q.bind(user.id.to_string());
 
     for id in &accessible {

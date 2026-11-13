@@ -71,7 +71,7 @@ pub async fn get_home(
         LIMIT ?
         "#
     );
-    let mut recent_q = sqlx::query_as::<_, BookListRow>(&recent_sql);
+    let mut recent_q = sqlx::query_as::<_, BookListRow>(sqlx::AssertSqlSafe(recent_sql));
     recent_q = recent_q.bind(&user_id);
     for id in &libs {
         recent_q = recent_q.bind(id);
@@ -97,7 +97,7 @@ pub async fn get_home(
     );
 
     let new_sql = format!("{list_sql} ORDER BY b.uploaded_at DESC LIMIT ?");
-    let mut new_q = sqlx::query_as::<_, BookListRow>(&new_sql);
+    let mut new_q = sqlx::query_as::<_, BookListRow>(sqlx::AssertSqlSafe(new_sql));
     new_q = new_q.bind(&user_id);
     for id in &libs {
         new_q = new_q.bind(id);
@@ -111,7 +111,7 @@ pub async fn get_home(
         .collect::<Result<Vec<_>, _>>()?;
 
     let random_sql = format!("{list_sql} ORDER BY RANDOM() LIMIT ?");
-    let mut aha_q = sqlx::query_as::<_, BookListRow>(&random_sql);
+    let mut aha_q = sqlx::query_as::<_, BookListRow>(sqlx::AssertSqlSafe(random_sql));
     aha_q = aha_q.bind(&user_id);
     for id in &libs {
         aha_q = aha_q.bind(id);

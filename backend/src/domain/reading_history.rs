@@ -119,7 +119,7 @@ pub async fn list_for_user(
     }
     sql.push_str(" ORDER BY h.recorded_at DESC LIMIT ? OFFSET ?");
 
-    let mut q = sqlx::query_as::<_, HistoryRow>(&sql);
+    let mut q = sqlx::query_as::<_, HistoryRow>(sqlx::AssertSqlSafe(sql));
     q = q.bind(user.id.to_string());
     for id in &accessible {
         q = q.bind(id);

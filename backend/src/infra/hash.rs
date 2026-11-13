@@ -9,7 +9,11 @@ pub fn md5_hex(bytes: &[u8]) -> String {
 pub fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
-    format!("{:x}", hasher.finalize())
+    hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 pub async fn md5_hex_file(path: &Path) -> AppResult<String> {

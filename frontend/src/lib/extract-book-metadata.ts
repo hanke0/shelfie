@@ -47,7 +47,7 @@ async function extractEpub(file: File): Promise<LocalExtractedBook> {
     const href = joinOpfPath(opfDir, parsed.coverHref);
     const entry = zip.file(href);
     if (entry) {
-      const bytes = await entry.async("uint8array");
+      const bytes = await entry.async("arraybuffer");
       const mime = coverMimeFromPath(href);
       const ext = mime.includes("png") ? "png" : "jpg";
       cover = new File([bytes], `${fallbackTitle(file)}-cover.${ext}`, { type: mime });

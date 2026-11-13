@@ -10,6 +10,7 @@ export interface FetchConfig {
   headers?: Record<string, string>;
   data?: unknown;
   params?: Record<string, unknown>;
+  responseType?: "blob";
   signal?: AbortSignal;
 }
 
@@ -75,6 +76,10 @@ export const customFetch = async <T>(
 
   if (response.status === 204) {
     return undefined as T;
+  }
+
+  if (config.responseType === "blob") {
+    return response.blob() as Promise<T>;
   }
 
   const contentType = response.headers.get("content-type");

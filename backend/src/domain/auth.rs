@@ -179,7 +179,8 @@ pub fn decode_token(jwt_secret: &str, token: &str) -> AppResult<JwtClaims> {
         token,
         &DecodingKey::from_secret(jwt_secret.as_bytes()),
         &Validation::default(),
-    )?;
+    )
+    .map_err(|e| AppError::Unauthorized(format!("Invalid token: {e}")))?;
     Ok(data.claims)
 }
 
@@ -200,4 +201,37 @@ pub async fn ensure_default_admin(state: &AppState) -> AppResult<()> {
         tracing::warn!("首次启动：已创建默认系统管理员（凭据见上方控制台输出）");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn expired_token_is_unauthorized() {
+        let claims = JwtClaims {
+            sub: Uuid::new_v4().to_string(),
+            username: "u".into(),
+            role: "user".into(),
+            exp: (Utc::now() - Duration::hours(1)).timestamp(),
+        };
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(b"secret"),
+        )
+        .unwrap();
+        assert!(matches!(
+            decode_token("secret", &token),
+            Err(AppError::Unauthorized(_))
+        ));
+    }
+
+    #[test]
+    fn garbage_token_is_unauthorized() {
+        assert!(matches!(
+            decode_token("secret", "not-a-jwt"),
+            Err(AppError::Unauthorized(_))
+        ));
+    }
 }

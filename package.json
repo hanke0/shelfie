@@ -17,5 +17,10 @@
     "typecheck": "npm exec -w shelfie-frontend -- tsc -b",
     "export-openapi": "./scripts/export-openapi.sh",
     "bump-version": "./scripts/bump-version.sh"
+  },
+  "overrides": {
+    "typedoc": {
+      "minimatch": "^11.0.1"
+    }
   }
 }

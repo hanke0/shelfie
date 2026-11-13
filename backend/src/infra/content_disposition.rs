@@ -12,7 +12,7 @@ fn ascii_fallback_filename(filename: &str) -> String {
     let ascii: String = filename
         .chars()
         .map(|c| {
-            if c.is_ascii() && c != '"' && c != '\\' {
+            if c.is_ascii() && !c.is_ascii_control() && c != '"' && c != '\\' {
                 c
             } else {
                 '_'
@@ -66,5 +66,33 @@ mod tests {
         let header = attachment_filename("book.pdf");
         assert!(header.contains("filename=\"book.pdf\""));
         assert!(header.contains("filename*=UTF-8''book.pdf"));
+    }
+
+    #[test]
+    fn hostile_names_produce_valid_single_header() {
+        for name in [
+            "a\r\nSet-Cookie: x=1.pdf",
+            "quote\"; filename=evil.exe.pdf",
+            "back\\slash.pdf",
+            "nul\0byte.pdf",
+            "tab\tname.pdf",
+        ] {
+            let header = attachment_filename(name);
+            assert!(
+                axum::http::HeaderValue::from_str(&header).is_ok(),
+                "{name:?} -> {header:?}"
+            );
+            assert_eq!(header.matches('"').count(), 2, "{header}");
+            assert!(!header.contains('\\'), "{header}");
+        }
+    }
+
+    #[test]
+    fn non_ascii_only_name_falls_back_to_extension() {
+        assert!(attachment_filename("三体.pdf").contains("filename=\"__.pdf\""));
+        assert!(attachment_filename("三体").contains("filename=\"download\""));
+        assert!(
+            attachment_filename("三体.epub").contains("filename*=UTF-8''%E4%B8%89%E4%BD%93.epub")
+        );
     }
 }

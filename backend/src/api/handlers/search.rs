@@ -31,7 +31,7 @@ pub async fn search(
     Extension(AuthContext(user)): Extension<AuthContext>,
     Query(q): Query<SearchQuery>,
 ) -> AppResult<Json<Vec<BookCard>>> {
-    let limit = q.limit.unwrap_or(20);
+    let limit = q.limit.unwrap_or(20).clamp(1, 200);
     Ok(Json(
         book::search_books(&state.db, &user, &q.q, q.library_id, limit).await?,
     ))

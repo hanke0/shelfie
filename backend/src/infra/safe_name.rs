@@ -255,4 +255,93 @@ mod tests {
     fn category_still_rejects_path_separators() {
         assert!(validate_category("foo/bar").is_err());
     }
+
+    #[test]
+    fn segments_reject_traversal_and_unsafe_chars() {
+        for bad in [
+            "", " ", ".", "..", " .. ", "a/b", "a\\b", "a:b", "a*b", "a?b", "a\"b", "a<b", "a>b",
+            "a|b", "a\0b", "a\nb", "a\u{7f}b", "a@b", "a$b", "a%2Fb",
+        ] {
+            assert!(validate_category(bad).is_err(), "{bad:?}");
+            assert!(validate_library_name(bad).is_err(), "{bad:?}");
+        }
+        for ok in ["科幻", "Sci-Fi", "小说 文学", "A&B", "《三体》", "v1.0"] {
+            assert!(validate_category(ok).is_ok(), "{ok:?}");
+        }
+    }
+
+    #[test]
+    fn reserved_names_are_case_insensitive() {
+        for name in ["con", "Con", "NUL", "com1", "LPT9", " aux "] {
+            assert!(validate_category(name).is_err(), "{name}");
+        }
+        assert!(validate_category("CONSOLE").is_ok());
+        assert_eq!(avoid_windows_reserved_base("nul.tar"), "untitled");
+        assert_eq!(avoid_windows_reserved_base(""), "");
+    }
+
+    #[test]
+    fn length_limits_count_chars_not_bytes() {
+        assert!(validate_category(&"分".repeat(MAX_CATEGORY_LEN)).is_ok());
+        assert!(validate_category(&"分".repeat(MAX_CATEGORY_LEN + 1)).is_err());
+        assert!(validate_library_name(&"a".repeat(MAX_LIBRARY_NAME_LEN + 1)).is_err());
+        assert!(validate_book_title(&"书".repeat(MAX_BOOK_FIELD_LEN)).is_ok());
+        assert!(validate_book_title(&"书".repeat(MAX_BOOK_FIELD_LEN + 1)).is_err());
+        assert_eq!(
+            sanitize_path_segment(&"字".repeat(500)).chars().count(),
+            MAX_BOOK_FIELD_LEN
+        );
+    }
+
+    #[test]
+    fn author_may_be_empty_but_title_may_not() {
+        assert!(validate_book_author("").is_ok());
+        assert!(validate_book_author("  ").is_ok());
+        assert!(validate_book_author("..").is_err());
+        assert!(validate_book_title("").is_err());
+        assert!(validate_book_title("..").is_err());
+    }
+
+    #[test]
+    fn slug_rules() {
+        for ok in ["lib", "a", "0lib", "my-lib_2"] {
+            assert!(validate_slug(ok).is_ok(), "{ok}");
+        }
+        for bad in [
+            "",
+            "Lib",
+            "-lib",
+            "_lib",
+            "my lib",
+            "lib/x",
+            "../x",
+            "库",
+            &"a".repeat(65),
+        ] {
+            assert!(validate_slug(bad).is_err(), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn sanitize_never_yields_dot_segments() {
+        assert_eq!(sanitize_path_segment("..."), "");
+        assert_eq!(sanitize_path_segment("../../etc/passwd"), "_.._etc_passwd");
+        assert_eq!(sanitize_path_segment("  a   b  "), "a_b");
+        assert_eq!(sanitize_path_segment("\u{0}\u{1}"), "");
+        assert!(!sanitize_path_segment(".hidden").starts_with('.'));
+    }
+
+    #[test]
+    fn allocate_library_root_appends_suffix_on_collision() {
+        let dir = std::env::temp_dir().join(format!("shelfie-alloc-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(dir.join("馆")).unwrap();
+        std::fs::create_dir_all(dir.join("馆_2")).unwrap();
+        assert_eq!(allocate_library_root(&dir, "馆").unwrap(), dir.join("馆_3"));
+        assert_eq!(
+            allocate_library_root(&dir, "新馆").unwrap(),
+            dir.join("新馆")
+        );
+        assert!(allocate_library_root(&dir, "../x").is_err());
+        let _ = std::fs::remove_dir_all(dir);
+    }
 }

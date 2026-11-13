@@ -236,19 +236,7 @@ pub fn find_metadata_in_dir(dir: &Path, book_stem: Option<&str>) -> Option<PathB
         }
     }
     let legacy = dir.join("metadata.json");
-    if legacy.is_file() {
-        return Some(legacy);
-    }
-    std::fs::read_dir(dir)
-        .ok()?
-        .filter_map(|e| e.ok())
-        .find_map(|entry| {
-            let path = entry.path();
-            if path.is_file() && path.extension().and_then(|x| x.to_str()) == Some("json") {
-                return Some(path);
-            }
-            None
-        })
+    legacy.is_file().then_some(legacy)
 }
 
 pub fn find_cover_in_dir(dir: &Path, book_stem: Option<&str>) -> Option<PathBuf> {
@@ -605,6 +593,75 @@ mod tests {
             book_base_name("三体—续", "作者@example"),
             "三体—续_作者@example"
         );
+    }
+
+    #[test]
+    fn extension_resolution_prefers_filename_then_mime() {
+        assert_eq!(
+            resolve_book_extension(Some("A.EPUB"), Some("application/pdf")).as_deref(),
+            Some("epub")
+        );
+        assert_eq!(
+            resolve_book_extension(Some("noext"), Some("application/pdf")).as_deref(),
+            Some("pdf")
+        );
+        assert_eq!(
+            resolve_cover_extension(None, Some("image/jpeg")).as_deref(),
+            Some("jpg")
+        );
+        assert_eq!(resolve_book_extension(None, Some("text/html")), None);
+        assert!(validate_book_extension("PDF").is_ok());
+        assert!(validate_book_extension("exe").is_err());
+        assert!(validate_cover_extension("svg").is_err());
+    }
+
+    #[test]
+    fn category_dir_rejects_traversal() {
+        let root = PathBuf::from("/tmp/lib");
+        for bad in ["..", "../x", "a/b", ""] {
+            assert!(category_dir(&root, bad).is_err(), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn book_base_name_fallbacks() {
+        assert_eq!(book_base_name("", ""), "untitled");
+        assert_eq!(book_base_name("", "Author"), "Author");
+        assert_eq!(book_base_name("...", "///"), "untitled");
+        assert_eq!(book_base_name("CON", ""), "untitled");
+    }
+
+    #[test]
+    fn metadata_lookup_does_not_borrow_other_books_sidecar() {
+        let dir = std::env::temp_dir().join(format!("shelfie-meta-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("other.json"), b"{}").unwrap();
+        assert_eq!(find_metadata_in_dir(&dir, Some("mine")), None);
+
+        std::fs::write(dir.join("mine.json"), b"{}").unwrap();
+        assert_eq!(
+            find_metadata_in_dir(&dir, Some("mine")),
+            Some(dir.join("mine.json"))
+        );
+
+        std::fs::write(dir.join("metadata.json"), b"{}").unwrap();
+        assert_eq!(
+            find_metadata_in_dir(&dir, Some("legacy")),
+            Some(dir.join("metadata.json"))
+        );
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn ensure_unique_base_appends_counter() {
+        let dir = std::env::temp_dir().join(format!("shelfie-uniq-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(ensure_unique_base(&dir, "b"), "b");
+        std::fs::write(dir.join("b.pdf"), b"x").unwrap();
+        std::fs::write(dir.join("b_2.json"), b"x").unwrap();
+        assert_eq!(ensure_unique_base(&dir, "b"), "b_3");
+        assert_eq!(ensure_unique_base(&dir.join("missing"), "b"), "b");
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

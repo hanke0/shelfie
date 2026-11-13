@@ -180,4 +180,45 @@ mod tests {
         zero.normalize_fields().unwrap();
         assert_eq!(zero.rating, None);
     }
+
+    #[test]
+    fn publish_date_validation() {
+        assert_eq!(BookMetadata::normalize_publish_date("").unwrap(), "");
+        assert_eq!(
+            BookMetadata::normalize_publish_date(" 2024-02 ").unwrap(),
+            "2024-02"
+        );
+        for bad in [
+            "2024-00",
+            "2024-13",
+            "2024-2",
+            "2024/02",
+            "abcd-02",
+            "2024-02-01",
+            "二〇二四-02",
+            "2024-0a",
+        ] {
+            assert!(BookMetadata::normalize_publish_date(bad).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn metadata_requires_title_and_tolerates_unknown_fields() {
+        assert!(BookMetadata::from_json("{}").is_err());
+        assert!(BookMetadata::from_json("not json").is_err());
+        let meta = BookMetadata::from_json(r#"{"title":"T","unknown":1}"#).unwrap();
+        assert_eq!(meta.title, "T");
+        assert_eq!(meta.author, "");
+    }
+
+    #[test]
+    fn book_hashes_are_set_from_bytes() {
+        let mut meta = BookMetadata::default();
+        meta.set_book_bytes_hashes(b"abc");
+        assert_eq!(
+            meta.file_md5.as_deref(),
+            Some("900150983cd24fb0d6963f7d28e17f72")
+        );
+        assert_eq!(meta.file_sha256.as_deref().map(str::len), Some(64));
+    }
 }

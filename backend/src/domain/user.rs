@@ -51,6 +51,28 @@ fn validate_library_role(role: &str) -> AppResult<()> {
     }
 }
 
+fn validate_username(raw: &str) -> AppResult<&str> {
+    let username = raw.trim();
+    if username.is_empty() {
+        return Err(AppError::BadRequest("username cannot be empty".into()));
+    }
+    if username.len() > 64 {
+        return Err(AppError::BadRequest(
+            "username must be at most 64 characters".into(),
+        ));
+    }
+    Ok(username)
+}
+
+fn validate_password(password: &str) -> AppResult<()> {
+    if password.len() < 6 {
+        return Err(AppError::BadRequest(
+            "password must be at least 6 characters".into(),
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone)]
 pub struct CreateUserParams {
     pub username: String,
@@ -84,16 +106,18 @@ pub async fn create_user(
         ));
     }
 
-    let user =
-        auth::register_user(&state.db, &params.username, &params.password, &params.role).await?;
+    let username = validate_username(&params.username)?;
+    validate_password(&params.password)?;
+
+    let library_role = params.library_role.unwrap_or_else(|| "member".to_string());
+    if let Some(library_id) = params.library_id {
+        validate_library_role(&library_role)?;
+        library::get_library_root(&state.db, &library_id).await?;
+    }
+
+    let user = auth::register_user(&state.db, username, &params.password, &params.role).await?;
 
     if let Some(library_id) = params.library_id {
-        let library_role = params.library_role.unwrap_or_else(|| "member".to_string());
-        validate_library_role(&library_role)?;
-
-        // 确认图书馆存在
-        library::get_library_root(&state.db, &library_id).await?;
-
         library::add_member(
             &state.db,
             &library_id,
@@ -129,15 +153,7 @@ pub async fn update_username(
         return Err(AppError::Forbidden("只能修改自己的用户名".into()));
     }
 
-    let username = raw_username.trim();
-    if username.is_empty() {
-        return Err(AppError::BadRequest("username cannot be empty".into()));
-    }
-    if username.len() > 64 {
-        return Err(AppError::BadRequest(
-            "username must be at most 64 characters".into(),
-        ));
-    }
+    let username = validate_username(raw_username)?;
     if username == requester.username {
         return Ok(requester.clone());
     }
@@ -173,11 +189,7 @@ pub async fn change_password(
     target_user_id: &Uuid,
     params: ChangePasswordParams,
 ) -> AppResult<()> {
-    if params.new_password.len() < 6 {
-        return Err(AppError::BadRequest(
-            "password must be at least 6 characters".into(),
-        ));
-    }
+    validate_password(&params.new_password)?;
 
     let is_self = requester.id == *target_user_id;
     if is_self {

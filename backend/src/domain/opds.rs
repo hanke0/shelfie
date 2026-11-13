@@ -328,6 +328,75 @@ mod tests {
     }
 
     #[test]
+    fn configured_base_url_overrides_request_headers() {
+        assert_eq!(
+            resolve_base_url(
+                Some("https://books.example/"),
+                Some("http"),
+                Some("evil.example")
+            ),
+            "https://books.example"
+        );
+        assert_eq!(
+            resolve_base_url(Some(""), Some("https"), Some("lan:8080")),
+            "https://lan:8080"
+        );
+        assert_eq!(resolve_base_url(None, None, None), "http://localhost:8080");
+    }
+
+    #[test]
+    fn absolute_url_joins_or_passes_through() {
+        assert_eq!(absolute_url("http://h/", "/api"), "http://h/api");
+        assert_eq!(absolute_url("http://h", "https://cdn/x"), "https://cdn/x");
+    }
+
+    #[test]
+    fn xml_escape_covers_all_special_chars() {
+        assert_eq!(
+            xml_escape(r#"<a href="x">&'</a>"#),
+            "&lt;a href=&quot;x&quot;&gt;&amp;&apos;&lt;/a&gt;"
+        );
+        assert_eq!(xml_escape("&amp;"), "&amp;amp;");
+    }
+
+    #[test]
+    fn opds_updated_normalizes_or_falls_back() {
+        assert_eq!(
+            format_opds_updated("2024-02-03T04:05:06+08:00"),
+            "2024-02-02T20:05:06Z"
+        );
+        assert!(format_opds_updated("garbage").ends_with('Z'));
+    }
+
+    #[test]
+    fn acquisition_entry_uses_mime_from_extension() {
+        let book = OpdsBookRow {
+            id: "id".into(),
+            title: "T".into(),
+            author: " ".into(),
+            category: "c".into(),
+            book_file_path: "/x/book.PDF".into(),
+            updated_at: "".into(),
+            summary: Some("<b>s</b>".into()),
+            language: Some("zh".into()),
+        };
+        let xml = acquisition_entry(&book, "http://h");
+        assert!(xml.contains(r#"type="application/pdf""#));
+        assert!(xml.contains("<name>Unknown</name>"));
+        assert!(xml.contains("<summary>&lt;b&gt;s&lt;/b&gt;</summary>"));
+        assert!(xml.contains("<dc:language>zh</dc:language>"));
+        assert!(xml.contains("http://h/api/v1/books/id/download"));
+        assert_eq!(mime_for_ext("mobi"), "application/x-mobipocket-ebook");
+        assert_eq!(mime_for_ext("epub"), "application/epub+zip");
+    }
+
+    #[test]
+    fn parse_library_id_rejects_garbage() {
+        assert!(parse_library_id("not-a-uuid").is_err());
+        assert!(parse_library_id(&Uuid::new_v4().to_string()).is_ok());
+    }
+
+    #[test]
     fn root_library_entry_is_navigation_only() {
         let xml = nav_entry_to_navigation(
             "默认",

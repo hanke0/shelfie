@@ -899,8 +899,12 @@ pub async fn upsert_from_fs(
         .parent()
         .ok_or_else(|| AppError::Internal("Invalid book file path".into()))?;
     let book_stem = fs::file_stem(book_file);
-    let metadata_path = fs::find_metadata_in_dir(dir, book_stem.as_deref())
-        .unwrap_or_else(|| dir.join("metadata.json"));
+    let metadata_path = fs::find_metadata_in_dir(dir, book_stem.as_deref()).unwrap_or_else(|| {
+        dir.join(format!(
+            "{}.json",
+            book_stem.as_deref().unwrap_or("metadata")
+        ))
+    });
     let cover_file = fs::find_cover_in_dir(dir, book_stem.as_deref())
         .filter(|p| p.is_file())
         .unwrap_or_default();

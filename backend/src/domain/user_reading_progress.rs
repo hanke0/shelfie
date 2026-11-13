@@ -92,3 +92,23 @@ pub async fn upsert(
     .await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_columns_mean_no_progress() {
+        assert!(progress_from_columns(None, None, None).is_none());
+        assert!(progress_from_columns(None, None, Some(String::new())).is_none());
+        let p = progress_from_columns(Some(1.5), None, Some(String::new())).unwrap();
+        assert_eq!(p.percent, Some(1.5));
+        assert_eq!(p.last_position, None);
+        assert_eq!(
+            progress_from_columns(None, Some(3), None)
+                .unwrap()
+                .current_page,
+            Some(3)
+        );
+    }
+}

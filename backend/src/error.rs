@@ -114,3 +114,37 @@ impl IntoResponse for AppError {
 }
 
 pub type AppResult<T> = Result<T, AppError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn status_and_code_mapping() {
+        let cases = [
+            (AppError::BadRequest("x".into()), 400, "bad_request"),
+            (AppError::Unauthorized("x".into()), 401, "unauthorized"),
+            (AppError::Forbidden("x".into()), 403, "forbidden"),
+            (AppError::NotFound("x".into()), 404, "not_found"),
+            (AppError::Conflict("x".into()), 409, "conflict"),
+            (AppError::Internal("x".into()), 500, "internal_error"),
+            (
+                AppError::Io(std::io::Error::other("disk")),
+                500,
+                "internal_error",
+            ),
+        ];
+        for (err, status, code) in cases {
+            assert_eq!(err.status().as_u16(), status);
+            assert_eq!(err.code(), code);
+        }
+    }
+
+    #[test]
+    fn only_unauthorized_sends_basic_challenge() {
+        let res = AppError::Unauthorized("x".into()).into_response();
+        assert_eq!(res.headers()[WWW_AUTHENTICATE], WWW_AUTH_BASIC_REALM);
+        let res = AppError::Forbidden("x".into()).into_response();
+        assert!(!res.headers().contains_key(WWW_AUTHENTICATE));
+    }
+}

@@ -43,3 +43,38 @@ pub fn not_modified_response(etag: &str, mime: &str) -> Response {
         .body(axum::body::Body::empty())
         .unwrap()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn headers(v: &str) -> HeaderMap {
+        let mut h = HeaderMap::new();
+        h.insert(header::IF_NONE_MATCH, v.parse().unwrap());
+        h
+    }
+
+    #[test]
+    fn if_none_match_handles_lists_and_wildcard() {
+        let etag = "\"full-1-2\"";
+        assert!(if_none_match(&headers(etag), etag));
+        assert!(if_none_match(&headers("\"a\", \"full-1-2\""), etag));
+        assert!(if_none_match(&headers("*"), etag));
+        assert!(!if_none_match(&headers("\"thumb-1-2\""), etag));
+        assert!(!if_none_match(&HeaderMap::new(), etag));
+    }
+
+    #[tokio::test]
+    async fn etag_differs_between_full_and_thumb() {
+        let path = std::env::temp_dir().join(format!("shelfie-etag-{}", uuid::Uuid::new_v4()));
+        std::fs::write(&path, b"12345").unwrap();
+        let full = cover_etag(&path, false).await.unwrap();
+        let thumb = cover_etag(&path, true).await.unwrap();
+        assert!(full.starts_with("\"full-") && full.ends_with("-5\""));
+        assert_ne!(full, thumb);
+        assert!(cover_etag(&path.with_extension("missing"), false)
+            .await
+            .is_err());
+        let _ = std::fs::remove_file(path);
+    }
+}

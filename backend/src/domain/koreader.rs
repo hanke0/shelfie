@@ -324,8 +324,11 @@ async fn user_can_view_book(db: &SqlitePool, user: &AuthUser, book_id: &Uuid) ->
     };
 
     let library_id = Uuid::parse_str(&library_id).map_err(|e| AppError::Internal(e.to_string()))?;
-    let perm = library::resolve_permission(db, user, &library_id).await?;
-    Ok(perm.can_view)
+    match library::resolve_permission(db, user, &library_id).await {
+        Ok(perm) => Ok(perm.can_view),
+        Err(AppError::Forbidden(_)) => Ok(false),
+        Err(e) => Err(e),
+    }
 }
 
 async fn upsert_document_link(
@@ -548,9 +551,10 @@ pub async fn set_document_link(
     upsert_document_link(&state.db, &req.document, &book_id, "manual").await?;
 
     // Backfill koreader_progress.book_id for this user+document
-    sqlx::query("UPDATE koreader_progress SET book_id = ? WHERE document = ?")
+    sqlx::query("UPDATE koreader_progress SET book_id = ? WHERE document = ? AND user_id = ?")
         .bind(book_id.to_string())
         .bind(&req.document)
+        .bind(user.id.to_string())
         .execute(&state.db)
         .await?;
 

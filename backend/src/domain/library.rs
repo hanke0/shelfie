@@ -406,6 +406,19 @@ pub async fn add_member(
         ));
     }
     let user_id = resolve_member_user_id(db, &req).await?;
+    if requester.role != "system_admin" {
+        let existing: Option<(String,)> =
+            sqlx::query_as("SELECT role FROM library_members WHERE library_id = ? AND user_id = ?")
+                .bind(library_id.to_string())
+                .bind(&user_id)
+                .fetch_optional(db)
+                .await?;
+        if existing.is_some_and(|(role,)| role == "admin") {
+            return Err(AppError::Forbidden(
+                "Cannot modify a library admin; contact system admin".into(),
+            ));
+        }
+    }
     let can_view = if req.role == "admin" {
         1
     } else {

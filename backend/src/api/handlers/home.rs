@@ -32,7 +32,7 @@ pub async fn get_home(
     Extension(AuthContext(user)): Extension<AuthContext>,
     Query(q): Query<HomeQuery>,
 ) -> AppResult<Json<home::HomeResponse>> {
-    let limit = q.limit.unwrap_or(12);
+    let limit = q.limit.unwrap_or(12).clamp(1, 200);
     Ok(Json(
         home::get_home(&state, &user, q.library_id, limit, q.seed).await?,
     ))

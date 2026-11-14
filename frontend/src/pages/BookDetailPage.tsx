@@ -232,9 +232,14 @@ export function BookDetailPage() {
 
   return (
     <div className={`app-shell ${styles.page}`}>
-      <Link to="/" className={styles.back}>
-        ← 返回首页
-      </Link>
+      <nav className={styles.topBar}>
+        <Link to="/" className={styles.back}>
+          <span className={styles.backArrow} aria-hidden>
+            ←
+          </span>
+          返回首页
+        </Link>
+      </nav>
 
       <div className={styles.layout}>
         <aside className={styles.coverCol}>

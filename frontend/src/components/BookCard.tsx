@@ -69,11 +69,14 @@ export function BookCard({
         )}
       </div>
       <div className={styles.meta}>
-        <h3>{book.title}</h3>
-        <p>{book.author || "未知作者"}</p>
+        <h3 title={book.title}>{book.title}</h3>
+        <p title={book.author || undefined}>{book.author || "未知作者"}</p>
         {percent > 0 && (
-          <div className={styles.progress}>
-            <div style={{ width: `${Math.min(percent, 100)}%` }} />
+          <div className={styles.progressRow}>
+            <div className={styles.progress}>
+              <div style={{ width: `${Math.min(percent, 100)}%` }} />
+            </div>
+            <span className={styles.percent}>{Math.round(Math.min(percent, 100))}%</span>
           </div>
         )}
       </div>

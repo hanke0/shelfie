@@ -10,7 +10,7 @@ Shelfie 是图书管理 Web 应用：用户上传 PDF/EPUB/MOBI，按分类存�
 |------|------|------|
 | 1 | 完成 | Monorepo 骨架、health、空路由 |
 | 2 | 完成 | OpenAPI 契约、migrations、stub handlers |
-| 3 | 完成 | JWT、权限、CRUD、upload、refresh sync |
+| 3 | 完成 | JWT、权限、CRUD、upload、维护任务（目录对比同步） |
 | 4 | 完成 | React 首页/详情/管理台 |
 
 ## 开发命令
@@ -73,12 +73,13 @@ npm run codegen
 | `HOST` | 监听地址，默认 `127.0.0.1`（局域网访问可设为 `0.0.0.0`） |
 | `PORT` | 监听端口，默认 8080 |
 
-## Refresh 同步策略
+## 系统维护与后台任务
 
-- FS 有、DB 无 → INSERT（从 `metadata.json`）
-- DB 有、FS 无 → 标记 `orphan`（不自动删 DB）
-- 不一致 → 默认以 FS `metadata.json` 为准（`?prefer=db` 可选）
-- 同步结束 → 删除分类目录内无对应图书文件的 metadata / 封面 / `.thumb.jpg`（`RefreshDiff.cleaned`）
+- 通用长任务：`domain/tasks.rs`（`TaskManager`），记录存 `maintenance_tasks` 表；同一 `lock_key`（图书馆工具为 `library:{id}`）同时只允许一个 running 任务（部分唯一索引），冲突返回 409；取消为协作式（任务循环内检查 `TaskContext::is_cancelled`）；启动时残留 running 标记为 `interrupted`
+- 工具注册：`domain/maintenance.rs`；新增工具需加 `MaintenanceTool` 枚举值、`describe`/`permission` 与分发分支
+- 接口：`GET /maintenance/tools`、`GET|POST /maintenance/tasks`、`GET /maintenance/tasks/{id}`、`POST /maintenance/tasks/{id}/cancel`；可见性按图书馆编辑权限，破坏性工具需删除权限
+- 图书馆对比（`domain/sync.rs`）：`library_scan` 只读出报告（DB 有 FS 无 / FS 有 DB 无 / 多余附属文件）；后续工具 `library_import_untracked`、`library_delete_untracked`、`library_purge_missing`、`library_clean_dangling`、`library_resync_metadata` 执行前重新扫描，`items` 中不再符合条件的项记为 skipped
+- 哈希工具：`library_refresh_hashes`（全部重算）、`library_fill_missing_hashes`（仅缺 MD5 / partial MD5 / SHA-256 任一项的），写回 DB 与 metadata.json，文件缺失的图书不处理
 
 ## 禁止提交
 

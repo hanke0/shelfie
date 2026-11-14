@@ -960,12 +960,3 @@ pub async fn upsert_from_fs(
 
     Ok(())
 }
-
-pub async fn mark_orphan(db: &SqlitePool, book_id: &Uuid) -> AppResult<()> {
-    sqlx::query("UPDATE books SET sync_status = 'orphan', updated_at = ? WHERE id = ?")
-        .bind(Utc::now().to_rfc3339())
-        .bind(book_id.to_string())
-        .execute(db)
-        .await?;
-    Ok(())
-}

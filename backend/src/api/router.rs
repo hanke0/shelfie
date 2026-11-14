@@ -114,12 +114,21 @@ pub fn build_router(state: AppState) -> Router {
             get(handlers::libraries::find_duplicate_books),
         )
         .route(
-            "/libraries/{id}/refresh",
-            post(handlers::sync::refresh_library),
+            "/maintenance/tools",
+            get(handlers::maintenance::list_maintenance_tools),
         )
         .route(
-            "/libraries/{id}/refresh/{job_id}",
-            get(handlers::sync::get_refresh_job),
+            "/maintenance/tasks",
+            get(handlers::maintenance::list_maintenance_tasks)
+                .post(handlers::maintenance::start_maintenance_task),
+        )
+        .route(
+            "/maintenance/tasks/{id}",
+            get(handlers::maintenance::get_maintenance_task),
+        )
+        .route(
+            "/maintenance/tasks/{id}/cancel",
+            post(handlers::maintenance::cancel_maintenance_task),
         )
         .route("/users", get(handlers::users::list_users))
         .route(

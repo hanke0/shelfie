@@ -595,7 +595,7 @@ async fn opds_requires_credentials() {
 
 #[cfg(unix)]
 #[tokio::test]
-async fn refresh_does_not_follow_symlinks_out_of_library() {
+async fn maintenance_does_not_follow_symlinks_out_of_library() {
     let (app, lib, root) = setup().await;
     let outside = app.root.join("outside");
     std::fs::create_dir_all(&outside).unwrap();
@@ -607,18 +607,25 @@ async fn refresh_does_not_follow_symlinks_out_of_library() {
     .unwrap();
     std::os::unix::fs::symlink(&outside, root.join("linked-category")).unwrap();
 
-    let res = app
-        .send(
-            Method::POST,
-            &format!("/api/v1/libraries/{lib}/refresh"),
-            Some(&common::bearer(&app.admin.token)),
-            None,
-            vec![],
-            &[],
-        )
+    let params = json!({ "library_id": lib });
+    let scan = app
+        .run_task(&app.admin.token, "library_scan", params.clone())
         .await;
-    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
-    assert!(res.json()["result"]["added"].as_array().unwrap().is_empty());
+    assert!(
+        scan["result"]["untracked_files"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
+        "{scan}"
+    );
+    for tool in [
+        "library_import_untracked",
+        "library_delete_untracked",
+        "library_clean_dangling",
+    ] {
+        let task = app.run_task(&app.admin.token, tool, params.clone()).await;
+        assert_eq!(task["status"], "completed", "{task}");
+    }
     let books = app.get("/api/v1/books", &app.admin.token).await.json();
     assert!(books.as_array().unwrap().is_empty());
     assert!(

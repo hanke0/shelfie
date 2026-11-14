@@ -492,13 +492,14 @@ async fn duplicates_are_grouped() {
 }
 
 #[tokio::test]
-async fn refresh_syncs_filesystem_changes() {
+async fn maintenance_scan_and_follow_up_tools() {
     let app = TestApp::new().await;
     let lib = app.create_library("馆", "lib").await;
     let token = app.admin.token.clone();
     let cat = app.data_root().join("馆").join("手动");
     std::fs::create_dir_all(&cat).unwrap();
-    std::fs::write(cat.join("dropped_book.pdf"), b"dropped").unwrap();
+    let dropped = cat.join("dropped_book.pdf");
+    std::fs::write(&dropped, b"dropped").unwrap();
     std::fs::write(
         cat.join("dropped_book.json"),
         json!({ "title": "From Disk", "author": "FS" }).to_string(),
@@ -507,32 +508,52 @@ async fn refresh_syncs_filesystem_changes() {
     std::fs::write(cat.join("bare_file.epub"), b"bare").unwrap();
     std::fs::write(cat.join("ghost.json"), b"{}").unwrap();
     std::fs::write(cat.join("ghost.jpg"), b"jpg").unwrap();
+    let params = json!({ "library_id": lib });
 
-    let refresh = |prefer_db: bool| {
-        let uri = format!("/api/v1/libraries/{lib}/refresh?prefer_db={prefer_db}");
-        let app = &app;
-        let token = token.clone();
-        async move {
-            let res = app
-                .send(Method::POST, &uri, Some(&bearer(&token)), None, vec![], &[])
-                .await;
-            assert_eq!(res.status, StatusCode::OK, "{}", res.text());
-            res.json()["result"].clone()
-        }
-    };
-
-    let diff = refresh(false).await;
-    assert_eq!(diff["added"].as_array().unwrap().len(), 2, "{diff}");
-    assert!(diff["errors"].as_array().unwrap().is_empty(), "{diff}");
-    let cleaned: Vec<&str> = diff["cleaned"]
+    // scan is read-only
+    let task = app.run_task(&token, "library_scan", params.clone()).await;
+    assert_eq!(task["status"], "completed", "{task}");
+    let report = &task["result"];
+    assert_eq!(
+        report["untracked_files"].as_array().unwrap().len(),
+        2,
+        "{report}"
+    );
+    assert_eq!(
+        report["dangling_files"].as_array().unwrap().len(),
+        2,
+        "{report}"
+    );
+    assert!(report["missing_files"].as_array().unwrap().is_empty());
+    let titled = report["untracked_files"]
         .as_array()
         .unwrap()
         .iter()
-        .map(|p| p.as_str().unwrap())
-        .collect();
-    assert_eq!(cleaned.len(), 2, "{cleaned:?}");
-    assert!(!cat.join("ghost.json").exists() && !cat.join("ghost.jpg").exists());
+        .find(|f| f["path"] == dropped.to_string_lossy().as_ref())
+        .unwrap();
+    assert_eq!(titled["title"], "From Disk");
+    assert!(cat.join("ghost.json").is_file());
+    assert!(app
+        .get("/api/v1/books", &token)
+        .await
+        .json()
+        .as_array()
+        .unwrap()
+        .is_empty());
 
+    // import only the selected file
+    let task = app
+        .run_task(
+            &token,
+            "library_import_untracked",
+            json!({ "library_id": lib, "items": [dropped.to_string_lossy()] }),
+        )
+        .await;
+    assert_eq!(
+        task["result"]["processed"].as_array().unwrap().len(),
+        1,
+        "{task}"
+    );
     let found = app
         .get(
             &format!("/api/v1/search?q={}", urlencoding::encode("From Disk")),
@@ -542,51 +563,119 @@ async fn refresh_syncs_filesystem_changes() {
         .json();
     assert_eq!(found[0]["category"], "手动");
     let dropped_id = found[0]["id"].as_str().unwrap().to_string();
-    let bare = app.get("/api/v1/search?q=bare", &token).await.json();
-    assert_eq!(bare[0]["title"], "bare file");
-    assert!(
-        cat.join("bare_file.json").is_file(),
-        "metadata sidecar is written for bare files"
-    );
 
-    // FS wins by default
+    // remaining untracked file is deleted from disk
+    let task = app
+        .run_task(&token, "library_delete_untracked", params.clone())
+        .await;
+    assert_eq!(task["status"], "completed", "{task}");
+    assert!(!cat.join("bare_file.epub").exists());
+
+    let task = app
+        .run_task(&token, "library_clean_dangling", params.clone())
+        .await;
+    assert_eq!(
+        task["result"]["processed"].as_array().unwrap().len(),
+        2,
+        "{task}"
+    );
+    assert!(!cat.join("ghost.json").exists() && !cat.join("ghost.jpg").exists());
+    assert!(cat.join("dropped_book.json").is_file());
+
+    // disk metadata overrides DB
     std::fs::write(
         cat.join("dropped_book.json"),
         json!({ "title": "Edited On Disk" }).to_string(),
     )
     .unwrap();
-    let diff = refresh(true).await;
-    assert!(diff["updated"].as_array().unwrap().is_empty());
-    let detail = app
-        .get(&format!("/api/v1/books/{dropped_id}"), &token)
-        .await
-        .json();
-    assert_eq!(detail["title"], "From Disk");
-    let diff = refresh(false).await;
-    assert_eq!(diff["updated"].as_array().unwrap().len(), 2);
+    app.run_task(&token, "library_resync_metadata", params.clone())
+        .await;
     let detail = app
         .get(&format!("/api/v1/books/{dropped_id}"), &token)
         .await
         .json();
     assert_eq!(detail["title"], "Edited On Disk");
 
-    // missing file -> orphan, DB row kept
-    std::fs::remove_file(cat.join("dropped_book.pdf")).unwrap();
-    let diff = refresh(false).await;
-    assert_eq!(diff["removed"], json!([dropped_id]));
-    let detail = app
-        .get(&format!("/api/v1/books/{dropped_id}"), &token)
-        .await
-        .json();
-    assert_eq!(detail["sync_status"], "orphan");
-    assert!(
-        !cat.join("dropped_book.json").exists(),
-        "dangling metadata is cleaned"
-    );
+    // missing file -> reported, then purged; unknown ids are skipped
+    std::fs::remove_file(&dropped).unwrap();
+    let task = app.run_task(&token, "library_scan", params.clone()).await;
+    assert_eq!(task["result"]["missing_files"][0]["book_id"], dropped_id);
+    let task = app
+        .run_task(
+            &token,
+            "library_purge_missing",
+            json!({ "library_id": lib, "items": [dropped_id, "bogus"] }),
+        )
+        .await;
+    assert_eq!(task["result"]["processed"], json!([dropped_id]));
+    assert_eq!(task["result"]["skipped"], json!(["bogus"]));
     assert_eq!(
-        app.get(&format!("/api/v1/books/{dropped_id}/download"), &token)
+        app.get(&format!("/api/v1/books/{dropped_id}"), &token)
             .await
             .status,
         StatusCode::NOT_FOUND
+    );
+
+    let tasks = app.get("/api/v1/maintenance/tasks", &token).await.json();
+    assert_eq!(tasks.as_array().unwrap().len(), 7);
+    assert!(tasks[0].get("result").is_none(), "list omits results");
+    assert_eq!(tasks[0]["tool"], "library_purge_missing");
+    assert_eq!(tasks[0]["library_name"], "馆");
+    assert_eq!(tasks[0]["created_by"], "admin");
+}
+
+#[tokio::test]
+async fn maintenance_hash_tools() {
+    let app = TestApp::new().await;
+    let lib = app.create_library("馆", "lib").await;
+    let token = app.admin.token.clone();
+    let a = app.seed_book(lib, "A", b"%PDF-a").await;
+    let b = app.seed_book(lib, "B", b"%PDF-b").await;
+    let params = json!({ "library_id": lib });
+
+    sqlx::query(
+        "UPDATE books SET metadata = json_remove(metadata, '$.file_md5', '$.partial_md5', '$.file_sha256') WHERE id = ?",
+    )
+    .bind(a.to_string())
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+
+    let task = app
+        .run_task(&token, "library_fill_missing_hashes", params.clone())
+        .await;
+    assert_eq!(
+        task["result"]["processed"],
+        json!([a.to_string()]),
+        "{task}"
+    );
+    let detail = app.get(&format!("/api/v1/books/{a}"), &token).await.json();
+    assert_eq!(
+        detail["metadata"]["file_md5"],
+        shelfie_backend::infra::hash::md5_hex(b"%PDF-a")
+    );
+    let sidecar: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(path_of(&detail).with_extension("json")).unwrap(),
+    )
+    .unwrap();
+    assert!(sidecar["file_sha256"].is_string(), "{sidecar}");
+
+    let task = app
+        .run_task(&token, "library_fill_missing_hashes", params.clone())
+        .await;
+    assert!(task["result"]["processed"].as_array().unwrap().is_empty());
+
+    let b_path = path_of(&app.get(&format!("/api/v1/books/{b}"), &token).await.json());
+    std::fs::write(&b_path, b"%PDF-changed").unwrap();
+    let task = app.run_task(&token, "library_refresh_hashes", params).await;
+    assert_eq!(
+        task["result"]["processed"].as_array().unwrap().len(),
+        2,
+        "{task}"
+    );
+    let detail = app.get(&format!("/api/v1/books/{b}"), &token).await.json();
+    assert_eq!(
+        detail["metadata"]["file_md5"],
+        shelfie_backend::infra::hash::md5_hex(b"%PDF-changed")
     );
 }

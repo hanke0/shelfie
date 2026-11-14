@@ -1,6 +1,7 @@
 use shelfie_backend::api::router::build_router;
 use shelfie_backend::config::Config;
 use shelfie_backend::domain::auth::ensure_default_admin;
+use shelfie_backend::domain::tasks::mark_interrupted;
 use shelfie_backend::infra::db;
 use shelfie_backend::state::AppState;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -34,6 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let config = Config::from_env();
     let pool = db::connect(&config).await?;
+    mark_interrupted(&pool).await?;
     let state = AppState::new(pool, config.clone());
     ensure_default_admin(&state).await?;
 

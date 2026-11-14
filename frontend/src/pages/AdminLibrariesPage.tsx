@@ -6,7 +6,6 @@ import {
   useListLibraries,
   useListMembers,
 } from "@/api/generated/libraries/libraries";
-import { useRefreshLibrary } from "@/api/generated/sync/sync";
 import { CreateLibraryModal } from "@/components/CreateLibraryModal";
 import { AddMemberModal } from "@/components/AddMemberModal";
 import { LibraryCategoryManager } from "@/components/LibraryCategoryManager";
@@ -17,7 +16,6 @@ import { useConfirmTwice } from "@/context/ConfirmContext";
 import { useToast } from "@/context/ToastContext";
 import { formatApiError } from "@/lib/api-error";
 import { opdsLibraryCatalogUrl, opdsRootCatalogUrl } from "@/lib/opds-url";
-import { useApiAction } from "@/hooks/useApiAction";
 import styles from "./AdminPage.module.css";
 
 export function AdminLibrariesPage() {
@@ -26,12 +24,9 @@ export function AdminLibrariesPage() {
   const qc = useQueryClient();
   const { libraryId: contextLibraryId, setLibraryId, library } = useLibrary();
   const { data: libraries } = useListLibraries();
-  const refreshLibrary = useRefreshLibrary();
   const deleteLibrary = useDeleteLibrary();
   const confirmTwice = useConfirmTwice();
   const toast = useToast();
-  const run = useApiAction();
-
   const [selectedLib, setSelectedLib] = useState<string>(contextLibraryId ?? "");
   const { data: members } = useListMembers(selectedLib, {
     query: { enabled: !!selectedLib },
@@ -53,7 +48,6 @@ export function AdminLibrariesPage() {
 
   const [createLibOpen, setCreateLibOpen] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
-  const [refreshResult, setRefreshResult] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const selectedLibrary = libraries?.find((lib) => lib.id === selectedLib);
@@ -97,26 +91,6 @@ export function AdminLibrariesPage() {
       toast.error(msg);
     }
   };
-
-  const handleRefresh = () => {
-    if (!selectedLib) return;
-    void run(
-      async () => {
-        const res = await refreshLibrary.mutateAsync({ id: selectedLib });
-        setRefreshResult(
-          res.result
-            ? `新增 ${res.result.added.length}，更新 ${res.result.updated.length}，孤儿 ${res.result.removed.length}${
-                res.result.cleaned.length
-                  ? `，清理文件 ${res.result.cleaned.length}`
-                  : ""
-              }`
-            : "完成",
-        );
-      },
-      { errorMessage: "同步失败" },
-    );
-  };
-
   return (
     <div className={`app-shell ${styles.page}`}>
       <Link to="/" className={styles.back}>
@@ -243,16 +217,13 @@ export function AdminLibrariesPage() {
             </ul>
           </div>
 
-          {canManageMembers && (
+          {canEditCategories && (
             <div className={styles.card}>
               <h2>文件夹同步</h2>
               <p className={styles.muted}>
-                扫描磁盘目录并与数据库 reconcile（默认以 FS metadata 为准）
+                扫描磁盘目录、对比数据库并处理差异，请到
+                <Link to="/admin/maintenance">维护工具</Link>页面运行“图书馆扫描对比”。
               </p>
-              <button type="button" className="btn" onClick={() => void handleRefresh()}>
-                立即刷新
-              </button>
-              {refreshResult && <p>{refreshResult}</p>}
             </div>
           )}
         </>

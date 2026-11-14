@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Shelfie API",
-    "description": "图书管理 API。Metadata 写路径：PATCH 更新 DB 后异步写回 metadata.json；refresh 默认以 FS 为准。",
+    "description": "图书管理 API。Metadata 写路径：PATCH 更新 DB 后异步写回 metadata.json；目录与数据库的对比与修复通过 /maintenance 后台任务执行。",
     "license": {
       "name": ""
     },
@@ -1115,25 +1115,17 @@
         ]
       }
     },
-    "/libraries/{id}/refresh": {
-      "post": {
+    "/maintenance/tasks": {
+      "get": {
         "tags": [
-          "Sync"
+          "Maintenance"
         ],
-        "operationId": "refresh_library",
+        "operationId": "list_maintenance_tasks",
         "parameters": [
           {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "prefer_db",
+            "name": "active_only",
             "in": "query",
+            "description": "仅返回运行中的任务",
             "required": false,
             "schema": {
               "type": [
@@ -1149,7 +1141,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefreshJobResponse"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskDto"
+                  }
                 }
               }
             }
@@ -1160,26 +1155,52 @@
             "bearer_auth": []
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "Maintenance"
+        ],
+        "operationId": "start_maintenance_task",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "同一图书馆已有维护任务在运行"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
       }
     },
-    "/libraries/{id}/refresh/{job_id}": {
+    "/maintenance/tasks/{id}": {
       "get": {
         "tags": [
-          "Sync"
+          "Maintenance"
         ],
-        "operationId": "get_refresh_job",
+        "operationId": "get_maintenance_task",
         "parameters": [
           {
             "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "job_id",
             "in": "path",
             "required": true,
             "schema": {
@@ -1193,7 +1214,72 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefreshJobResponse"
+                  "$ref": "#/components/schemas/TaskDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/maintenance/tasks/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Maintenance"
+        ],
+        "operationId": "cancel_maintenance_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "任务已结束"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/maintenance/tools": {
+      "get": {
+        "tags": [
+          "Maintenance"
+        ],
+        "operationId": "list_maintenance_tools",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MaintenanceToolDto"
+                  }
                 }
               }
             }
@@ -2262,6 +2348,62 @@
           }
         ]
       },
+      "LibraryScanReport": {
+        "type": "object",
+        "required": [
+          "library_id",
+          "scanned_files",
+          "db_books",
+          "in_sync",
+          "missing_files",
+          "untracked_files",
+          "dangling_files",
+          "errors"
+        ],
+        "properties": {
+          "dangling_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "无对应图书文件的 metadata / 封面 / 缩略图"
+          },
+          "db_books": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "in_sync": {
+            "type": "integer",
+            "description": "文件与记录一一对应的图书数",
+            "minimum": 0
+          },
+          "library_id": {
+            "type": "string"
+          },
+          "missing_files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MissingFileBook"
+            }
+          },
+          "scanned_files": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "untracked_files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UntrackedBookFile"
+            }
+          }
+        }
+      },
       "LoginRequest": {
         "type": "object",
         "required": [
@@ -2289,6 +2431,113 @@
           },
           "user": {
             "$ref": "#/components/schemas/UserInfo"
+          }
+        }
+      },
+      "MaintenanceActionReport": {
+        "type": "object",
+        "required": [
+          "processed",
+          "skipped",
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "processed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "成功处理的项（图书 ID 或文件路径）"
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "指定了但当前已不符合条件、被跳过的项"
+          }
+        }
+      },
+      "MaintenanceTool": {
+        "type": "string",
+        "enum": [
+          "library_scan",
+          "library_import_untracked",
+          "library_resync_metadata",
+          "library_delete_untracked",
+          "library_purge_missing",
+          "library_clean_dangling",
+          "library_refresh_hashes",
+          "library_fill_missing_hashes"
+        ]
+      },
+      "MaintenanceToolDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "required_permission",
+          "destructive",
+          "params"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "destructive": {
+            "type": "boolean",
+            "description": "会删除或覆盖数据，前端应二次确认"
+          },
+          "id": {
+            "$ref": "#/components/schemas/MaintenanceTool"
+          },
+          "name": {
+            "type": "string"
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolParamDto"
+            }
+          },
+          "required_permission": {
+            "$ref": "#/components/schemas/ToolPermission",
+            "description": "在目标图书馆上所需的权限"
+          }
+        }
+      },
+      "MissingFileBook": {
+        "type": "object",
+        "description": "数据库有记录、磁盘上图书文件已不存在",
+        "required": [
+          "book_id",
+          "title",
+          "author",
+          "category",
+          "book_file_path"
+        ],
+        "properties": {
+          "author": {
+            "type": "string"
+          },
+          "book_file_path": {
+            "type": "string"
+          },
+          "book_id": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
           }
         }
       },
@@ -2393,74 +2642,6 @@
           }
         }
       },
-      "RefreshDiff": {
-        "type": "object",
-        "required": [
-          "added",
-          "updated",
-          "removed",
-          "cleaned",
-          "errors"
-        ],
-        "properties": {
-          "added": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "cleaned": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "已从磁盘删除的无主附属文件（metadata / 封面 / 缩略图）路径"
-          },
-          "errors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "removed": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "updated": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "RefreshJobResponse": {
-        "type": "object",
-        "required": [
-          "job_id",
-          "status"
-        ],
-        "properties": {
-          "job_id": {
-            "type": "string"
-          },
-          "result": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/RefreshDiff"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "status": {
-            "type": "string"
-          }
-        }
-      },
       "RegisterRequest": {
         "type": "object",
         "required": [
@@ -2515,6 +2696,209 @@
           },
           "document": {
             "type": "string"
+          }
+        }
+      },
+      "StartTaskRequest": {
+        "type": "object",
+        "required": [
+          "tool"
+        ],
+        "properties": {
+          "params": {
+            "type": "object",
+            "description": "工具参数，字段见 `MaintenanceToolDto.params`"
+          },
+          "tool": {
+            "$ref": "#/components/schemas/MaintenanceTool"
+          }
+        }
+      },
+      "TaskDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "tool",
+          "params",
+          "status",
+          "cancel_requested",
+          "progress",
+          "started_at",
+          "elapsed_ms"
+        ],
+        "properties": {
+          "cancel_requested": {
+            "type": "boolean"
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "发起人用户名"
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "已运行时长（结束的任务为总耗时）"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "library_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "library_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "params": {
+            "type": "object"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/TaskProgress"
+          },
+          "result": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "仅在查询单个任务时返回"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "tool": {
+            "type": "string"
+          }
+        }
+      },
+      "TaskProgress": {
+        "type": "object",
+        "required": [
+          "current"
+        ],
+        "properties": {
+          "current": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "completed",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ]
+      },
+      "ToolParamDto": {
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "kind",
+          "required"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ToolParamKind"
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ToolParamKind": {
+        "type": "string",
+        "enum": [
+          "library",
+          "string_list"
+        ]
+      },
+      "ToolPermission": {
+        "type": "string",
+        "enum": [
+          "edit",
+          "delete"
+        ]
+      },
+      "UntrackedBookFile": {
+        "type": "object",
+        "description": "磁盘上有图书文件、数据库中没有记录",
+        "required": [
+          "path",
+          "category",
+          "size"
+        ],
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "同名 metadata 中的书名（若有）"
           }
         }
       },
@@ -2678,8 +3062,8 @@
       "description": "Book categories per library"
     },
     {
-      "name": "Sync",
-      "description": "Filesystem sync"
+      "name": "Maintenance",
+      "description": "System maintenance tools and background tasks"
     },
     {
       "name": "Users",

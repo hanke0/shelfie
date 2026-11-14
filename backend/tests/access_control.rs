@@ -119,8 +119,8 @@ async fn non_member_cannot_touch_foreign_library() {
         ),
         (
             Method::POST,
-            format!("/api/v1/libraries/{a}/refresh"),
-            json!(null),
+            "/api/v1/maintenance/tasks".to_string(),
+            json!({ "tool": "library_scan", "params": { "library_id": a } }),
         ),
         (
             Method::POST,
@@ -260,8 +260,8 @@ async fn viewer_is_read_only() {
         ),
         (
             Method::POST,
-            format!("/api/v1/libraries/{a}/refresh"),
-            json!(null),
+            "/api/v1/maintenance/tasks".to_string(),
+            json!({ "tool": "library_scan", "params": { "library_id": a } }),
         ),
         (
             Method::POST,
@@ -568,38 +568,83 @@ async fn memberships_visible_only_to_self_or_admin() {
 }
 
 #[tokio::test]
-async fn refresh_job_is_scoped_to_its_library() {
+async fn maintenance_tasks_are_scoped_by_library_permission() {
     let f = fixture().await;
     let app = &f.app;
-    let res = app
-        .send(
-            Method::POST,
-            &format!("/api/v1/libraries/{}/refresh", f.lib_b),
-            Some(&common::bearer(&f.outsider.token)),
-            None,
-            vec![],
-            &[],
-        )
-        .await;
-    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
-    let job = res.json()["job_id"].as_str().unwrap().to_string();
-
-    let res = app
-        .get(
-            &format!("/api/v1/libraries/{}/refresh/{job}", f.lib_b),
+    let task = app
+        .run_task(
             &f.outsider.token,
+            "library_scan",
+            json!({ "library_id": f.lib_b }),
         )
         .await;
-    assert_eq!(res.status, StatusCode::OK);
-    assert_eq!(res.json()["status"], "completed");
+    assert_eq!(task["status"], "completed", "{task}");
+    let id = task["id"].as_str().unwrap();
 
+    // members of another library cannot see or cancel it
     let res = app
-        .get(
-            &format!("/api/v1/libraries/{}/refresh/{job}", f.lib_a),
+        .get(&format!("/api/v1/maintenance/tasks/{id}"), &f.editor.token)
+        .await;
+    assert_eq!(res.status, StatusCode::NOT_FOUND);
+    let res = app
+        .json(
+            Method::POST,
+            &format!("/api/v1/maintenance/tasks/{id}/cancel"),
             &f.editor.token,
+            json!(null),
         )
         .await;
     assert_eq!(res.status, StatusCode::NOT_FOUND);
+    let list = app
+        .get("/api/v1/maintenance/tasks", &f.editor.token)
+        .await
+        .json();
+    assert!(list.as_array().unwrap().is_empty());
+    let list = app
+        .get("/api/v1/maintenance/tasks", &app.admin.token)
+        .await
+        .json();
+    assert_eq!(ids(&list), vec![id.to_string()]);
+
+    // finished tasks cannot be cancelled
+    let res = app
+        .json(
+            Method::POST,
+            &format!("/api/v1/maintenance/tasks/{id}/cancel"),
+            &f.outsider.token,
+            json!(null),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::CONFLICT);
+
+    // destructive tools need delete permission
+    let res = app
+        .json(
+            Method::POST,
+            "/api/v1/maintenance/tasks",
+            &f.editor.token,
+            json!({ "tool": "library_purge_missing", "params": { "library_id": f.lib_a } }),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::FORBIDDEN);
+    let task = app
+        .run_task(
+            &f.deleter.token,
+            "library_purge_missing",
+            json!({ "library_id": f.lib_a }),
+        )
+        .await;
+    assert_eq!(task["status"], "completed", "{task}");
+
+    let res = app
+        .json(
+            Method::POST,
+            "/api/v1/maintenance/tasks",
+            &f.editor.token,
+            json!({ "tool": "library_scan", "params": {} }),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]

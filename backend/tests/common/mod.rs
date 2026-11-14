@@ -333,6 +333,31 @@ impl TestApp {
         .await
     }
 
+    /// Starts a maintenance task and polls until it is no longer running; returns the task JSON.
+    pub async fn run_task(&self, token: &str, tool: &str, params: Value) -> Value {
+        let res = self
+            .json(
+                Method::POST,
+                "/api/v1/maintenance/tasks",
+                token,
+                serde_json::json!({ "tool": tool, "params": params }),
+            )
+            .await;
+        assert_eq!(res.status, StatusCode::ACCEPTED, "{}", res.text());
+        let id = res.json()["id"].as_str().unwrap().to_string();
+        for _ in 0..500 {
+            let task = self
+                .get(&format!("/api/v1/maintenance/tasks/{id}"), token)
+                .await
+                .json();
+            if task["status"] != "running" {
+                return task;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        panic!("task {id} did not finish");
+    }
+
     /// Uploads a book as admin into the default category and returns its id.
     pub async fn seed_book(&self, library_id: Uuid, title: &str, data: &[u8]) -> Uuid {
         let res = self

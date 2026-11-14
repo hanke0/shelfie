@@ -5,7 +5,7 @@ pub mod health;
 pub mod home;
 pub mod koreader;
 pub mod libraries;
+pub mod maintenance;
 pub mod opds;
 pub mod search;
-pub mod sync;
 pub mod users;

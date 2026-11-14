@@ -456,8 +456,8 @@ pub async fn scan_library_books(library_root: &Path) -> AppResult<Vec<ScannedBoo
     Ok(results)
 }
 
-/// 删除分类目录内无对应图书文件的 metadata、封面与缩略图缓存。
-pub async fn cleanup_dangling_files(
+/// 列出分类目录内无对应图书文件的 metadata、封面与缩略图缓存（不删除）。
+pub async fn find_dangling_files(
     library_root: &Path,
     scanned: &[ScannedBookFile],
 ) -> AppResult<Vec<PathBuf>> {
@@ -471,9 +471,9 @@ pub async fn cleanup_dangling_files(
         }
     }
 
-    let mut removed = Vec::new();
+    let mut dangling = Vec::new();
     if !library_root.exists() {
-        return Ok(removed);
+        return Ok(dangling);
     }
 
     let mut categories = tokio::fs::read_dir(library_root).await?;
@@ -505,21 +505,62 @@ pub async fn cleanup_dangling_files(
             {
                 continue;
             }
-            if is_cover_path(&path) {
-                thumbnail::remove_for_cover(&path).await;
-            } else if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if let Some(base) = name.strip_suffix(".thumb.jpg") {
-                    for ext in COVER_EXTENSIONS {
-                        thumbnail::remove_for_cover(&cat_path.join(format!("{base}.{ext}"))).await;
-                    }
-                }
-            }
-            if tokio::fs::remove_file(&path).await.is_ok() {
-                removed.push(path);
-            }
+            dangling.push(path);
         }
     }
 
+    Ok(dangling)
+}
+
+/// 删除一个无主附属文件，连同其缩略图缓存
+pub async fn remove_dangling_file(path: &Path) -> AppResult<()> {
+    if is_cover_path(path) {
+        thumbnail::remove_for_cover(path).await;
+    } else if let (Some(dir), Some(name)) =
+        (path.parent(), path.file_name().and_then(|n| n.to_str()))
+    {
+        if let Some(base) = name.strip_suffix(".thumb.jpg") {
+            for ext in COVER_EXTENSIONS {
+                thumbnail::remove_for_cover(&dir.join(format!("{base}.{ext}"))).await;
+            }
+        }
+    }
+    if path.is_file() {
+        tokio::fs::remove_file(path).await?;
+    }
+    Ok(())
+}
+
+/// 删除未入库的图书文件；目录内没有其它同名图书时，一并删除同名 metadata / 封面 / 缩略图。
+/// 返回实际删除的文件。
+pub async fn remove_untracked_book(book: &Path) -> AppResult<Vec<PathBuf>> {
+    let mut removed = Vec::new();
+    tokio::fs::remove_file(book).await?;
+    removed.push(book.to_path_buf());
+
+    let (Some(dir), Some(stem)) = (book.parent(), file_stem(book)) else {
+        return Ok(removed);
+    };
+    if BOOK_EXTENSIONS
+        .iter()
+        .any(|ext| dir.join(format!("{stem}.{ext}")).is_file())
+    {
+        return Ok(removed);
+    }
+    let mut sidecars = vec![
+        dir.join(format!("{stem}.json")),
+        dir.join(format!("{stem}.thumb.jpg")),
+    ];
+    sidecars.extend(
+        COVER_EXTENSIONS
+            .iter()
+            .map(|ext| dir.join(format!("{stem}.{ext}"))),
+    );
+    for path in sidecars {
+        if path.is_file() && remove_dangling_file(&path).await.is_ok() {
+            removed.push(path);
+        }
+    }
     Ok(removed)
 }
 
@@ -691,7 +732,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn cleanup_dangling_files_removes_orphan_sidecars() {
+    async fn find_and_remove_dangling_sidecars() {
         let tmp = std::env::temp_dir().join(format!("shelfie_cleanup_test_{}", std::process::id()));
         let cat = tmp.join("fiction");
         std::fs::create_dir_all(&cat).unwrap();
@@ -705,19 +746,44 @@ mod tests {
             category: "fiction".to_string(),
             book_file: cat.join("book.pdf"),
         }];
-        let removed = cleanup_dangling_files(&tmp, &scanned).await.unwrap();
-        let removed_names: HashSet<_> = removed
+        let found = find_dangling_files(&tmp, &scanned).await.unwrap();
+        let found_names: HashSet<_> = found
             .iter()
             .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
             .collect();
+        assert!(found_names.contains("orphan.json"));
+        assert!(found_names.contains("orphan.jpg"));
+        assert!(!found_names.contains("book.json"));
+        assert!(cat.join("orphan.json").is_file(), "find does not delete");
 
+        for path in &found {
+            remove_dangling_file(path).await.unwrap();
+        }
         assert!(cat.join("book.pdf").is_file());
         assert!(cat.join("book.json").is_file());
         assert!(!cat.join("orphan.json").exists());
         assert!(!cat.join("orphan.jpg").exists());
         assert!(!cat.join("orphan.thumb.jpg").exists());
-        assert!(removed_names.contains("orphan.json"));
-        assert!(removed_names.contains("orphan.jpg"));
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[tokio::test]
+    async fn remove_untracked_book_keeps_sidecars_shared_with_other_format() {
+        let tmp = std::env::temp_dir().join(format!("shelfie-untracked-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&tmp).unwrap();
+        for name in [
+            "a.pdf", "a.epub", "a.json", "a.jpg", "b.pdf", "b.json", "b.png",
+        ] {
+            std::fs::write(tmp.join(name), b"x").unwrap();
+        }
+
+        let removed = remove_untracked_book(&tmp.join("a.pdf")).await.unwrap();
+        assert_eq!(removed, vec![tmp.join("a.pdf")]);
+        assert!(tmp.join("a.json").is_file() && tmp.join("a.jpg").is_file());
+
+        remove_untracked_book(&tmp.join("b.pdf")).await.unwrap();
+        assert!(!tmp.join("b.json").exists() && !tmp.join("b.png").exists());
 
         let _ = std::fs::remove_dir_all(&tmp);
     }

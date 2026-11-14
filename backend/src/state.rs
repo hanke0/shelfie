@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::domain::tasks::TaskManager;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
@@ -6,6 +7,7 @@ use std::sync::Arc;
 pub struct AppState {
     pub db: SqlitePool,
     pub config: Arc<Config>,
+    pub tasks: TaskManager,
 }
 
 impl AppState {
@@ -13,6 +15,7 @@ impl AppState {
         Self {
             db,
             config: Arc::new(config),
+            tasks: TaskManager::default(),
         }
     }
 }

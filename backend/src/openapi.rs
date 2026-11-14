@@ -14,8 +14,15 @@ use crate::domain::library::{
     AddMemberRequest, CreateLibraryRequest, LibraryDto, LibraryMemberDto, PermissionFlags,
     UpdateMemberPermissionsRequest, UserLibraryMembershipDto,
 };
+use crate::domain::maintenance::{
+    MaintenanceTool, MaintenanceToolDto, StartTaskRequest, ToolParamDto, ToolParamKind,
+    ToolPermission,
+};
 use crate::domain::reading_history::ReadingHistoryEntry;
-use crate::domain::sync::{RefreshDiff, RefreshJobResponse};
+use crate::domain::sync::{
+    LibraryScanReport, MaintenanceActionReport, MissingFileBook, UntrackedBookFile,
+};
+use crate::domain::tasks::{TaskDto, TaskProgress, TaskStatus};
 use crate::domain::user::UserDto;
 use crate::error::ApiErrorBody;
 use crate::infra::{BookMetadata, ReadingProgress};
@@ -51,8 +58,11 @@ use utoipa::{Modify, OpenApi};
         handlers::categories::list_categories,
         handlers::categories::create_category,
         handlers::categories::delete_category,
-        handlers::sync::refresh_library,
-        handlers::sync::get_refresh_job,
+        handlers::maintenance::list_maintenance_tools,
+        handlers::maintenance::list_maintenance_tasks,
+        handlers::maintenance::start_maintenance_task,
+        handlers::maintenance::get_maintenance_task,
+        handlers::maintenance::cancel_maintenance_task,
         handlers::users::list_users,
         handlers::users::list_my_reading_history,
         handlers::users::list_user_memberships,
@@ -97,8 +107,19 @@ use utoipa::{Modify, OpenApi};
         handlers::users::ChangePasswordRequest,
         ReadingHistoryEntry,
         UserDto,
-        RefreshJobResponse,
-        RefreshDiff,
+        MaintenanceTool,
+        MaintenanceToolDto,
+        ToolParamDto,
+        ToolParamKind,
+        ToolPermission,
+        StartTaskRequest,
+        TaskDto,
+        TaskProgress,
+        TaskStatus,
+        LibraryScanReport,
+        MissingFileBook,
+        UntrackedBookFile,
+        MaintenanceActionReport,
         FindDuplicatesResponse,
         DuplicateGroup,
         DuplicateMatchKind,
@@ -120,7 +141,7 @@ use utoipa::{Modify, OpenApi};
         (name = "Search", description = "Global search"),
         (name = "Libraries", description = "Library management"),
         (name = "Categories", description = "Book categories per library"),
-        (name = "Sync", description = "Filesystem sync"),
+        (name = "Maintenance", description = "System maintenance tools and background tasks"),
         (name = "Users", description = "User administration"),
         (name = "Covers", description = "Cover images"),
         (name = "KOReader", description = "KOReader progress sync (KOSync protocol) and admin"),
@@ -128,7 +149,7 @@ use utoipa::{Modify, OpenApi};
     info(
         title = "Shelfie API",
         version = "0.5.2",
-        description = "图书管理 API。Metadata 写路径：PATCH 更新 DB 后异步写回 metadata.json；refresh 默认以 FS 为准。"
+        description = "图书管理 API。Metadata 写路径：PATCH 更新 DB 后异步写回 metadata.json；目录与数据库的对比与修复通过 /maintenance 后台任务执行。"
     )
 )]
 pub struct ApiDoc;

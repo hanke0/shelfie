@@ -2,6 +2,7 @@ pub mod annotations;
 pub mod auth;
 pub mod book;
 pub mod bookorbit;
+pub mod bookorbit_manage;
 pub mod category;
 pub mod duplicates;
 pub mod home;

@@ -206,6 +206,12 @@ pub fn build_router(state: AppState) -> Router {
             "/koreader/links/{document}",
             axum::routing::delete(handlers::koreader::delete_koreader_link),
         )
+        .route("/bookorbit/devices", get(handlers::bookorbit::list_devices))
+        .route(
+            "/bookorbit/devices/reset",
+            post(handlers::bookorbit::reset_device),
+        )
+        .route("/bookorbit/books", get(handlers::bookorbit::list_books))
         .route("/assets/covers/{id}", get(handlers::books::get_cover))
         .layer(middleware::from_fn_with_state(state.clone(), require_auth));
 

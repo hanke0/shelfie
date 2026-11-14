@@ -83,6 +83,14 @@ export function UserMenu({ className }: UserMenuProps) {
               KOReader 同步
             </Link>
             <Link
+              to="/admin/bookorbit"
+              className={styles.item}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              BookOrbit 同步
+            </Link>
+            <Link
               to="/admin/maintenance"
               className={styles.item}
               role="menuitem"

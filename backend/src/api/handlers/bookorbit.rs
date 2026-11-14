@@ -1,3 +1,4 @@
+use crate::api::middleware::auth::AuthContext;
 use crate::api::middleware::kosync_auth::KosyncAuth;
 use crate::domain::bookorbit::{
     self, AckResponse, AnnotationAckRequest, AnnotationExchangeRequest, AnnotationExchangeResponse,
@@ -5,9 +6,83 @@ use crate::domain::bookorbit::{
     BookmarkExchangeResponse, PageStatsRequest, PageStatsResponse, PluginMatchCheckRequest,
     PluginMatchCheckResponse, PluginVersionInfo,
 };
+use crate::domain::bookorbit_manage::{
+    self, BookOrbitBookSummary, BookOrbitDevice, ResetDeviceResponse,
+};
 use crate::error::AppResult;
 use crate::state::AppState;
-use axum::{extract::State, Extension, Json};
+use axum::{
+    extract::{Query, State},
+    Extension, Json,
+};
+use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
+
+#[derive(Deserialize, IntoParams)]
+pub struct BookOrbitBooksQuery {
+    pub library_id: Option<Uuid>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct ResetDeviceRequest {
+    pub device_id: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/bookorbit/devices",
+    operation_id = "list_bookorbit_devices",
+    tag = "BookOrbit",
+    responses((status = 200, body = [BookOrbitDevice])),
+    security(("bearer_auth" = []))
+)]
+pub async fn list_devices(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+) -> AppResult<Json<Vec<BookOrbitDevice>>> {
+    Ok(Json(
+        bookorbit_manage::list_devices(&state.db, &user).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    path = "/bookorbit/devices/reset",
+    operation_id = "reset_bookorbit_device",
+    tag = "BookOrbit",
+    request_body = ResetDeviceRequest,
+    responses((status = 200, body = ResetDeviceResponse), (status = 400)),
+    security(("bearer_auth" = []))
+)]
+pub async fn reset_device(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Json(req): Json<ResetDeviceRequest>,
+) -> AppResult<Json<ResetDeviceResponse>> {
+    Ok(Json(
+        bookorbit_manage::reset_device(&state.db, &user, &req.device_id).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/bookorbit/books",
+    operation_id = "list_bookorbit_books",
+    tag = "BookOrbit",
+    params(BookOrbitBooksQuery),
+    responses((status = 200, body = [BookOrbitBookSummary])),
+    security(("bearer_auth" = []))
+)]
+pub async fn list_books(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Query(q): Query<BookOrbitBooksQuery>,
+) -> AppResult<Json<Vec<BookOrbitBookSummary>>> {
+    Ok(Json(
+        bookorbit_manage::list_books(&state.db, &user, q.library_id).await?,
+    ))
+}
 
 #[utoipa::path(
     get,

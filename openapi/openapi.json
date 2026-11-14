@@ -116,6 +116,109 @@
         ]
       }
     },
+    "/bookorbit/books": {
+      "get": {
+        "tags": [
+          "BookOrbit"
+        ],
+        "operationId": "list_bookorbit_books",
+        "parameters": [
+          {
+            "name": "library_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookOrbitBookSummary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bookorbit/devices": {
+      "get": {
+        "tags": [
+          "BookOrbit"
+        ],
+        "operationId": "list_bookorbit_devices",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookOrbitDevice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bookorbit/devices/reset": {
+      "post": {
+        "tags": [
+          "BookOrbit"
+        ],
+        "operationId": "reset_bookorbit_device",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetDeviceResponse"
+                }
+              }
+            }
+          },
+          "400": {}
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/books": {
       "get": {
         "tags": [
@@ -2650,6 +2753,96 @@
           }
         }
       },
+      "BookOrbitBookSummary": {
+        "type": "object",
+        "required": [
+          "book_id",
+          "title",
+          "author",
+          "annotations",
+          "bookmarks",
+          "total_seconds"
+        ],
+        "properties": {
+          "annotations": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "author": {
+            "type": "string"
+          },
+          "book_id": {
+            "type": "string"
+          },
+          "bookmarks": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "last_read_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Unix 秒"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "reading / complete / abandoned"
+          },
+          "title": {
+            "type": "string"
+          },
+          "total_seconds": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "BookOrbitDevice": {
+        "type": "object",
+        "required": [
+          "device_id",
+          "books",
+          "annotations",
+          "bookmarks",
+          "page_stats"
+        ],
+        "properties": {
+          "annotations": {
+            "type": "integer",
+            "format": "int64",
+            "description": "已同步到该设备的有效标注数"
+          },
+          "bookmarks": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "books": {
+            "type": "integer",
+            "format": "int64",
+            "description": "有同步记录的图书数"
+          },
+          "device_id": {
+            "type": "string"
+          },
+          "last_change_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "最近一次同步产生变更的时间（RFC3339）"
+          },
+          "page_stats": {
+            "type": "integer",
+            "format": "int64",
+            "description": "上报过的页面阅读统计条数"
+          }
+        }
+      },
       "BookReadingSummary": {
         "type": "object",
         "description": "当前用户在该书上的阅读状态与页面阅读统计汇总",
@@ -4359,6 +4552,36 @@
           }
         }
       },
+      "ResetDeviceRequest": {
+        "type": "object",
+        "required": [
+          "device_id"
+        ],
+        "properties": {
+          "device_id": {
+            "type": "string"
+          }
+        }
+      },
+      "ResetDeviceResponse": {
+        "type": "object",
+        "required": [
+          "annotation_states",
+          "bookmark_links"
+        ],
+        "properties": {
+          "annotation_states": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "bookmark_links": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "SetDocumentLinkRequest": {
         "type": "object",
         "required": [
@@ -4751,6 +4974,10 @@
     {
       "name": "KOReader",
       "description": "KOReader progress sync (KOSync protocol, also mounted under /koreader for BookOrbit clients), BookOrbit plugin sync (annotations, bookmarks, stats, status) and admin"
+    },
+    {
+      "name": "BookOrbit",
+      "description": "BookOrbit sync management for the current user (devices, per-book summary)"
     }
   ]
 }

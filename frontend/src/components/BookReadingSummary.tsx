@@ -1,7 +1,7 @@
 import type { BookReadingSummary as Summary } from "@/api/generated/models";
 import styles from "./BookReadingSummary.module.css";
 
-const STATUS_LABELS: Record<string, string> = {
+export const READING_STATUS_LABELS: Record<string, string> = {
   reading: "阅读中",
   complete: "已读完",
   abandoned: "已放弃",
@@ -28,7 +28,7 @@ export function BookReadingSummary({ summary }: { summary?: Summary }) {
       <div>
         <dt>状态</dt>
         <dd>
-          {summary.status ? (STATUS_LABELS[summary.status] ?? summary.status) : "—"}
+          {summary.status ? (READING_STATUS_LABELS[summary.status] ?? summary.status) : "—"}
           {summary.status_modified ? (
             <span className={styles.muted}>（{summary.status_modified}）</span>
           ) : null}

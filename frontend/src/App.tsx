@@ -8,6 +8,7 @@ import { SearchPage } from "@/pages/SearchPage";
 import { AdminLibrariesPage } from "@/pages/AdminLibrariesPage";
 import { AdminUsersPage } from "@/pages/AdminUsersPage";
 import { AdminKoreaderPage } from "@/pages/AdminKoreaderPage";
+import { AdminBookOrbitPage } from "@/pages/AdminBookOrbitPage";
 import { AdminMaintenancePage } from "@/pages/AdminMaintenancePage";
 import { ReadingHistoryPage } from "@/pages/ReadingHistoryPage";
 import { DuplicatesPage } from "@/pages/DuplicatesPage";
@@ -70,6 +71,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AdminKoreaderPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/bookorbit"
+          element={
+            <ProtectedRoute>
+              <AdminBookOrbitPage />
             </ProtectedRoute>
           }
         />

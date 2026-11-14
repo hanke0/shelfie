@@ -549,6 +549,105 @@ async fn snapshot_survives_edit_and_restores_on_resync() {
 }
 
 #[tokio::test]
+async fn management_lists_devices_books_and_resets_device() {
+    let app = TestApp::new().await;
+    let (reader, book, doc) = setup(&app).await;
+    let a = Device {
+        app: &app,
+        user: &reader,
+        id: "device-a",
+    };
+    let b = Device {
+        app: &app,
+        user: &reader,
+        id: "device-b",
+    };
+    let keys = json!([{ "k": key(DT, POS), "dt": DT }]);
+    a.post(
+        "annotations/exchange",
+        json!({ "books": [{ "hash": doc, "keys": keys, "keysComplete": true,
+                            "changes": [annotation("n", None)] }] }),
+    )
+    .await;
+    a.post(
+        "page-stats",
+        json!({ "books": [{ "hash": doc, "events": [
+            { "page": 1, "startTime": 1_700_000_000, "durationSeconds": 30, "totalPages": 10 }
+        ] }] }),
+    )
+    .await;
+    let res = b
+        .post(
+            "annotations/exchange",
+            json!({ "books": [{ "hash": doc, "keys": [], "keysComplete": true, "changes": [] }] }),
+        )
+        .await;
+    let server_id = res["results"][0]["toApply"]["add"][0]["serverId"].clone();
+    b.post(
+        "annotations/exchange-ack",
+        json!({ "books": [{ "hash": doc, "deleted": [], "applied": [
+            { "serverId": server_id, "version": 1, "status": "applied" }
+        ] }] }),
+    )
+    .await;
+
+    let devices = app
+        .get("/api/v1/bookorbit/devices", &reader.token)
+        .await
+        .json();
+    let devices = devices.as_array().unwrap();
+    assert_eq!(devices.len(), 2, "{devices:?}");
+    let dev_a = devices
+        .iter()
+        .find(|d| d["device_id"] == "device-a")
+        .unwrap();
+    assert_eq!(dev_a["annotations"], 1);
+    assert_eq!(dev_a["page_stats"], 1);
+    assert_eq!(dev_a["books"], 1);
+
+    let books = app
+        .get("/api/v1/bookorbit/books", &reader.token)
+        .await
+        .json();
+    assert_eq!(books[0]["book_id"], book.to_string());
+    assert_eq!(books[0]["title"], "Orbit");
+    assert_eq!(books[0]["annotations"], 1);
+    assert_eq!(books[0]["total_seconds"], 30);
+    let outsider = app.create_user("outsider", "pass-123", "user").await;
+    let none = app
+        .get("/api/v1/bookorbit/books", &outsider.token)
+        .await
+        .json();
+    assert_eq!(none, json!([]));
+
+    let res = app
+        .json(
+            Method::POST,
+            "/api/v1/bookorbit/devices/reset",
+            &reader.token,
+            json!({ "device_id": "device-b" }),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
+    assert_eq!(res.json()["annotation_states"], 1);
+    let res = b
+        .post(
+            "annotations/exchange",
+            json!({ "books": [{ "hash": doc, "keys": keys, "keysComplete": true, "changes": [] }] }),
+        )
+        .await;
+    assert_eq!(
+        res["results"][0]["toApply"]["add"][0]["serverId"],
+        server_id
+    );
+    let listed = app
+        .get(&format!("/api/v1/books/{book}/annotations"), &reader.token)
+        .await
+        .json();
+    assert_eq!(listed["annotations"].as_array().unwrap().len(), 1);
+}
+
+#[tokio::test]
 async fn exchange_rejects_invalid_input() {
     let app = TestApp::new().await;
     let (reader, _book, doc) = setup(&app).await;

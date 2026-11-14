@@ -13,6 +13,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct OpdsBooksQuery {
     pub category: Option<String>,
+    pub sort: Option<String>,
 }
 
 fn opds_response(xml: String, kind: &str) -> Response {
@@ -63,6 +64,11 @@ pub async fn opds_library_books(
     let id = opds::parse_library_id(&library_id)?;
     let base = request_base_url(&state, &headers);
     let category = query.category.as_deref();
-    let xml = opds::library_acquisition_feed(&state, &user, &id, category, &base).await?;
+    let sort = match query.sort.as_deref() {
+        Some("new") => opds::OpdsSort::New,
+        Some("reading") => opds::OpdsSort::Reading,
+        _ => opds::OpdsSort::Title,
+    };
+    let xml = opds::library_acquisition_feed(&state, &user, &id, category, sort, &base).await?;
     Ok(opds_response(xml, "acquisition"))
 }

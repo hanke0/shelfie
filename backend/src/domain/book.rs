@@ -214,11 +214,21 @@ pub struct OpdsBookRow {
     pub language: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OpdsSort {
+    Title,
+    /// Most recently uploaded first.
+    New,
+    /// Only books the user has reading progress for, most recently read first.
+    Reading,
+}
+
 pub async fn list_books_for_opds(
     db: &SqlitePool,
     user: &AuthUser,
     library_id: Uuid,
     category: Option<&str>,
+    sort: OpdsSort,
     limit: i64,
 ) -> AppResult<Vec<OpdsBookRow>> {
     let accessible = accessible_library_ids(db, user).await?;
@@ -227,19 +237,30 @@ pub async fn list_books_for_opds(
     }
 
     let mut query = r#"
-        SELECT id, category, book_file_path, metadata, updated_at
-        FROM books
-        WHERE library_id = ?
+        SELECT b.id, b.category, b.book_file_path, b.metadata, b.updated_at
+        FROM books b
     "#
     .to_string();
+    if sort == OpdsSort::Reading {
+        query.push_str(" JOIN user_reading_progress urp ON urp.book_id = b.id AND urp.user_id = ?");
+    }
+    query.push_str(" WHERE b.library_id = ?");
 
     if category.is_some() {
-        query.push_str(" AND category = ?");
+        query.push_str(" AND b.category = ?");
     }
-    query.push_str(" ORDER BY json_extract(metadata, '$.title') COLLATE NOCASE LIMIT ?");
+    query.push_str(match sort {
+        OpdsSort::Title => " ORDER BY json_extract(b.metadata, '$.title') COLLATE NOCASE",
+        OpdsSort::New => " ORDER BY b.uploaded_at DESC",
+        OpdsSort::Reading => " ORDER BY urp.updated_at DESC",
+    });
+    query.push_str(" LIMIT ?");
 
     let mut q =
         sqlx::query_as::<_, (String, String, String, String, String)>(sqlx::AssertSqlSafe(query));
+    if sort == OpdsSort::Reading {
+        q = q.bind(user.id.to_string());
+    }
     q = q.bind(library_id.to_string());
     if let Some(cat) = category {
         q = q.bind(cat);

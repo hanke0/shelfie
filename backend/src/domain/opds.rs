@@ -1,4 +1,5 @@
 use crate::domain::auth::AuthUser;
+pub use crate::domain::book::OpdsSort;
 use crate::domain::book::{self, OpdsBookRow};
 use crate::domain::category;
 use crate::domain::library;
@@ -10,6 +11,7 @@ use uuid::Uuid;
 
 const NAV_TYPE: &str = "application/atom+xml;profile=opds-catalog;kind=navigation";
 const ACQ_TYPE: &str = "application/atom+xml;profile=opds-catalog;kind=acquisition";
+const RECENT_LIMIT: i64 = 10;
 
 pub fn resolve_base_url(
     configured: Option<&str>,
@@ -246,6 +248,16 @@ pub async fn library_navigation_feed(
         &format!("urn:uuid:{library_id}:all"),
         &all_books,
     ));
+    xml.push_str(&nav_entry_to_acquisition_feed(
+        "最近新增",
+        &format!("urn:uuid:{library_id}:new"),
+        &absolute_url(base, &format!("{catalog_path}/books?sort=new")),
+    ));
+    xml.push_str(&nav_entry_to_acquisition_feed(
+        "最近在读",
+        &format!("urn:uuid:{library_id}:reading"),
+        &absolute_url(base, &format!("{catalog_path}/books?sort=reading")),
+    ));
 
     let categories = category::list_categories(state, user, library_id).await?;
     for cat in categories {
@@ -267,6 +279,7 @@ pub async fn library_acquisition_feed(
     user: &AuthUser,
     library_id: &Uuid,
     category: Option<&str>,
+    sort: OpdsSort,
     base: &str,
 ) -> AppResult<String> {
     let perm = library::resolve_permission(&state.db, user, library_id).await?;
@@ -274,26 +287,41 @@ pub async fn library_acquisition_feed(
 
     let name = library::get_library_name(&state.db, library_id).await?;
     let catalog_path = library::opds_catalog_path(&library_id.to_string());
-    let mut self_path = format!("{catalog_path}/books");
+    let mut params = Vec::new();
     if let Some(cat) = category {
-        self_path.push_str(&format!("?category={}", urlencoding::encode(cat)));
+        params.push(format!("category={}", urlencoding::encode(cat)));
+    }
+    let (sort_param, sort_label, limit) = match sort {
+        OpdsSort::Title => (None, None, 2000),
+        OpdsSort::New => (Some("new"), Some("最近新增"), RECENT_LIMIT),
+        OpdsSort::Reading => (Some("reading"), Some("最近在读"), RECENT_LIMIT),
+    };
+    if let Some(s) = sort_param {
+        params.push(format!("sort={s}"));
+    }
+    let mut self_path = format!("{catalog_path}/books");
+    if !params.is_empty() {
+        self_path.push('?');
+        self_path.push_str(&params.join("&"));
     }
     let self_href = absolute_url(base, &self_path);
     let up_href = absolute_url(base, &catalog_path);
 
-    let title = match category {
-        Some(c) => format!("{name} · {c}"),
-        None => format!("{name} · 全部图书"),
+    let title = match (category, sort_label) {
+        (Some(c), Some(s)) => format!("{name} · {c} · {s}"),
+        (Some(c), None) => format!("{name} · {c}"),
+        (None, Some(s)) => format!("{name} · {s}"),
+        (None, None) => format!("{name} · 全部图书"),
     };
 
-    let books = book::list_books_for_opds(&state.db, user, *library_id, category, 2000).await?;
+    let books =
+        book::list_books_for_opds(&state.db, user, *library_id, category, sort, limit).await?;
 
-    let mut xml = feed_header(
-        &format!("urn:uuid:{library_id}:acq:{}", category.unwrap_or("all")),
-        &title,
-        &self_href,
-        "acquisition",
-    );
+    let mut feed_id = format!("urn:uuid:{library_id}:acq:{}", category.unwrap_or("all"));
+    if let Some(s) = sort_param {
+        feed_id.push_str(&format!(":{s}"));
+    }
+    let mut xml = feed_header(&feed_id, &title, &self_href, "acquisition");
     xml.push_str(&format!(
         r#"  <link rel="up" href="{up_href}" type="{nav_type}"/>
   <link rel="start" href="{up_href}" type="{nav_type}"/>

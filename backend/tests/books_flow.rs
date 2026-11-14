@@ -679,3 +679,87 @@ async fn maintenance_hash_tools() {
         shelfie_backend::infra::hash::md5_hex(b"%PDF-changed")
     );
 }
+
+#[tokio::test]
+async fn opds_recent_new_and_reading_feeds() {
+    let app = TestApp::new().await;
+    let token = &app.admin.token;
+    let lib = app.create_library("馆", "lib").await;
+
+    let mut ids = Vec::new();
+    for i in 0..12 {
+        let id = app
+            .seed_book(lib, &format!("Book{i:02}"), format!("b{i}").as_bytes())
+            .await;
+        sqlx::query("UPDATE books SET uploaded_at = ? WHERE id = ?")
+            .bind(format!("2026-01-01 00:00:{i:02}"))
+            .bind(id.to_string())
+            .execute(&app.state.db)
+            .await
+            .unwrap();
+        ids.push(id);
+    }
+
+    let nav = app
+        .get(&format!("/api/v1/opds/libraries/{lib}"), token)
+        .await
+        .text();
+    assert!(nav.contains("最近新增") && nav.contains("books?sort=new"));
+    assert!(nav.contains("最近在读") && nav.contains("books?sort=reading"));
+
+    let xml = app
+        .get(
+            &format!("/api/v1/opds/libraries/{lib}/books?sort=new"),
+            token,
+        )
+        .await
+        .text();
+    assert_eq!(xml.matches("<entry>").count(), 10);
+    assert!(xml.find("Book11").unwrap() < xml.find("Book02").unwrap());
+    assert!(!xml.contains("Book01") && !xml.contains("Book00"));
+
+    let xml = app
+        .get(
+            &format!("/api/v1/opds/libraries/{lib}/books?sort=reading"),
+            token,
+        )
+        .await
+        .text();
+    assert_eq!(xml.matches("<entry>").count(), 0);
+
+    for id in [ids[3], ids[7]] {
+        let res = app
+            .json(
+                Method::PATCH,
+                &format!("/api/v1/books/{id}/progress"),
+                token,
+                json!({ "reading_progress": { "percent": 10.0 } }),
+            )
+            .await;
+        assert_eq!(res.status, StatusCode::OK);
+    }
+    sqlx::query(
+        "UPDATE user_reading_progress SET updated_at = '2026-01-02 00:00:00' WHERE book_id = ?",
+    )
+    .bind(ids[3].to_string())
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+    sqlx::query(
+        "UPDATE user_reading_progress SET updated_at = '2026-01-01 00:00:00' WHERE book_id = ?",
+    )
+    .bind(ids[7].to_string())
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+
+    let xml = app
+        .get(
+            &format!("/api/v1/opds/libraries/{lib}/books?sort=reading"),
+            token,
+        )
+        .await
+        .text();
+    assert_eq!(xml.matches("<entry>").count(), 2);
+    assert!(xml.find("Book03").unwrap() < xml.find("Book07").unwrap());
+}

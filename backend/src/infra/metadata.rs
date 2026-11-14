@@ -46,6 +46,9 @@ pub struct BookMetadata {
     /// 图书文件 MD5（小写 hex），用于 KOReader document 关联
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_md5: Option<String>,
+    /// 图书文件 KOReader partial MD5（小写 hex），用于 KOReader document 关联
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub partial_md5: Option<String>,
     /// 图书文件 SHA-256（小写 hex）
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_sha256: Option<String>,
@@ -102,19 +105,21 @@ impl BookMetadata {
         self.reading_progress = None;
     }
 
-    /// 根据内存中的图书文件内容设置 MD5 / SHA-256
+    /// 根据内存中的图书文件内容设置 MD5 / partial MD5 / SHA-256
     pub fn set_book_bytes_hashes(&mut self, bytes: &[u8]) {
         self.file_md5 = Some(hash::md5_hex(bytes));
+        self.partial_md5 = Some(hash::partial_md5_hex(bytes));
         self.file_sha256 = Some(hash::sha256_hex(bytes));
     }
 
-    /// 根据磁盘上的电子书文件刷新 MD5 / SHA-256
+    /// 根据磁盘上的电子书文件刷新 MD5 / partial MD5 / SHA-256
     pub async fn refresh_book_file_hashes(
         &mut self,
         book_path: &Path,
     ) -> crate::error::AppResult<()> {
         if book_path.is_file() {
             self.file_md5 = Some(hash::md5_hex_file(book_path).await?);
+            self.partial_md5 = Some(hash::partial_md5_hex_file(book_path).await?);
             self.file_sha256 = Some(hash::sha256_hex_file(book_path).await?);
         }
         Ok(())

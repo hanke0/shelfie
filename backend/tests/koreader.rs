@@ -3,7 +3,7 @@ mod common;
 use axum::http::{Method, StatusCode};
 use common::{TestApp, TestUser};
 use serde_json::json;
-use shelfie_backend::infra::hash::md5_hex;
+use shelfie_backend::infra::hash::{md5_hex, partial_md5_hex};
 
 async fn kosync_put(
     app: &TestApp,
@@ -102,6 +102,30 @@ async fn progress_roundtrip_and_md5_autolink() {
         .json();
     assert_eq!(progress[0]["book_title"], "Linked");
     assert_eq!(progress[0]["username"], "reader");
+}
+
+#[tokio::test]
+async fn partial_md5_autolink() {
+    let app = TestApp::new().await;
+    let lib = app.create_library("馆", "lib").await;
+    let reader = app.create_user("reader", "pass-123", "user").await;
+    app.add_member(lib, &reader, "member", (true, true, false))
+        .await;
+    let content: Vec<u8> = (0..20_000u32).map(|i| (i % 251) as u8).collect();
+    let book = app.seed_book(lib, "Partial", &content).await;
+    let doc = partial_md5_hex(&content);
+    assert_ne!(doc, md5_hex(&content));
+
+    let res = kosync_put(&app, &reader, &doc, 0.25).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
+
+    let links = app
+        .get("/api/v1/koreader/links", &reader.token)
+        .await
+        .json();
+    assert_eq!(links[0]["document"], doc);
+    assert_eq!(links[0]["book_id"], book.to_string());
+    assert_eq!(links[0]["link_source"], "md5");
 }
 
 #[tokio::test]

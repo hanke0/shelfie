@@ -248,7 +248,7 @@ async fn resolve_book_for_document(
         return Ok(Some(book_id));
     }
 
-    if let Some(book_id) = lookup_book_by_file_md5(db, user, document).await? {
+    if let Some(book_id) = lookup_book_by_md5(db, user, document).await? {
         upsert_document_link(db, document, &book_id, "md5").await?;
         return Ok(Some(book_id));
     }
@@ -279,7 +279,8 @@ async fn lookup_manual_link(
     }
 }
 
-async fn lookup_book_by_file_md5(
+/// KOReader document 可能是 partial MD5（默认）或整文件 MD5，两者都匹配
+async fn lookup_book_by_md5(
     db: &SqlitePool,
     user: &AuthUser,
     document: &str,
@@ -295,11 +296,13 @@ async fn lookup_book_by_file_md5(
             r#"
             SELECT id FROM books
             WHERE library_id = ?
-              AND lower(json_extract(metadata, '$.file_md5')) = ?
+              AND (lower(json_extract(metadata, '$.partial_md5')) = ?
+                OR lower(json_extract(metadata, '$.file_md5')) = ?)
             LIMIT 1
             "#,
         )
         .bind(&lid)
+        .bind(&doc_lower)
         .bind(&doc_lower)
         .fetch_optional(db)
         .await?;

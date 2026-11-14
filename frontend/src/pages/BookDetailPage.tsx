@@ -436,6 +436,11 @@ export function BookDetailPage() {
                 <code className={styles.hashCell}>{metaForm.file_md5 ?? "—"}</code>
               </ReadonlyValue>
             </FieldRow>
+            <FieldRow label="Partial MD5" wide>
+              <ReadonlyValue>
+                <code className={styles.hashCell}>{metaForm.partial_md5 ?? "—"}</code>
+              </ReadonlyValue>
+            </FieldRow>
             <FieldRow label="SHA-256" wide>
               <ReadonlyValue>
                 <code className={styles.hashCell}>{metaForm.file_sha256 ?? "—"}</code>

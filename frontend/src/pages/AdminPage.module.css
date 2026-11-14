@@ -72,6 +72,10 @@
   align-items: center;
 }
 
+.list li:last-child {
+  border-bottom: none;
+}
+
 .dangerZone {
   margin-top: 1rem;
   padding-top: 1rem;

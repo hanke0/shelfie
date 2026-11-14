@@ -216,16 +216,6 @@ export function AdminLibrariesPage() {
               ))}
             </ul>
           </div>
-
-          {canEditCategories && (
-            <div className={styles.card}>
-              <h2>文件夹同步</h2>
-              <p className={styles.muted}>
-                扫描磁盘目录、对比数据库并处理差异，请到
-                <Link to="/admin/maintenance">维护工具</Link>页面运行“图书馆扫描对比”。
-              </p>
-            </div>
-          )}
         </>
       )}
 

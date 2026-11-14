@@ -52,6 +52,59 @@ pub struct BookMetadata {
     /// 图书文件 SHA-256（小写 hex）
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_sha256: Option<String>,
+    /// 各用户的标注与笔记快照；数据库为准，由阅读器同步写入，接口编辑时忽略
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub annotations: Vec<MetadataAnnotation>,
+    /// 各用户的书签快照；同 `annotations`
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bookmarks: Vec<MetadataBookmark>,
+}
+
+/// 一条标注（高亮，可带笔记）。位置为阅读器上报的原样 KOReader 位置
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
+pub struct MetadataAnnotation {
+    pub username: String,
+    #[serde(default)]
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chapter: Option<String>,
+    /// KOReader 颜色名（yellow / red / …）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    /// KOReader 样式：lighten / underscore / strikeout / invert
+    pub drawer: String,
+    /// `xpointer` 或 `pdf`
+    pub pos_format: String,
+    pub pos0: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pos1: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pageno: Option<i64>,
+    /// 设备端身份时间 `YYYY-MM-DD HH:MM:SS`
+    pub datetime: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub datetime_updated: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
+pub struct MetadataBookmark {
+    pub username: String,
+    pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chapter: Option<String>,
+    pub pos: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pageno: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub datetime: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 impl BookMetadata {
@@ -103,6 +156,17 @@ impl BookMetadata {
     /// 阅读进度按用户存 DB，不写入共享 metadata / metadata.json。
     pub fn clear_reading_progress(&mut self) {
         self.reading_progress = None;
+    }
+
+    /// 标注/书签快照只由同步维护：客户端提交的元数据沿用库中现有快照
+    pub fn keep_sync_snapshot_from(&mut self, current: &BookMetadata) {
+        self.annotations = current.annotations.clone();
+        self.bookmarks = current.bookmarks.clone();
+    }
+
+    pub fn clear_sync_snapshot(&mut self) {
+        self.annotations.clear();
+        self.bookmarks.clear();
     }
 
     /// 根据内存中的图书文件内容设置 MD5 / partial MD5 / SHA-256

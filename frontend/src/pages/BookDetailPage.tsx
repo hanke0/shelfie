@@ -6,8 +6,12 @@ import {
   useUpdateBook,
   useUpdateProgress,
   useDeleteBook,
+  useListBookAnnotations,
+  useGetReadingSummary,
   getGetBookQueryKey,
 } from "@/api/generated/books/books";
+import { BookAnnotations } from "@/components/BookAnnotations";
+import { BookReadingSummary } from "@/components/BookReadingSummary";
 import { fetchCoverBlob } from "@/lib/custom-fetch";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
 import { FileInput } from "@/components/ui/FileInput";
@@ -63,6 +67,8 @@ export function BookDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: book, isLoading } = useGetBook(id);
+  const { data: annotations } = useListBookAnnotations(id);
+  const { data: readingSummary } = useGetReadingSummary(id);
   const updateBook = useUpdateBook();
   const updateProgress = useUpdateProgress();
   const deleteBook = useDeleteBook();
@@ -288,6 +294,11 @@ export function BookDetailPage() {
             </div>
           </div>
 
+          <div className={styles.sideBlock}>
+            <p className={styles.sideLabel}>阅读状态与统计</p>
+            <BookReadingSummary summary={readingSummary} />
+          </div>
+
           {canDelete && (
             <button
               type="button"
@@ -447,6 +458,8 @@ export function BookDetailPage() {
               </ReadonlyValue>
             </FieldRow>
           </div>
+
+          <BookAnnotations data={annotations} />
         </main>
       </div>
     </div>

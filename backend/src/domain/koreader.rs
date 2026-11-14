@@ -239,7 +239,7 @@ pub async fn kosync_update_progress(
     })
 }
 
-async fn resolve_book_for_document(
+pub(crate) async fn resolve_book_for_document(
     db: &SqlitePool,
     user: &AuthUser,
     document: &str,

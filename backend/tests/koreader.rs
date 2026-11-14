@@ -312,6 +312,166 @@ async fn link_management_permissions() {
 }
 
 #[tokio::test]
+async fn bookorbit_client_flow_under_koreader_prefix() {
+    let app = TestApp::new().await;
+    let lib = app.create_library("馆", "lib").await;
+    let reader = app.create_user("reader", "pass-123", "user").await;
+    app.add_member(lib, &reader, "member", (true, true, false))
+        .await;
+    let content: Vec<u8> = (0..20_000u32).map(|i| (i % 251) as u8).collect();
+    let book = app.seed_book(lib, "Orbit", &content).await;
+    let doc = partial_md5_hex(&content);
+    let key = md5_hex(reader.password.as_bytes());
+    let auth = [
+        ("x-auth-user", reader.username.as_str()),
+        ("x-auth-key", key.as_str()),
+        ("accept", "application/json"),
+    ];
+
+    let res = app
+        .send(
+            Method::GET,
+            "/api/v1/koreader/users/auth",
+            None,
+            None,
+            vec![],
+            &auth,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
+    assert_eq!(res.json()["authorized"], "OK");
+
+    let res = app
+        .send(
+            Method::GET,
+            "/api/v1/koreader/plugin/version",
+            None,
+            None,
+            vec![],
+            &auth,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
+    assert!(res.json()["capabilities"].is_array());
+
+    let unknown = "0123456789abcdef0123456789abcdef";
+    let res = app
+        .send(
+            Method::POST,
+            "/api/v1/koreader/plugin/match-check",
+            None,
+            Some("application/json"),
+            serde_json::to_vec(&json!({
+                "deviceId": "dev-1",
+                "deviceModel": "Readest",
+                "pluginVersion": "readest-1",
+                "hashes": [doc.to_uppercase(), unknown],
+                "books": [{ "hash": doc, "title": "Orbit", "source": "current_file" }],
+            }))
+            .unwrap(),
+            &auth,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
+    let matches = res.json()["matches"].clone();
+    assert_eq!(
+        matches,
+        json!([{ "hash": doc, "bookId": book.to_string(), "bookFileId": book.to_string() }])
+    );
+
+    let res = app
+        .send(
+            Method::PUT,
+            "/api/v1/koreader/syncs/progress",
+            None,
+            Some("application/json"),
+            serde_json::to_vec(&json!({
+                "document": doc,
+                "progress": "/body/DocFragment[3]/body/p[2]/text().0",
+                "percentage": 0.4,
+                "device": "Readest (Linux)",
+                "device_id": "dev-1",
+            }))
+            .unwrap(),
+            &auth,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
+
+    let res = app
+        .send(
+            Method::GET,
+            &format!("/api/v1/koreader/syncs/progress/{doc}"),
+            None,
+            None,
+            vec![],
+            &auth,
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.text());
+    assert_eq!(res.json()["percentage"], 0.4);
+    assert_eq!(kosync_get(&app, &reader, &doc).await["percentage"], 0.4);
+
+    let detail = app
+        .get(&format!("/api/v1/books/{book}"), &reader.token)
+        .await
+        .json();
+    assert_eq!(detail["reading_percent"], 40.0);
+}
+
+#[tokio::test]
+async fn bookorbit_plugin_rejects_bad_auth_and_input() {
+    let app = TestApp::new().await;
+    let reader = app.create_user("reader", "pass-123", "user").await;
+    let key = md5_hex(reader.password.as_bytes());
+    let auth = [
+        ("x-auth-user", reader.username.as_str()),
+        ("x-auth-key", key.as_str()),
+    ];
+    let res = app
+        .send(
+            Method::POST,
+            "/api/v1/koreader/plugin/match-check",
+            None,
+            Some("application/json"),
+            serde_json::to_vec(&json!({ "hashes": ["0123456789abcdef0123456789abcdef"] })).unwrap(),
+            &[],
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::UNAUTHORIZED);
+
+    for body in [
+        json!({ "hashes": [] }),
+        json!({ "hashes": ["not-a-hash"] }),
+        json!({ "hashes": vec!["0123456789abcdef0123456789abcdef"; 501] }),
+    ] {
+        let res = app
+            .send(
+                Method::POST,
+                "/api/v1/koreader/plugin/match-check",
+                None,
+                Some("application/json"),
+                serde_json::to_vec(&body).unwrap(),
+                &auth,
+            )
+            .await;
+        assert_eq!(res.status, StatusCode::BAD_REQUEST, "{body}");
+    }
+
+    let res = app
+        .send(
+            Method::GET,
+            "/api/v1/koreader/plugin/version",
+            None,
+            None,
+            vec![],
+            &[],
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
 async fn view_only_member_progress_is_not_written_to_book() {
     let app = TestApp::new().await;
     let lib = app.create_library("馆", "lib").await;

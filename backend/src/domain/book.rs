@@ -127,6 +127,7 @@ pub(crate) struct BookRowInternal {
     pub metadata: String,
     #[allow(dead_code)]
     pub metadata_file_path: String,
+    pub updated_at: String,
 }
 
 pub(crate) async fn fetch_row_internal(
@@ -138,6 +139,7 @@ pub(crate) async fn fetch_row_internal(
         library_id: row.library_id,
         metadata: row.metadata,
         metadata_file_path: row.metadata_file_path,
+        updated_at: row.updated_at,
     })
 }
 
@@ -183,6 +185,8 @@ pub async fn get_book(state: &AppState, user: &AuthUser, book_id: &Uuid) -> AppR
 
     let mut meta = BookMetadata::from_json(&row.metadata)?;
     meta.clear_reading_progress();
+    // 含其他用户的标注；当前用户的通过 /books/{id}/annotations 获取
+    meta.clear_sync_snapshot();
     let up = crate::domain::user_reading_progress::get(&state.db, &user.id, book_id).await?;
     meta.reading_progress = up.progress.clone();
     let card = row_to_card(&row, &up)?;
@@ -438,6 +442,7 @@ pub async fn upload_book(
         metadata.title = format!("Untitled {}", &book_id.to_string()[..8]);
     }
     metadata.clear_reading_progress();
+    metadata.clear_sync_snapshot();
     metadata.normalize_fields()?;
     fs::validate_book_path_fields(&metadata.title, &metadata.author, &category)?;
 
@@ -598,6 +603,7 @@ pub async fn update_book(
 
     let mut metadata = metadata;
     metadata.clear_reading_progress();
+    metadata.keep_sync_snapshot_from(&BookMetadata::from_json(&row.metadata)?);
     metadata.normalize_fields()?;
 
     let lib_root = library::get_library_root(&state.db, &library_id).await?;
@@ -978,6 +984,8 @@ pub async fn upsert_from_fs(
             let _ = fs::write_metadata_file(dir, base, &metadata).await;
         }
     }
+
+    crate::domain::annotations::restore_from_metadata(db, book_id, &metadata).await?;
 
     Ok(())
 }

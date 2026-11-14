@@ -35,6 +35,44 @@ pub fn build_router(state: AppState) -> Router {
             require_kosync_auth,
         ));
 
+    let kosync = kosync_public.merge(kosync_protected);
+
+    // BookOrbit 兼容：客户端（如 Readest）把 KOSync 挂在 {server}/api/v1/koreader 下
+    let bookorbit_plugin = Router::new()
+        .route("/plugin/version", get(handlers::bookorbit::plugin_version))
+        .route(
+            "/plugin/match-check",
+            post(handlers::bookorbit::match_check),
+        )
+        .route(
+            "/plugin/annotations/exchange",
+            post(handlers::bookorbit::exchange_annotations),
+        )
+        .route(
+            "/plugin/annotations/exchange-ack",
+            post(handlers::bookorbit::ack_annotations),
+        )
+        .route(
+            "/plugin/bookmarks/exchange",
+            post(handlers::bookorbit::exchange_bookmarks),
+        )
+        .route(
+            "/plugin/bookmarks/exchange-ack",
+            post(handlers::bookorbit::ack_bookmarks),
+        )
+        .route(
+            "/plugin/page-stats",
+            post(handlers::bookorbit::upload_page_stats),
+        )
+        .route(
+            "/plugin/book-states",
+            post(handlers::bookorbit::upload_book_states),
+        )
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            require_kosync_auth,
+        ));
+
     let opds = Router::new()
         .route("/opds", get(handlers::opds::opds_root))
         .route(
@@ -53,8 +91,8 @@ pub fn build_router(state: AppState) -> Router {
     let public = Router::new()
         .route("/health", get(handlers::health::health))
         .route("/auth/login", post(handlers::auth::login))
-        .merge(kosync_public)
-        .merge(kosync_protected);
+        .merge(kosync.clone())
+        .nest("/koreader", kosync.merge(bookorbit_plugin));
 
     let protected = Router::new()
         .route("/auth/register", post(handlers::auth::register))
@@ -80,6 +118,14 @@ pub fn build_router(state: AppState) -> Router {
             patch(handlers::books::update_progress),
         )
         .route("/books/{id}/cover", put(handlers::books::update_cover))
+        .route(
+            "/books/{id}/annotations",
+            get(handlers::books::list_book_annotations),
+        )
+        .route(
+            "/books/{id}/reading-summary",
+            get(handlers::books::get_reading_summary),
+        )
         .route("/search", get(handlers::search::search))
         .route(
             "/libraries",

@@ -1,8 +1,12 @@
 use crate::api::handlers;
+use crate::domain::annotations::{
+    BookAnnotationDto, BookAnnotationsResponse, BookBookmarkDto, BookReadingSummary,
+};
 use crate::domain::book::{
     BatchMoveCategoryRequest, BatchMoveCategoryResponse, BookCard, BookDetail, UpdateBookRequest,
     UpdateProgressRequest,
 };
+use crate::domain::bookorbit;
 use crate::domain::category::{CategoryDto, CreateCategoryRequest};
 use crate::domain::duplicates::{DuplicateGroup, DuplicateMatchKind, FindDuplicatesResponse};
 use crate::domain::home::HomeResponse;
@@ -25,7 +29,7 @@ use crate::domain::sync::{
 use crate::domain::tasks::{TaskDto, TaskProgress, TaskStatus};
 use crate::domain::user::UserDto;
 use crate::error::ApiErrorBody;
-use crate::infra::{BookMetadata, ReadingProgress};
+use crate::infra::{BookMetadata, MetadataAnnotation, MetadataBookmark, ReadingProgress};
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 
@@ -42,6 +46,8 @@ use utoipa::{Modify, OpenApi};
         handlers::books::batch_move_category,
         handlers::books::update_book,
         handlers::books::update_progress,
+        handlers::books::list_book_annotations,
+        handlers::books::get_reading_summary,
         handlers::books::delete_book,
         handlers::books::update_cover,
         handlers::books::download_book,
@@ -73,6 +79,14 @@ use utoipa::{Modify, OpenApi};
         handlers::koreader::kosync_auth_user,
         handlers::koreader::kosync_update_progress,
         handlers::koreader::kosync_get_progress,
+        handlers::bookorbit::plugin_version,
+        handlers::bookorbit::match_check,
+        handlers::bookorbit::exchange_annotations,
+        handlers::bookorbit::ack_annotations,
+        handlers::bookorbit::exchange_bookmarks,
+        handlers::bookorbit::ack_bookmarks,
+        handlers::bookorbit::upload_page_stats,
+        handlers::bookorbit::upload_book_states,
         handlers::koreader::list_koreader_progress,
         handlers::koreader::list_koreader_links,
         handlers::koreader::set_koreader_link,
@@ -88,7 +102,13 @@ use utoipa::{Modify, OpenApi};
         BookCard,
         BookDetail,
         BookMetadata,
+        MetadataAnnotation,
+        MetadataBookmark,
         ReadingProgress,
+        BookAnnotationsResponse,
+        BookAnnotationDto,
+        BookBookmarkDto,
+        BookReadingSummary,
         UpdateBookRequest,
         UpdateProgressRequest,
         BatchMoveCategoryRequest,
@@ -127,6 +147,44 @@ use utoipa::{Modify, OpenApi};
         KosyncProgressResponse,
         KosyncUpdateRequest,
         KosyncUpdateResponse,
+        bookorbit::PluginVersionInfo,
+        bookorbit::PluginMatchCheckRequest,
+        bookorbit::PluginMatch,
+        bookorbit::PluginMatchCheckResponse,
+        bookorbit::ExchangeKey,
+        bookorbit::KoAnnotation,
+        bookorbit::AnnotationExchangeBook,
+        bookorbit::AnnotationExchangeRequest,
+        bookorbit::ExchangeAddEntry,
+        bookorbit::ExchangeEditEntry,
+        bookorbit::ExchangeDeleteEntry,
+        bookorbit::AnnotationToApply,
+        bookorbit::AnnotationExchangeResult,
+        bookorbit::AnnotationExchangeResponse,
+        bookorbit::AnnotationAckApplied,
+        bookorbit::AckDeleted,
+        bookorbit::AnnotationAckBook,
+        bookorbit::AnnotationAckRequest,
+        bookorbit::AckResponse,
+        bookorbit::KoBookmark,
+        bookorbit::BookmarkExchangeBook,
+        bookorbit::BookmarkExchangeRequest,
+        bookorbit::BookmarkAddEntry,
+        bookorbit::BookmarkToApply,
+        bookorbit::BookmarkExchangeResult,
+        bookorbit::BookmarkExchangeResponse,
+        bookorbit::BookmarkAckApplied,
+        bookorbit::BookmarkAckBook,
+        bookorbit::BookmarkAckRequest,
+        bookorbit::PageStatsEvent,
+        bookorbit::PageStatsBook,
+        bookorbit::PageStatsRequest,
+        bookorbit::PageStatsResult,
+        bookorbit::PageStatsResponse,
+        bookorbit::BookStateEntry,
+        bookorbit::BookStatesRequest,
+        bookorbit::BookStateResult,
+        bookorbit::BookStatesResponse,
         KoreaderProgressRow,
         KoreaderDocumentLink,
         SetDocumentLinkRequest,
@@ -144,7 +202,7 @@ use utoipa::{Modify, OpenApi};
         (name = "Maintenance", description = "System maintenance tools and background tasks"),
         (name = "Users", description = "User administration"),
         (name = "Covers", description = "Cover images"),
-        (name = "KOReader", description = "KOReader progress sync (KOSync protocol) and admin"),
+        (name = "KOReader", description = "KOReader progress sync (KOSync protocol, also mounted under /koreader for BookOrbit clients), BookOrbit plugin sync (annotations, bookmarks, stats, status) and admin"),
     ),
     info(
         title = "Shelfie API",

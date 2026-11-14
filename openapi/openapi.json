@@ -370,6 +370,41 @@
         ]
       }
     },
+    "/books/{id}/annotations": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "operationId": "list_book_annotations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookAnnotationsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/books/{id}/cover": {
       "put": {
         "tags": [
@@ -472,6 +507,41 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/books/{id}/reading-summary": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "operationId": "get_reading_summary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookReadingSummary"
                 }
               }
             }
@@ -680,6 +750,243 @@
             "bearer_auth": []
           }
         ]
+      }
+    },
+    "/koreader/plugin/annotations/exchange": {
+      "post": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "exchange_annotations",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationExchangeResponse"
+                }
+              }
+            }
+          },
+          "400": {},
+          "401": {}
+        }
+      }
+    },
+    "/koreader/plugin/annotations/exchange-ack": {
+      "post": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "ack_annotations",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationAckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AckResponse"
+                }
+              }
+            }
+          },
+          "400": {},
+          "401": {}
+        }
+      }
+    },
+    "/koreader/plugin/book-states": {
+      "post": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "upload_book_states",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookStatesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookStatesResponse"
+                }
+              }
+            }
+          },
+          "400": {},
+          "401": {}
+        }
+      }
+    },
+    "/koreader/plugin/bookmarks/exchange": {
+      "post": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "exchange_bookmarks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookmarkExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookmarkExchangeResponse"
+                }
+              }
+            }
+          },
+          "400": {},
+          "401": {}
+        }
+      }
+    },
+    "/koreader/plugin/bookmarks/exchange-ack": {
+      "post": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "ack_bookmarks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookmarkAckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AckResponse"
+                }
+              }
+            }
+          },
+          "400": {},
+          "401": {}
+        }
+      }
+    },
+    "/koreader/plugin/match-check": {
+      "post": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "match_check",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PluginMatchCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginMatchCheckResponse"
+                }
+              }
+            }
+          },
+          "400": {},
+          "401": {}
+        }
+      }
+    },
+    "/koreader/plugin/page-stats": {
+      "post": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "upload_page_stats",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageStatsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageStatsResponse"
+                }
+              }
+            }
+          },
+          "400": {},
+          "401": {}
+        }
+      }
+    },
+    "/koreader/plugin/version": {
+      "get": {
+        "tags": [
+          "KOReader"
+        ],
+        "operationId": "plugin_version",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginVersionInfo"
+                }
+              }
+            }
+          },
+          "401": {}
+        }
       }
     },
     "/koreader/progress": {
@@ -1676,6 +1983,34 @@
   },
   "components": {
     "schemas": {
+      "AckDeleted": {
+        "type": "object",
+        "required": [
+          "serverId",
+          "status"
+        ],
+        "properties": {
+          "serverId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "AckResponse": {
+        "type": "object",
+        "required": [
+          "acked"
+        ],
+        "properties": {
+          "acked": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "AddMemberRequest": {
         "type": "object",
         "required": [
@@ -1706,6 +2041,237 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "AnnotationAckApplied": {
+        "type": "object",
+        "required": [
+          "serverId",
+          "version",
+          "status"
+        ],
+        "properties": {
+          "corrected": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "datetimeUpdated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "pos0": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pos1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serverId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string",
+            "description": "applied / failed"
+          },
+          "verified": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AnnotationAckBook": {
+        "type": "object",
+        "required": [
+          "hash"
+        ],
+        "properties": {
+          "applied": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnotationAckApplied"
+            }
+          },
+          "deleted": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AckDeleted"
+            }
+          },
+          "hash": {
+            "type": "string"
+          }
+        }
+      },
+      "AnnotationAckRequest": {
+        "type": "object",
+        "required": [
+          "deviceId",
+          "books"
+        ],
+        "properties": {
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnotationAckBook"
+            }
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        }
+      },
+      "AnnotationExchangeBook": {
+        "type": "object",
+        "required": [
+          "hash"
+        ],
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KoAnnotation"
+            }
+          },
+          "hash": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeKey"
+            },
+            "description": "设备上该书全部有效标注的身份 key"
+          },
+          "keysComplete": {
+            "type": "boolean",
+            "description": "`keys` 是否完整；完整时缺失的已同步条目视为设备端删除"
+          }
+        }
+      },
+      "AnnotationExchangeRequest": {
+        "type": "object",
+        "required": [
+          "deviceId",
+          "books"
+        ],
+        "properties": {
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnotationExchangeBook"
+            }
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "deviceTime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "设备当前时间 `YYYY-MM-DD HH:MM:SS`，用于换算设备编辑时间"
+          }
+        }
+      },
+      "AnnotationExchangeResponse": {
+        "type": "object",
+        "required": [
+          "results",
+          "unmatched"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnotationExchangeResult"
+            }
+          },
+          "unmatched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AnnotationExchangeResult": {
+        "type": "object",
+        "required": [
+          "hash",
+          "bookId",
+          "toApply",
+          "more",
+          "skippedNoPosition"
+        ],
+        "properties": {
+          "bookId": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "more": {
+            "type": "boolean",
+            "description": "还有未下发的变更，客户端应再次交换"
+          },
+          "skippedNoPosition": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "toApply": {
+            "$ref": "#/components/schemas/AnnotationToApply"
+          }
+        }
+      },
+      "AnnotationToApply": {
+        "type": "object",
+        "required": [
+          "add",
+          "edit",
+          "delete"
+        ],
+        "properties": {
+          "add": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeAddEntry"
+            }
+          },
+          "delete": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeDeleteEntry"
+            }
+          },
+          "edit": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeEditEntry"
+            }
           }
         }
       },
@@ -1780,6 +2346,121 @@
             "type": "integer",
             "format": "int32",
             "minimum": 0
+          }
+        }
+      },
+      "BookAnnotationDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "drawer",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "chapter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "KOReader 颜色名（yellow / red / green / blue / purple / orange / cyan / olive / gray）"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "drawer": {
+            "type": "string",
+            "description": "lighten（高亮）/ underscore（下划线）/ strikeout（删除线）/ invert（反色）"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "BookAnnotationsResponse": {
+        "type": "object",
+        "required": [
+          "annotations",
+          "bookmarks"
+        ],
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookAnnotationDto"
+            }
+          },
+          "bookmarks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookBookmarkDto"
+            }
+          }
+        }
+      },
+      "BookBookmarkDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "created_at"
+        ],
+        "properties": {
+          "chapter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
           }
         }
       },
@@ -1871,8 +2552,22 @@
           "title"
         ],
         "properties": {
+          "annotations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetadataAnnotation"
+            },
+            "description": "各用户的标注与笔记快照；数据库为准，由阅读器同步写入，接口编辑时忽略"
+          },
           "author": {
             "type": "string"
+          },
+          "bookmarks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetadataBookmark"
+            },
+            "description": "各用户的书签快照；同 `annotations`"
           },
           "category": {
             "type": "string"
@@ -1952,6 +2647,398 @@
           },
           "translator": {
             "type": "string"
+          }
+        }
+      },
+      "BookReadingSummary": {
+        "type": "object",
+        "description": "当前用户在该书上的阅读状态与页面阅读统计汇总",
+        "required": [
+          "total_seconds",
+          "pages_read",
+          "reading_days"
+        ],
+        "properties": {
+          "first_read_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Unix 秒"
+          },
+          "last_read_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "pages_read": {
+            "type": "integer",
+            "format": "int64",
+            "description": "读过的不同页数"
+          },
+          "reading_days": {
+            "type": "integer",
+            "format": "int64",
+            "description": "有阅读记录的天数（UTC）"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "reading / complete / abandoned"
+          },
+          "status_modified": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "状态修改日期 `YYYY-MM-DD`"
+          },
+          "total_pages": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "最近一次统计上报时的总页数"
+          },
+          "total_seconds": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "BookStateEntry": {
+        "type": "object",
+        "required": [
+          "hash"
+        ],
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "rating": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "1-5，写入图书元数据评分"
+          },
+          "ratingCleared": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "设备端清除了评分"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "reading / complete / abandoned"
+          },
+          "statusModified": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "设备端状态修改日期 `YYYY-MM-DD`；评分冲突时也按此日期判断"
+          }
+        }
+      },
+      "BookStateResult": {
+        "type": "object",
+        "required": [
+          "hash",
+          "statusApplied",
+          "ratingApplied",
+          "ratingSet"
+        ],
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "rating": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "ratingApplied": {
+            "type": "boolean",
+            "description": "设备评分是否被采纳（无编辑权限或修改不比图书新时不采纳）"
+          },
+          "ratingSet": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "statusApplied": {
+            "type": "boolean",
+            "description": "设备状态是否被采纳（同日或更旧的修改不覆盖服务端）"
+          },
+          "statusModified": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "BookStatesRequest": {
+        "type": "object",
+        "required": [
+          "books"
+        ],
+        "properties": {
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookStateEntry"
+            }
+          }
+        }
+      },
+      "BookStatesResponse": {
+        "type": "object",
+        "required": [
+          "results",
+          "unmatched"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookStateResult"
+            }
+          },
+          "unmatched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BookmarkAckApplied": {
+        "type": "object",
+        "required": [
+          "serverId",
+          "status"
+        ],
+        "properties": {
+          "datetime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pos": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serverId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "BookmarkAckBook": {
+        "type": "object",
+        "required": [
+          "hash"
+        ],
+        "properties": {
+          "applied": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookmarkAckApplied"
+            }
+          },
+          "deleted": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AckDeleted"
+            }
+          },
+          "hash": {
+            "type": "string"
+          }
+        }
+      },
+      "BookmarkAckRequest": {
+        "type": "object",
+        "required": [
+          "deviceId",
+          "books"
+        ],
+        "properties": {
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookmarkAckBook"
+            }
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        }
+      },
+      "BookmarkAddEntry": {
+        "type": "object",
+        "required": [
+          "serverId",
+          "pos",
+          "title"
+        ],
+        "properties": {
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "pos": {
+            "type": "string"
+          },
+          "serverId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "BookmarkExchangeBook": {
+        "type": "object",
+        "required": [
+          "hash"
+        ],
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KoBookmark"
+            }
+          },
+          "hash": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeKey"
+            }
+          },
+          "keysComplete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BookmarkExchangeRequest": {
+        "type": "object",
+        "required": [
+          "deviceId",
+          "books"
+        ],
+        "properties": {
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookmarkExchangeBook"
+            }
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        }
+      },
+      "BookmarkExchangeResponse": {
+        "type": "object",
+        "required": [
+          "results",
+          "unmatched"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookmarkExchangeResult"
+            }
+          },
+          "unmatched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BookmarkExchangeResult": {
+        "type": "object",
+        "required": [
+          "hash",
+          "bookId",
+          "toApply",
+          "more"
+        ],
+        "properties": {
+          "bookId": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "more": {
+            "type": "boolean"
+          },
+          "toApply": {
+            "$ref": "#/components/schemas/BookmarkToApply"
+          }
+        }
+      },
+      "BookmarkToApply": {
+        "type": "object",
+        "required": [
+          "add",
+          "delete"
+        ],
+        "properties": {
+          "add": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookmarkAddEntry"
+            }
+          },
+          "delete": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeDeleteEntry"
+            }
           }
         }
       },
@@ -2048,6 +3135,170 @@
           "sha256"
         ]
       },
+      "ExchangeAddEntry": {
+        "type": "object",
+        "required": [
+          "serverId",
+          "version",
+          "datetime",
+          "drawer",
+          "color",
+          "text",
+          "posFormat",
+          "pos0"
+        ],
+        "properties": {
+          "chapter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color": {
+            "type": "string"
+          },
+          "datetime": {
+            "type": "string"
+          },
+          "datetimeUpdated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "drawer": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "pos0": {
+            "type": "string"
+          },
+          "pos1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "posFormat": {
+            "type": "string"
+          },
+          "serverId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ExchangeDeleteEntry": {
+        "type": "object",
+        "required": [
+          "serverId",
+          "key"
+        ],
+        "properties": {
+          "datetime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "serverId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ExchangeEditEntry": {
+        "type": "object",
+        "required": [
+          "serverId",
+          "version",
+          "key",
+          "datetimeUpdated",
+          "drawer",
+          "color",
+          "text"
+        ],
+        "properties": {
+          "chapter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color": {
+            "type": "string"
+          },
+          "datetime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "datetimeUpdated": {
+            "type": "string"
+          },
+          "drawer": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serverId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ExchangeKey": {
+        "type": "object",
+        "required": [
+          "k",
+          "dt"
+        ],
+        "properties": {
+          "dt": {
+            "type": "string"
+          },
+          "k": {
+            "type": "string"
+          }
+        }
+      },
       "FindDuplicatesResponse": {
         "type": "object",
         "required": [
@@ -2101,6 +3352,114 @@
               "$ref": "#/components/schemas/BookCard"
             },
             "description": "最近阅读：按当前用户阅读时间降序"
+          }
+        }
+      },
+      "KoAnnotation": {
+        "type": "object",
+        "required": [
+          "datetime",
+          "drawer",
+          "posFormat",
+          "pos0"
+        ],
+        "properties": {
+          "chapter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "datetime": {
+            "type": "string"
+          },
+          "datetimeUpdated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "drawer": {
+            "type": "string",
+            "description": "lighten / underscore / strikeout / invert"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "pos0": {
+            "type": "string"
+          },
+          "pos1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "posFormat": {
+            "type": "string",
+            "description": "xpointer / pdf"
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "KoBookmark": {
+        "type": "object",
+        "required": [
+          "datetime",
+          "pos"
+        ],
+        "properties": {
+          "chapter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "datetime": {
+            "type": "string"
+          },
+          "datetimeUpdated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "pos": {
+            "type": "string"
           }
         }
       },
@@ -2513,6 +3872,138 @@
           }
         }
       },
+      "MetadataAnnotation": {
+        "type": "object",
+        "description": "一条标注（高亮，可带笔记）。位置为阅读器上报的原样 KOReader 位置",
+        "required": [
+          "username",
+          "drawer",
+          "pos_format",
+          "pos0",
+          "datetime",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "chapter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "KOReader 颜色名（yellow / red / …）"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "datetime": {
+            "type": "string",
+            "description": "设备端身份时间 `YYYY-MM-DD HH:MM:SS`"
+          },
+          "datetime_updated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "drawer": {
+            "type": "string",
+            "description": "KOReader 样式：lighten / underscore / strikeout / invert"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "pos0": {
+            "type": "string"
+          },
+          "pos1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pos_format": {
+            "type": "string",
+            "description": "`xpointer` 或 `pdf`"
+          },
+          "text": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "MetadataBookmark": {
+        "type": "object",
+        "required": [
+          "username",
+          "title",
+          "pos",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "chapter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "datetime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageno": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "pos": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
       "MissingFileBook": {
         "type": "object",
         "description": "数据库有记录、磁盘上图书文件已不存在",
@@ -2541,6 +4032,117 @@
           }
         }
       },
+      "PageStatsBook": {
+        "type": "object",
+        "required": [
+          "hash",
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PageStatsEvent"
+            }
+          },
+          "hash": {
+            "type": "string"
+          }
+        }
+      },
+      "PageStatsEvent": {
+        "type": "object",
+        "required": [
+          "page",
+          "startTime",
+          "durationSeconds",
+          "totalPages"
+        ],
+        "properties": {
+          "durationSeconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "startTime": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix 秒"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PageStatsRequest": {
+        "type": "object",
+        "required": [
+          "deviceId",
+          "books"
+        ],
+        "properties": {
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PageStatsBook"
+            }
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        }
+      },
+      "PageStatsResponse": {
+        "type": "object",
+        "required": [
+          "results",
+          "unmatched"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PageStatsResult"
+            }
+          },
+          "unmatched": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PageStatsResult": {
+        "type": "object",
+        "required": [
+          "hash",
+          "accepted",
+          "duplicates",
+          "watermark"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duplicates": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "watermark": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PermissionFlags": {
         "type": "object",
         "required": [
@@ -2557,6 +4159,79 @@
           },
           "can_view": {
             "type": "boolean"
+          }
+        }
+      },
+      "PluginMatch": {
+        "type": "object",
+        "required": [
+          "hash",
+          "bookId",
+          "bookFileId"
+        ],
+        "properties": {
+          "bookFileId": {
+            "type": "string",
+            "description": "Shelfie 一书一文件，与 `book_id` 相同"
+          },
+          "bookId": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          }
+        }
+      },
+      "PluginMatchCheckRequest": {
+        "type": "object",
+        "description": "`POST /koreader/plugin/match-check`；设备字段等其余字段忽略",
+        "required": [
+          "hashes"
+        ],
+        "properties": {
+          "hashes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PluginMatchCheckResponse": {
+        "type": "object",
+        "required": [
+          "matches"
+        ],
+        "properties": {
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PluginMatch"
+            }
+          }
+        }
+      },
+      "PluginVersionInfo": {
+        "type": "object",
+        "description": "`GET /koreader/plugin/version`",
+        "required": [
+          "pluginVersion",
+          "serverVersion",
+          "capabilities"
+        ],
+        "properties": {
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "未声明的能力（如 `bookmarkSync`）客户端不会调用"
+          },
+          "pluginVersion": {
+            "type": "string"
+          },
+          "serverVersion": {
+            "type": "string"
           }
         }
       },
@@ -3075,7 +4750,7 @@
     },
     {
       "name": "KOReader",
-      "description": "KOReader progress sync (KOSync protocol) and admin"
+      "description": "KOReader progress sync (KOSync protocol, also mounted under /koreader for BookOrbit clients), BookOrbit plugin sync (annotations, bookmarks, stats, status) and admin"
     }
   ]
 }

@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod bookorbit;
 pub mod books;
 pub mod categories;
 pub mod health;

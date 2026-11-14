@@ -1,4 +1,5 @@
 use crate::api::middleware::auth::AuthContext;
+use crate::domain::annotations::{self, BookAnnotationsResponse, BookReadingSummary};
 use crate::domain::book::{
     self, BatchMoveCategoryRequest, BatchMoveCategoryResponse, BookCard, BookDetail,
     UpdateBookRequest, UpdateProgressRequest,
@@ -222,6 +223,28 @@ pub async fn update_progress(
 ) -> AppResult<Json<BookDetail>> {
     Ok(Json(
         book::update_progress(&state, &user, &id, req.reading_progress).await?,
+    ))
+}
+
+#[utoipa::path(get, path = "/books/{id}/annotations", tag = "Books", params(("id" = Uuid, Path)), responses((status = 200, body = BookAnnotationsResponse)), security(("bearer_auth" = [])))]
+pub async fn list_book_annotations(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<BookAnnotationsResponse>> {
+    Ok(Json(
+        annotations::list_for_user(&state.db, &user, &id).await?,
+    ))
+}
+
+#[utoipa::path(get, path = "/books/{id}/reading-summary", tag = "Books", params(("id" = Uuid, Path)), responses((status = 200, body = BookReadingSummary)), security(("bearer_auth" = [])))]
+pub async fn get_reading_summary(
+    State(state): State<AppState>,
+    Extension(AuthContext(user)): Extension<AuthContext>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<BookReadingSummary>> {
+    Ok(Json(
+        annotations::reading_summary(&state.db, &user, &id).await?,
     ))
 }
 

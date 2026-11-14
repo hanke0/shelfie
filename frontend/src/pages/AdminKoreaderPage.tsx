@@ -64,6 +64,8 @@ export function AdminKoreaderPage() {
       <p className={styles.muted}>
         设备端将同步服务器设为 <code>http://你的域名/api/v1</code>，用户名/密码与 Shelfie
         相同（KOReader 会对密码做 MD5）。首次使用前请在网页登录一次以启用同步密钥。
+        Readest 等 BookOrbit 客户端的服务器地址填 <code>http://你的域名</code>
+        即可，支持阅读进度、标注/笔记、书签、阅读状态与阅读统计同步。
       </p>
 
       <div className={styles.card}>

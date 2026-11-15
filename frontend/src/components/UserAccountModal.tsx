@@ -111,7 +111,7 @@ export function UserAccountModal({
       {!isSelf && (
         <button
           type="button"
-          className="btn btn-ghost"
+          className="btn btn-danger"
           style={{ marginTop: "1rem" }}
           onClick={() => void handleDelete()}
           disabled={deleteUser.isPending}

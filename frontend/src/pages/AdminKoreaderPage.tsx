@@ -12,16 +12,31 @@ import { KoreaderLinkModal } from "@/components/KoreaderLinkModal";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { useLibrary } from "@/context/LibraryContext";
 import { useConfirmTwice } from "@/context/ConfirmContext";
+import { useToast } from "@/context/ToastContext";
 import { useApiAction } from "@/hooks/useApiAction";
+import { useStoredUser } from "@/lib/auth";
 import styles from "./AdminPage.module.css";
 import tableStyles from "./AdminKoreaderPage.module.css";
 
 export function AdminKoreaderPage() {
   const qc = useQueryClient();
+  const user = useStoredUser();
+  const toast = useToast();
   const { libraryId: contextLibraryId, setLibraryId } = useLibrary();
   const { data: libraries } = useListLibraries();
   const [libraryFilter, setLibraryFilter] = useState(contextLibraryId ?? "");
   const [linkModalOpen, setLinkModalOpen] = useState(false);
+
+  const serverUrl = `${window.location.origin}/api/v1`;
+
+  const copyServerUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(serverUrl);
+      toast.success("已复制服务器地址");
+    } catch {
+      toast.error("复制失败");
+    }
+  };
 
   const libParam = libraryFilter ? { library_id: libraryFilter } : undefined;
   const { data: progressRows } = useListKoreaderProgress(libParam ?? {}, {
@@ -60,13 +75,22 @@ export function AdminKoreaderPage() {
     <div className={`app-shell ${styles.page}`}>
       <BackLink />
       <h1>KOReader 同步</h1>
-      <p className={styles.muted}>
-        设备端将同步服务器设为 <code>http://你的域名/api/v1</code>，用户名/密码与 Shelfie
-        相同（KOReader 会对密码做 MD5）。首次使用前请在网页登录一次以启用同步密钥。
-        Readest 等 BookOrbit 客户端的服务器地址填 <code>http://你的域名</code>
-        即可，支持阅读进度、标注/笔记、书签、阅读状态与阅读统计同步，详见「
-        <Link to="/admin/bookorbit">BookOrbit 同步</Link>」。
-      </p>
+      <p className={styles.muted}>管理 KOReader 进度同步与 document ↔ 图书匹配。</p>
+
+      <div className={styles.card}>
+        <h2>连接设置</h2>
+        <p className={styles.muted}>在 KOReader 的同步设置中，服务器地址填写：</p>
+        <div className={styles.opdsRow}>
+          <code className={styles.opdsUrl}>{serverUrl}</code>
+          <button type="button" className="btn btn-ghost" onClick={() => void copyServerUrl()}>
+            复制
+          </button>
+        </div>
+        <p className={styles.muted}>
+          用户名：<code>{user?.username}</code>，密码与 Shelfie 登录密码相同（KOReader
+          会对密码做 MD5）。首次使用前请在网页登录一次以启用同步密钥。
+        </p>
+      </div>
 
       <div className={styles.card}>
         <div className={styles.cardHeader}>
@@ -119,7 +143,7 @@ export function AdminKoreaderPage() {
                 <td>
                   <button
                     type="button"
-                    className="btn btn-ghost"
+                    className="btn btn-danger"
                     onClick={() => void handleDeleteLink(l.document)}
                   >
                     删除

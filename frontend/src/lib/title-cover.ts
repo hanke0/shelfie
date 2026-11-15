@@ -5,7 +5,7 @@ const COLORS = {
   bgTop: "#e8c4b0",
   bgBottom: "#ebe3d8",
   ink: "#1f1a14",
-  inkMuted: "#6b5f52",
+  inkMuted: "#94877a",
   accent: "#b85c38",
 };
 
@@ -14,8 +14,8 @@ let fontsReady: Promise<void> | null = null;
 function ensureFonts(): Promise<void> {
   if (!fontsReady && typeof document !== "undefined" && document.fonts) {
     fontsReady = Promise.all([
-      document.fonts.load('700 52px "Playfair Display"'),
-      document.fonts.load('500 28px "DM Sans"'),
+      document.fonts.load('700 52px "Noto Serif SC"'),
+      document.fonts.load('500 28px "Noto Serif SC"'),
     ]).then(() => undefined);
   }
   return fontsReady ?? Promise.resolve();
@@ -66,7 +66,7 @@ function drawTitleCover(
   let y = h * 0.28;
 
   ctx.fillStyle = COLORS.accent;
-  ctx.font = '700 52px "Playfair Display", Georgia, serif';
+  ctx.font = '700 52px "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
 
@@ -81,7 +81,7 @@ function drawTitleCover(
   if (authorText) {
     y += 20;
     ctx.fillStyle = COLORS.inkMuted;
-    ctx.font = '500 28px "DM Sans", system-ui, sans-serif';
+    ctx.font = '500 28px "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
     const authorLines = wrapText(ctx, authorText, maxWidth);
     for (const line of authorLines.slice(0, 2)) {
       ctx.fillText(line, w / 2, y);

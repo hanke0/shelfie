@@ -86,16 +86,16 @@ export function LibraryCategoryManager({ libraryId, canEdit }: LibraryCategoryMa
             return (
               <li key={c.name} className={styles.categoryRow}>
                 <span>
-                  {c.name}
+                  <span className={styles.categoryName}>{c.name}</span>
                   {count > 0 ? (
-                    <span className={styles.muted}>（{count} 本）</span>
+                    <span className={styles.categoryCount}>（{count} 本）</span>
                   ) : null}
                 </span>
                 {canEdit && c.name !== DEFAULT_CATEGORY ? (
                   canDelete ? (
                     <button
                       type="button"
-                      className="btn btn-ghost"
+                      className="btn btn-danger"
                       disabled={deleteCategory.isPending}
                       onClick={() => void handleDelete(c.name)}
                     >

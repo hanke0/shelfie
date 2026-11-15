@@ -26,6 +26,7 @@ export function LibraryMemberPermissionsEditor({
   member,
   canEditPermissions,
   canRemoveMember,
+  showPermSummary = true,
   onSaved,
 }: {
   libraryId: string;
@@ -35,6 +36,8 @@ export function LibraryMemberPermissionsEditor({
   member: MemberPermState;
   canEditPermissions: boolean;
   canRemoveMember: boolean;
+  /** When false, only action buttons are rendered (e.g. table layout). */
+  showPermSummary?: boolean;
   onSaved?: () => void;
 }) {
   const qc = useQueryClient();
@@ -69,29 +72,42 @@ export function LibraryMemberPermissionsEditor({
     setRemoving(false);
   };
 
+  const hasActions = canEditPermissions || canRemoveMember;
+
+  const actionButtons = (
+    <>
+      {canEditPermissions && (
+        <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
+          编辑权限
+        </button>
+      )}
+      {canRemoveMember && (
+        <button
+          type="button"
+          className="btn btn-danger"
+          disabled={removing}
+          onClick={() => void handleRemove()}
+        >
+          {removing ? "移除中…" : "移出图书馆"}
+        </button>
+      )}
+    </>
+  );
+
   return (
     <>
-      <div className={styles.memberActions}>
-        <span className={styles.muted}>{permLabel(member)}</span>
-        <div className={styles.rowActions}>
-          {canEditPermissions && (
-            <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(true)}>
-              编辑权限
-            </button>
-          )}
-          {canRemoveMember && (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              disabled={removing}
-              onClick={() => void handleRemove()}
-            >
-              {removing ? "移除中…" : "移出图书馆"}
-            </button>
-          )}
+      {showPermSummary ? (
+        <div className={styles.memberActions}>
+          <span className={styles.muted}>{permLabel(member)}</span>
+          {hasActions && <div className={styles.rowActions}>{actionButtons}</div>}
+          {error && <span className={styles.error}>{error}</span>}
         </div>
-        {error && <span className={styles.error}>{error}</span>}
-      </div>
+      ) : (
+        <div className={styles.rowActions}>
+          {hasActions ? actionButtons : <span className={styles.muted}>—</span>}
+          {error && <span className={styles.error}>{error}</span>}
+        </div>
+      )}
       {canEditPermissions && username && editOpen && (
         <EditMemberPermissionsModal
           onClose={() => setEditOpen(false)}
@@ -104,4 +120,8 @@ export function LibraryMemberPermissionsEditor({
       )}
     </>
   );
+}
+
+export function memberPermMark(ok: boolean | undefined) {
+  return ok ? "✓" : "✗";
 }

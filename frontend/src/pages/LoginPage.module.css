@@ -31,7 +31,10 @@
 
 .sub {
   margin: -0.25rem 0 0.5rem;
+  font-size: var(--text-2xs);
+  font-weight: 400;
   color: var(--ink-muted);
+  line-height: 1.6;
 }
 
 .card label {
@@ -48,7 +51,9 @@
 
 .hint {
   margin: 0;
-  font-size: var(--text-xs);
-  color: var(--ink-muted);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  color: var(--ink-faint);
+  line-height: 1.55;
   text-align: center;
 }

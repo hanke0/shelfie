@@ -9,7 +9,10 @@ import { BackLink } from "@/components/BackLink";
 import { CreateLibraryModal } from "@/components/CreateLibraryModal";
 import { AddMemberModal } from "@/components/AddMemberModal";
 import { LibraryCategoryManager } from "@/components/LibraryCategoryManager";
-import { LibraryMemberPermissionsEditor } from "@/components/LibraryMemberPermissionsEditor";
+import {
+  LibraryMemberPermissionsEditor,
+  memberPermMark,
+} from "@/components/LibraryMemberPermissionsEditor";
 import { getUser } from "@/lib/auth";
 import { useLibrary } from "@/context/LibraryContext";
 import { useConfirmTwice } from "@/context/ConfirmContext";
@@ -110,20 +113,20 @@ export function AdminLibrariesPage() {
             </button>
           )}
         </div>
-        <ul className={styles.list}>
+        <ul className={styles.libList}>
           {libraries?.map((lib) => (
             <li key={lib.id}>
               <button
                 type="button"
-                className={selectedLib === lib.id ? styles.active : ""}
+                className={`${styles.libRow} ${selectedLib === lib.id ? styles.libRowActive : ""}`}
                 onClick={() => {
                   setSelectedLib(lib.id);
                   setLibraryId(lib.id);
                 }}
               >
-                {lib.name}
+                <span className={styles.libRowName}>{lib.name}</span>
+                <span className={styles.libRowPath}>{lib.root_path}</span>
               </button>
-              <span className={styles.muted}>{lib.root_path}</span>
             </li>
           ))}
         </ul>
@@ -184,35 +187,62 @@ export function AdminLibrariesPage() {
             {!canManageMembers && (
               <p className={styles.muted}>你只能查看自己在本馆的权限；成员管理请联系馆管理员。</p>
             )}
-            <ul className={styles.memberList}>
-              {members?.map((m) => (
-                <li key={m.user_id} className={styles.memberRow}>
-                  <div className={styles.memberHead}>
-                    <strong>{m.username}</strong>
-                    <span className={styles.muted}>
-                      {m.role === "admin" ? "馆管理员" : "成员"}
-                    </span>
-                  </div>
-                  <LibraryMemberPermissionsEditor
-                    libraryId={selectedLib}
-                    userId={m.user_id}
-                    username={m.username}
-                    member={{
-                      role: m.role,
-                      can_view: m.can_view,
-                      can_edit: m.can_edit,
-                      can_delete: m.can_delete,
-                    }}
-                    canEditPermissions={isSystemAdmin}
-                    canRemoveMember={
-                      canManageMembers &&
-                      (isSystemAdmin || m.role !== "admin") &&
-                      m.user_id !== user?.id
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>用户</th>
+                    <th>角色</th>
+                    <th>查看</th>
+                    <th>编辑</th>
+                    <th>删除</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members?.map((m) => {
+                    const isAdmin = m.role === "admin";
+                    return (
+                      <tr key={m.user_id}>
+                        <td>
+                          <strong>{m.username}</strong>
+                        </td>
+                        <td>{isAdmin ? "馆管理员" : "成员"}</td>
+                        <td className={styles.permMark}>
+                          {isAdmin ? "✓" : memberPermMark(m.can_view)}
+                        </td>
+                        <td className={styles.permMark}>
+                          {isAdmin ? "✓" : memberPermMark(m.can_edit)}
+                        </td>
+                        <td className={styles.permMark}>
+                          {isAdmin ? "✓" : memberPermMark(m.can_delete)}
+                        </td>
+                        <td>
+                          <LibraryMemberPermissionsEditor
+                            libraryId={selectedLib}
+                            userId={m.user_id}
+                            username={m.username}
+                            member={{
+                              role: m.role,
+                              can_view: m.can_view,
+                              can_edit: m.can_edit,
+                              can_delete: m.can_delete,
+                            }}
+                            canEditPermissions={isSystemAdmin}
+                            canRemoveMember={
+                              canManageMembers &&
+                              (isSystemAdmin || m.role !== "admin") &&
+                              m.user_id !== user?.id
+                            }
+                            showPermSummary={false}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}

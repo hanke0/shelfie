@@ -48,21 +48,21 @@ export function AdminUsersPage() {
           </button>
         </div>
         <p className={styles.muted}>点击用户名查看详情与权限。</p>
-        <ul className={styles.list}>
+        <ul className={styles.userList}>
           {users?.map((u) => (
             <li key={u.id}>
               <button
                 type="button"
-                className={selectedUserId === u.id ? styles.active : ""}
+                className={`${styles.userRow} ${selectedUserId === u.id ? styles.userRowActive : ""}`}
                 onClick={() =>
                   setSelectedUserId((prev) => (prev === u.id ? null : u.id))
                 }
               >
-                {u.username}
+                <span className={styles.userRowName}>{u.username}</span>
+                <span className={styles.userRowRole}>
+                  {u.role === "system_admin" ? "系统管理员" : "普通用户"}
+                </span>
               </button>
-              <span className={styles.muted}>
-                {u.role === "system_admin" ? "系统管理员" : "普通用户"}
-              </span>
             </li>
           ))}
         </ul>

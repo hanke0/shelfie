@@ -25,6 +25,7 @@ export function extractFrontMatter(text: string): Partial<BookMetadata> {
   const normalized = text
     .replace(/\u00a0/g, " ")
     .replace(/\u3000/g, " ")
+    .replace(/[–—－]/g, "-")
     .replace(/[ \t]+/g, " ")
     .replace(/\r\n?/g, "\n");
 
@@ -36,26 +37,30 @@ export function extractFrontMatter(text: string): Partial<BookMetadata> {
     }
   };
 
-  // 1) Explicit labeled fields (书名：/作者：/出版时间：…)
+  // 1) Explicit labeled fields (书名：/著者：/出版时间：…)
   take("title", matchLabeled(normalized, /书名|书\s*名/));
-  take("author", matchLabeled(normalized, /作者/));
+  take("author", matchLabeled(normalized, /著者|作者/));
   take("translator", findTranslator(normalized));
   take(
     "publisher",
     cleanPublisher(
-      matchLabeled(normalized, /出版社|出版者|出版公司|出版集团/) ??
-        firstLineMatch(normalized, /^(.{2,40}出版社)\s*$/m) ??
+      matchLabeled(normalized, /出版发行|出版社|出版者|出版公司|出版集团|出版/) ??
+        firstLineMatch(normalized, /^(?!出版)(.{2,40}出版社)\s*$/m) ??
         "",
     ),
   );
   take(
     "publish_date",
-    normalizePublishDate(matchLabeled(normalized, /出版(?:时间|日期|年月)|出版年/) ?? ""),
+    normalizePublishDate(
+      matchLabeled(normalized, /出版(?:时间|日期|年月)|出版年|版\s*次/) ?? "",
+    ),
   );
   take(
     "original_title",
-    matchLabeled(normalized, /原(?:作|书)?名|原题|英文(?:书)?名|Original\s*Title/i) ??
-      firstLineMatch(normalized, /^原(?:作|书)?名[：:]\s*(.+)$/m),
+    matchLabeled(
+      normalized,
+      /书名原文|原(?:作|书)?名|原题|英文(?:书)?名|Original\s*Title/i,
+    ) ?? firstLineMatch(normalized, /^原(?:作|书)?名[：:]\s*(.+)$/m),
   );
 
   // 2) 版权页：「甲 著 乙 译」/ 出版发行 / 版次（完整署名优先于 CIP 简写）
@@ -74,7 +79,7 @@ export function extractFrontMatter(text: string): Partial<BookMetadata> {
   take("publisher", cip.publisher);
   take("publish_date", cip.publish_date);
 
-  const isbn = normalized.match(/ISBN(?:-1[03])?[：:\s]*([\dXx-]{10,17})/i)?.[1];
+  const isbn = normalized.match(/ISBN(?:-1[03])?[：:\s]*([\dXx-]{10,22})/i)?.[1];
   if (isbn) take("isbn", isbn.replace(/\s/g, ""));
 
   return out;
@@ -82,8 +87,9 @@ export function extractFrontMatter(text: string): Partial<BookMetadata> {
 
 /** 图书在版编目（CIP）责任说明行. */
 function parseCipLine(text: string): Partial<BookMetadata> {
+  // 信号与噪声 /（美）西尔弗著；胡晓姣，张新，朱辰辰译 .—北京：中信出版社，2013.8
   const m = text.match(
-    /([^\n／/]{1,80}?)\s*[／/]\s*([^\n]{2,160}?)\s*[．.]\s*[—–\-－]+\s*([^\n]{3,160})/,
+    /(?:^|\n)\s*([^\n／/]{1,80}?)\s*[／/]\s*([^\n]{2,160}?)\s*[．.]\s*[—–\-－]+\s*([^\n]{3,160})/,
   );
   if (!m) return {};
 
@@ -92,7 +98,9 @@ function parseCipLine(text: string): Partial<BookMetadata> {
   const publication = (m[3] ?? "").trim();
 
   const out: Partial<BookMetadata> = {};
-  if (title && !/^(图书在版编目|CIP|Ⅰ|Ⅱ|Ⅲ|Ⅳ)/.test(title)) out.title = title;
+  if (title && !/^(图书在版编目|CIP|Ⅰ|Ⅱ|Ⅲ|Ⅳ|I\.|II\.|III\.|IV\.)/i.test(title)) {
+    out.title = title;
+  }
 
   const authors: string[] = [];
   const translators: string[] = [];
@@ -108,9 +116,9 @@ function parseCipLine(text: string): Partial<BookMetadata> {
   if (authors.length) out.author = uniqueJoin(authors);
   if (translators.length) out.translator = uniqueJoin(translators);
 
-  // 西安：陕西师范大学出版总社有限公司，2013.3
+  // 北京：中信出版社，2013.8
   const pub = publication.match(
-    /^(?:[^：:]{1,20}[：:])?\s*([^，,]{2,80}?)\s*[，,]\s*(\d{4}(?:[.\-／/年]\d{1,2}(?:月\d{1,2}日?|[.\-／/]\d{1,2})?)?)/,
+    /^(?:[^：:]{1,20}[：:])?\s*([^，,]{2,80}?)\s*[，,]\s*(\d{4}(?:\s*[.\-／/年]\s*\d{1,2}(?:\s*月\s*\d{1,2}\s*日?|[.\-／/]\d{1,2})?)?)/,
   );
   if (pub) {
     out.publisher = cleanPublisher(pub[1] ?? "");
@@ -135,11 +143,14 @@ function parseAuthorTranslatorLine(text: string): Partial<BookMetadata> {
   };
 }
 
+const NEXT_FIELD =
+  /策划(?:推广)?|出版发行|出版社|出版者|著者|作者|译者|责任编辑|特约编辑|助理编辑|封面设计|版\s*次|印\s*次|开\s*本|印\s*张|字\s*数|书\s*号|定\s*价|ISBN|承\s*印/;
+
 function findTranslator(text: string): string {
   const found: string[] = [];
 
-  for (const m of text.matchAll(/(?:译者|翻\s*译)\s*[：:]\s*([^\n。]{1,80})/g)) {
-    pushPeople(found, m[1]);
+  for (const m of text.matchAll(/(?:译者|翻\s*译)\s*[：:]\s*([^\n。]{1,120})/g)) {
+    pushPeople(found, cutAtNextField(m[1] ?? ""));
   }
 
   for (const m of text.matchAll(
@@ -154,27 +165,30 @@ function findTranslator(text: string): string {
   return uniqueJoin(found);
 }
 
+function cutAtNextField(raw: string): string {
+  const parts = raw.split(new RegExp(`\\s+(?=${NEXT_FIELD.source})`));
+  return parts[0]?.trim() ?? raw.trim();
+}
+
 function matchLabeled(text: string, label: RegExp): string | undefined {
   const re = new RegExp(
-    `(?:${label.source})\\s*[：:]\\s*([^\\n，,；;。]{1,80})`,
+    `(?:${label.source})\\s*[：:]\\s*([^\\n]{1,100})`,
     label.flags.includes("i") ? "gi" : "g",
   );
   for (const m of text.matchAll(re)) {
-    const value = cleanPerson(m[1] ?? "");
+    const value = cleanPerson(cutAtNextField(m[1] ?? ""));
     if (value) return value;
   }
   return undefined;
 }
 
-/** 版权页常见「标签 + 空格 + 值」（无冒号）. */
+/** 版权页常见「标签 + 可选冒号 + 值」. */
 function matchSpacedLabel(text: string, label: RegExp): string | undefined {
-  const re = new RegExp(`(?:${label.source})\\s+([^\\n]{1,80})`, "g");
+  const re = new RegExp(`(?:${label.source})\\s*[：:]?\\s+([^\\n]{1,80})`, "g");
   for (const m of text.matchAll(re)) {
-    const value = cleanPerson(m[1] ?? "");
+    const value = cleanPerson(cutAtNextField(m[1] ?? ""));
     if (!value) continue;
-    if (/^(责任编辑|特约编辑|助理编辑|封面设计|经\s*销|印\s*刷|开\s*本|印\s*张|字\s*数)/.test(value)) {
-      continue;
-    }
+    if (NEXT_FIELD.test(value) && !/^\d{4}/.test(value)) continue;
     return value;
   }
   return undefined;
@@ -182,7 +196,7 @@ function matchSpacedLabel(text: string, label: RegExp): string | undefined {
 
 function matchSuffixRole(text: string, role: string): string | undefined {
   const re = new RegExp(
-    `(?:^|[\\n\\r]|[（(【\\[［])\\s*([^\\n（）()【】\\[\\]［］：:]{1,40}?)\\s+${role}\\s*(?:$|[\\n\\r]|[）)】\\]］])`,
+    `(?:^|[\\n\\r]|[（(【\\[［])\\s*([^\\n（）()【】\\[\\]［］：:]{1,40}?)(?:\\s+|◎)${role}\\s*(?:$|[\\n\\r]|[）)】\\]］])`,
     "gm",
   );
   for (const m of text.matchAll(re)) {
@@ -221,7 +235,7 @@ function cleanPerson(raw: string): string {
 
 function cleanPublisher(raw: string): string {
   return cleanPerson(raw)
-    .replace(/^(出版社|出版者|出版公司|出版发行|发行)[：:\s]*/, "")
+    .replace(/^(出版发行|出版社|出版者|出版公司|出版|发行)[：:\s]*/, "")
     .replace(/\s*[（(].*$/, "")
     .trim();
 }

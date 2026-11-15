@@ -78,6 +78,55 @@ ISBN 978-7-5613-6018-7
     });
   });
 
+  it("parses CITIC-style CIP with 书名原文 / 著者 / en-dash ISBN", () => {
+    const text = `
+图书在版编目（CIP）数据
+
+信号与噪声 /（美）西尔弗著；胡晓姣，张新，朱辰辰译 .—北京：中信出版社，2013.8
+
+书名原文：The Signal and the Noise
+
+ISBN 978–7–5086–4114–0
+
+信号与噪声
+
+著者：[ 美 ] 纳特 · 西尔弗
+
+译者：胡晓姣; 张新; 朱辰辰 策划推广：中信出版社（China CITIC Press） 出版发行：中信出版集团股份有限公司
+
+（北京市朝阳区惠新东街甲 4 号富盛大厦 2 座; 邮编 ;100029）
+
+版 次：2013 年 8 月第 1 版;;
+
+印 次：2013 年 8 月第 1 次印刷
+
+书 号：ISBN 978–7–5086–4114–0/F·2968
+    `;
+    expect(extractFrontMatter(text)).toMatchObject({
+      title: "信号与噪声",
+      original_title: "The Signal and the Noise",
+      author: "[ 美 ] 纳特 · 西尔弗",
+      translator: "胡晓姣, 张新, 朱辰辰",
+      publisher: "中信出版集团股份有限公司",
+      publish_date: "2013-08",
+      isbn: "978-7-5086-4114-0",
+    });
+  });
+
+  it("parses 出版：label without keeping the 出版 prefix", () => {
+    const text = `
+版权信息
+了不起的盖茨比
+菲茨杰拉德◎著
+出版：上海文艺出版社
+开本：720×1280／768×1024
+    `;
+    expect(extractFrontMatter(text)).toMatchObject({
+      author: "菲茨杰拉德",
+      publisher: "上海文艺出版社",
+    });
+  });
+
   it("ignores 编译-like false positives", () => {
     expect(extractFrontMatter("本书由某某编译完成").translator).toBeFalsy();
   });

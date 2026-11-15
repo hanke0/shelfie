@@ -5,12 +5,14 @@ export type OpfMeta = Record<string, string[]>;
 export type ParsedOpf = {
   meta: OpfMeta;
   coverHref?: string;
+  spineHrefs: string[];
 };
 
 export function parseOpf(opf: string): ParsedOpf {
   const doc = new DOMParser().parseFromString(opf, "application/xml");
   const meta: OpfMeta = {};
   const manifest = new Map<string, string>();
+  const peopleById = new Map<string, string>();
   let coverHref: string | undefined;
 
   for (const item of doc.querySelectorAll("manifest > item")) {
@@ -24,26 +26,53 @@ export function parseOpf(opf: string): ParsedOpf {
     if (!local) continue;
     if (local === "meta") {
       const name = el.getAttribute("name") ?? el.getAttribute("property") ?? "";
-      const content = el.getAttribute("content") ?? "";
+      const content = el.getAttribute("content") ?? el.textContent?.trim() ?? "";
       if ((name === "cover" || name === "cover-image") && content) {
         coverHref = manifest.get(content) ?? coverHref;
+      } else if (isRoleProperty(name) && isTranslatorRole(content)) {
+        const refined = resolveRefineTarget(el.getAttribute("refines"), peopleById);
+        if (refined) pushMeta(meta, "translator", refined);
       } else if (name && content) {
         pushMeta(meta, name, content);
       }
       continue;
     }
+
     const text = el.textContent?.trim();
-    if (text) pushMeta(meta, local, text);
+    if (!text) continue;
+
+    if (local === "creator" || local === "contributor") {
+      const id = el.getAttribute("id");
+      if (id) peopleById.set(id, text);
+      if (local === "creator") pushMeta(meta, "creator", text);
+      const role =
+        el.getAttribute("opf:role") ??
+        el.getAttributeNS("http://www.idpf.org/2007/opf", "role") ??
+        el.getAttribute("role") ??
+        "";
+      if (isTranslatorRole(role)) pushMeta(meta, "translator", text);
+      continue;
+    }
+
+    pushMeta(meta, local, text);
   }
 
-  return { meta, coverHref };
+  const spineHrefs: string[] = [];
+  for (const itemref of doc.querySelectorAll("spine > itemref")) {
+    const idref = itemref.getAttribute("idref");
+    if (!idref) continue;
+    const href = manifest.get(idref);
+    if (href) spineHrefs.push(href);
+  }
+
+  return { meta, coverHref, spineHrefs };
 }
 
 export function opfMetaToPartial(meta: OpfMeta, fallbackTitle = ""): Partial<BookMetadata> {
   return {
     title: firstMeta(meta, "title") || fallbackTitle,
     author: joinMeta(meta, "creator"),
-    translator: joinMeta(meta, "contributor"),
+    translator: joinMeta(meta, "translator"),
     publisher: firstMeta(meta, "publisher"),
     language: firstMeta(meta, "language"),
     isbn: isbnFromMeta(meta),
@@ -52,6 +81,30 @@ export function opfMetaToPartial(meta: OpfMeta, fallbackTitle = ""): Partial<Boo
     series: firstMeta(meta, "calibre:series") || firstMeta(meta, "series"),
     notes: firstMeta(meta, "description"),
   };
+}
+
+function isRoleProperty(name: string): boolean {
+  return name === "role" || name.endsWith(":role");
+}
+
+function isTranslatorRole(role: string): boolean {
+  const value = role.trim().toLowerCase();
+  if (!value) return false;
+  return (
+    value === "trl" ||
+    value === "translator" ||
+    value.endsWith("/trl") ||
+    value.includes("translator")
+  );
+}
+
+function resolveRefineTarget(
+  refines: string | null,
+  peopleById: Map<string, string>,
+): string | undefined {
+  if (!refines) return undefined;
+  const id = refines.startsWith("#") ? refines.slice(1) : refines;
+  return peopleById.get(id);
 }
 
 function pushMeta(meta: OpfMeta, key: string, value: string) {

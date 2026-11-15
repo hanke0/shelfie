@@ -1,5 +1,7 @@
 import type JSZip from "jszip";
 import type { BookMetadata } from "@/api/generated/models";
+import { extractFrontMatter, fillMissingMetadata, htmlToPlainText } from "@/lib/front-matter";
+import { parseMobi } from "@/lib/mobi-metadata";
 import {
   coverMimeFromPath,
   joinOpfPath,
@@ -16,6 +18,8 @@ export type LocalExtractedBook = {
   cover?: File;
 };
 
+const FRONT_PAGE_LIMIT = 5;
+
 export async function extractBookMetadataLocal(file: File): Promise<LocalExtractedBook> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   switch (ext) {
@@ -24,7 +28,7 @@ export async function extractBookMetadataLocal(file: File): Promise<LocalExtract
     case "pdf":
       return extractPdf(file);
     case "mobi":
-      return { metadata: { title: fallbackTitle(file) } };
+      return extractMobi(file);
     default:
       return { metadata: { title: fallbackTitle(file) } };
   }
@@ -55,10 +59,13 @@ async function extractEpub(file: File): Promise<LocalExtractedBook> {
     }
   }
 
-  return {
-    metadata: opfMetaToPartial(parsed.meta, fallbackTitle(file)),
-    cover,
-  };
+  let metadata = opfMetaToPartial(parsed.meta, fallbackTitle(file));
+  if (needsFrontMatter(metadata)) {
+    const frontText = await readEpubFrontText(zip, opfDir, parsed.spineHrefs);
+    metadata = fillMissingMetadata(metadata, extractFrontMatter(frontText));
+  }
+
+  return { metadata, cover };
 }
 
 async function extractPdf(file: File): Promise<LocalExtractedBook> {
@@ -73,18 +80,92 @@ async function extractPdf(file: File): Promise<LocalExtractedBook> {
   const info = meta.info as Record<string, string | undefined>;
   const pageCount = doc.numPages;
 
-  return {
-    metadata: {
-      title: info.Title?.trim() || fallbackTitle(file),
-      author: info.Author?.trim() ?? "",
-      publisher: info.Producer?.trim() || info.Creator?.trim() || "",
-      language: info.Language?.trim() ?? "",
-      isbn: normalizeIsbn(info.ISBN ?? ""),
-      publish_date: normalizePublishDate(info.CreationDate ?? info.ModDate ?? ""),
-      page_count: Number.isFinite(pageCount) ? pageCount : undefined,
-      notes: info.Subject?.trim() ?? "",
-    },
+  let metadata: Partial<BookMetadata> = {
+    title: info.Title?.trim() || fallbackTitle(file),
+    author: info.Author?.trim() ?? "",
+    publisher: info.Producer?.trim() || info.Creator?.trim() || "",
+    language: info.Language?.trim() ?? "",
+    isbn: normalizeIsbn(info.ISBN ?? ""),
+    publish_date: normalizePublishDate(info.CreationDate ?? info.ModDate ?? ""),
+    page_count: Number.isFinite(pageCount) ? pageCount : undefined,
+    notes: info.Subject?.trim() ?? "",
   };
+
+  if (needsFrontMatter(metadata)) {
+    const frontText = await readPdfFrontText(doc, FRONT_PAGE_LIMIT);
+    metadata = fillMissingMetadata(metadata, extractFrontMatter(frontText));
+  }
+
+  return { metadata };
+}
+
+async function extractMobi(file: File): Promise<LocalExtractedBook> {
+  const buffer = await file.arrayBuffer();
+  const parsed = parseMobi(buffer, fallbackTitle(file));
+  let metadata = parsed.metadata;
+
+  if (needsFrontMatter(metadata) && parsed.frontText) {
+    metadata = fillMissingMetadata(
+      metadata,
+      extractFrontMatter(htmlToPlainText(parsed.frontText)),
+    );
+  }
+
+  let cover: File | undefined;
+  if (parsed.coverBytes && parsed.coverMime) {
+    const ext = parsed.coverMime.includes("png") ? "png" : "jpg";
+    const bytes = new Uint8Array(parsed.coverBytes);
+    cover = new File([bytes], `${fallbackTitle(file)}-cover.${ext}`, {
+      type: parsed.coverMime,
+    });
+  }
+
+  return { metadata, cover };
+}
+
+function needsFrontMatter(meta: Partial<BookMetadata>): boolean {
+  return !(meta.translator?.trim()) || !(meta.author?.trim()) || !(meta.publisher?.trim()) || !(meta.isbn?.trim());
+}
+
+async function readEpubFrontText(
+  zip: JSZip,
+  opfDir: string,
+  spineHrefs: string[],
+): Promise<string> {
+  const parts: string[] = [];
+  let total = 0;
+  for (const href of spineHrefs.slice(0, FRONT_PAGE_LIMIT)) {
+    const path = joinOpfPath(opfDir, href);
+    const entry = zip.file(path);
+    if (!entry) continue;
+    try {
+      const html = await entry.async("text");
+      const text = htmlToPlainText(html);
+      parts.push(text);
+      total += text.length;
+      if (total >= 8_000) break;
+    } catch {
+      // skip unreadable spine item
+    }
+  }
+  return parts.join("\n").slice(0, 8_000);
+}
+
+async function readPdfFrontText(
+  doc: { numPages: number; getPage: (n: number) => Promise<{ getTextContent: () => Promise<{ items: unknown[] }> }> },
+  pageLimit: number,
+): Promise<string> {
+  const parts: string[] = [];
+  const limit = Math.min(doc.numPages, pageLimit);
+  for (let i = 1; i <= limit; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    const text = content.items
+      .map((item) => ("str" in (item as object) ? String((item as { str?: string }).str ?? "") : ""))
+      .join(" ");
+    parts.push(text);
+  }
+  return parts.join("\n");
 }
 
 async function readZipText(zip: JSZip, path: string): Promise<string> {

@@ -16,7 +16,8 @@ const OPF = `<?xml version="1.0" encoding="UTF-8"?>
     <dc:title>三体</dc:title>
     <dc:creator>刘慈欣</dc:creator>
     <dc:creator>某合著者</dc:creator>
-    <dc:contributor>译者甲</dc:contributor>
+    <dc:contributor>calibre (3.0.0) [https://calibre-ebook.com]</dc:contributor>
+    <dc:contributor opf:role="trl">译者甲</dc:contributor>
     <dc:publisher>重庆出版社</dc:publisher>
     <dc:language>zh</dc:language>
     <dc:identifier opf:scheme="uuid">urn:uuid:1234</dc:identifier>
@@ -28,13 +29,18 @@ const OPF = `<?xml version="1.0" encoding="UTF-8"?>
   </metadata>
   <manifest>
     <item id="cover-img" href="images/cover.jpg" media-type="image/jpeg"/>
+    <item id="chap1" href="text/chap1.xhtml" media-type="application/xhtml+xml"/>
   </manifest>
+  <spine>
+    <itemref idref="chap1"/>
+  </spine>
 </package>`;
 
 describe("parseOpf / opfMetaToPartial", () => {
-  it("extracts metadata and cover href", () => {
-    const { meta, coverHref } = parseOpf(OPF);
+  it("extracts metadata and cover href; ignores bare contributor", () => {
+    const { meta, coverHref, spineHrefs } = parseOpf(OPF);
     expect(coverHref).toBe("images/cover.jpg");
+    expect(spineHrefs).toEqual(["text/chap1.xhtml"]);
     expect(opfMetaToPartial(meta)).toEqual({
       title: "三体",
       author: "刘慈欣, 某合著者",
@@ -47,6 +53,22 @@ describe("parseOpf / opfMetaToPartial", () => {
       series: "地球往事",
       notes: "简介",
     });
+  });
+
+  it("reads EPUB3 role refinements for translators", () => {
+    const opf = `<?xml version="1.0"?>
+      <package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+        <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <dc:title>Book</dc:title>
+          <dc:creator>Author</dc:creator>
+          <dc:contributor id="tr1">沈锡良</dc:contributor>
+          <meta refines="#tr1" property="role" scheme="marc:relators">trl</meta>
+        </metadata>
+        <manifest/>
+        <spine/>
+      </package>`;
+    const { meta } = parseOpf(opf);
+    expect(opfMetaToPartial(meta).translator).toBe("沈锡良");
   });
 
   it("uses fallback title when missing", () => {

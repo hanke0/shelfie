@@ -87,8 +87,7 @@ export function AdminKoreaderPage() {
           </button>
         </div>
         <p className={styles.muted}>
-          用户名：<code>{user?.username}</code>，密码与 Shelfie 登录密码相同（KOReader
-          会对密码做 MD5）。首次使用前请在网页登录一次以启用同步密钥。
+          用户名填 <code>{user?.username}</code>，密码填 Shelfie 登录密码。
         </p>
       </div>
 

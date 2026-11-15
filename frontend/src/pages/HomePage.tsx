@@ -8,7 +8,7 @@ export function HomePage() {
   const [ahaSeed, setAhaSeed] = useState<number | undefined>();
   const { libraryId, libraries } = useLibrary();
   const { data, isLoading, error } = useGetHome(
-    { library_id: libraryId ?? undefined, limit: 12, seed: ahaSeed },
+    { library_id: libraryId ?? undefined, limit: 24, seed: ahaSeed },
     { query: { enabled: !!libraryId } },
   );
 
@@ -43,8 +43,8 @@ export function HomePage() {
             title="啊哈时刻"
             books={data.aha_moment}
             action={
-              <button type="button" className="btn btn-ghost" onClick={refreshAha}>
-                换一批
+              <button type="button" onClick={refreshAha}>
+                换一换
               </button>
             }
           />

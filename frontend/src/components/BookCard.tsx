@@ -7,7 +7,7 @@ import styles from "./BookCard.module.css";
 
 interface BookCardProps {
   book: BookCardType;
-  /** 首页横滑：封面圆角阴影，下方轻量标题 */
+  /** 首页书架格：封面圆角阴影，下方轻量标题 */
   variant?: "default" | "shelf";
   selectable?: boolean;
   selected?: boolean;

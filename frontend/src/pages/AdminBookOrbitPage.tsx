@@ -84,9 +84,7 @@ export function AdminBookOrbitPage() {
           </button>
         </div>
         <p className={styles.muted}>
-          用户名：<code>{user?.username}</code>，密码与 Shelfie 登录密码相同。
-          图书按文件 MD5 / Partial MD5 自动匹配，匹配不上时可在「
-          <Link to="/admin/koreader">KOReader 同步</Link>」页手动匹配。
+          用户名填 <code>{user?.username}</code>，密码填 Shelfie 登录密码。
         </p>
       </div>
 

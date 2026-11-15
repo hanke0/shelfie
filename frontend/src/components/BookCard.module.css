@@ -15,7 +15,7 @@
   transform: translateY(-3px);
 }
 
-/* 首页横滑：阴影与圆角落在封面上，避免方框阴影套圆角图 */
+/* 首页书架格：阴影与圆角落在封面上，避免方框阴影套圆角图 */
 .cardShelf {
   background: transparent;
   border: none;

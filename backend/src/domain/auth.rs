@@ -170,17 +170,14 @@ pub fn issue_token(jwt_secret: &str, user: &AuthUser) -> AppResult<String> {
     Ok(encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(jwt_secret.as_bytes()),
+        &EncodingKey::from_secret(jwt_secret.as_bytes())?,
     )?)
 }
 
 pub fn decode_token(jwt_secret: &str, token: &str) -> AppResult<JwtClaims> {
-    let data = decode::<JwtClaims>(
-        token,
-        &DecodingKey::from_secret(jwt_secret.as_bytes()),
-        &Validation::default(),
-    )
-    .map_err(|e| AppError::Unauthorized(format!("Invalid token: {e}")))?;
+    let key = DecodingKey::from_secret(jwt_secret.as_bytes())?;
+    let data = decode::<JwtClaims>(token, &key, &Validation::default())
+        .map_err(|e| AppError::Unauthorized(format!("Invalid token: {e}")))?;
     Ok(data.claims)
 }
 
@@ -218,7 +215,7 @@ mod tests {
         let token = encode(
             &Header::default(),
             &claims,
-            &EncodingKey::from_secret(b"secret"),
+            &EncodingKey::from_secret(b"secret").unwrap(),
         )
         .unwrap();
         assert!(matches!(

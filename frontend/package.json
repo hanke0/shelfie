@@ -30,7 +30,7 @@
     "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^6.3.0",
     "jsdom": "^31.0.1",
-    "orval": "^8.47.0",
+    "orval": "^8.48.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"

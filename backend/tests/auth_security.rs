@@ -115,7 +115,7 @@ async fn token_signed_with_other_secret_is_rejected() {
     let forged = encode(
         &Header::default(),
         &claims_for(&app.admin, "system_admin", 3600),
-        &EncodingKey::from_secret(b"attacker-secret"),
+        &EncodingKey::from_secret(b"attacker-secret").unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -130,7 +130,7 @@ async fn token_with_unexpected_algorithm_is_rejected() {
     let token = encode(
         &Header::new(Algorithm::HS512),
         &claims_for(&app.admin, "system_admin", 3600),
-        &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &EncodingKey::from_secret(JWT_SECRET.as_bytes()).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -160,7 +160,7 @@ async fn expired_token_is_rejected() {
     let token = encode(
         &Header::default(),
         &claims_for(&app.admin, "system_admin", -3600),
-        &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &EncodingKey::from_secret(JWT_SECRET.as_bytes()).unwrap(),
     )
     .unwrap();
     assert_eq!(

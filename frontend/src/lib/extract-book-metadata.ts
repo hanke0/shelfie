@@ -1,4 +1,4 @@
-import JSZip from "jszip";
+import type JSZip from "jszip";
 import type { BookMetadata } from "@/api/generated/models";
 import {
   coverMimeFromPath,
@@ -35,7 +35,8 @@ function fallbackTitle(file: File): string {
 }
 
 async function extractEpub(file: File): Promise<LocalExtractedBook> {
-  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const { default: JSZipLib } = await import("jszip");
+  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
   const container = await readZipText(zip, "META-INF/container.xml");
   const opfPath = parseContainerOpfPath(container);
   const opfDir = opfDirname(opfPath);

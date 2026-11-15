@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const TOKEN_KEY = "shelfie_token";
 const USER_KEY = "shelfie_user";
@@ -40,14 +40,31 @@ export function clearAuth() {
   notifyAuthChanged();
 }
 
+/** 同页登录/登出走自定义事件；其他标签页改动 localStorage 时触发 storage 事件 */
+function subscribeAuth(onChange: () => void) {
+  window.addEventListener(AUTH_CHANGED, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(AUTH_CHANGED, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+// useSyncExternalStore 要求快照在数据未变时引用稳定，按原始字符串缓存解析结果
+let cachedUserRaw: string | null = null;
+let cachedUser: StoredUser | null = null;
+
+function getUserSnapshot(): StoredUser | null {
+  const raw = localStorage.getItem(USER_KEY);
+  if (raw !== cachedUserRaw) {
+    cachedUserRaw = raw;
+    cachedUser = getUser();
+  }
+  return cachedUser;
+}
+
 export function useStoredUser(): StoredUser | null {
-  const [user, setUser] = useState<StoredUser | null>(() => getUser());
-  useEffect(() => {
-    const sync = () => setUser(getUser());
-    window.addEventListener(AUTH_CHANGED, sync);
-    return () => window.removeEventListener(AUTH_CHANGED, sync);
-  }, []);
-  return user;
+  return useSyncExternalStore(subscribeAuth, getUserSnapshot);
 }
 
 export function isAuthenticated(): boolean {
@@ -55,11 +72,5 @@ export function isAuthenticated(): boolean {
 }
 
 export function useIsAuthenticated(): boolean {
-  const [authed, setAuthed] = useState(() => isAuthenticated());
-  useEffect(() => {
-    const sync = () => setAuthed(isAuthenticated());
-    window.addEventListener(AUTH_CHANGED, sync);
-    return () => window.removeEventListener(AUTH_CHANGED, sync);
-  }, []);
-  return authed;
+  return useSyncExternalStore(subscribeAuth, isAuthenticated);
 }

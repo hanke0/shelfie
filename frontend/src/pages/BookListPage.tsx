@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listBooks,
-  useListBooks,
   getListBooksQueryKey,
   useBatchMoveCategory,
 } from "@/api/generated/books/books";
-import type { BookCard as BookCardType } from "@/api/generated/models";
 import { useLibrary } from "@/context/LibraryContext";
 import { BackLink } from "@/components/BackLink";
 import { BookCard } from "@/components/BookCard";
@@ -28,9 +26,6 @@ export function BookListPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [targetCategory, setTargetCategory] = useState("");
-  const [extraBooks, setExtraBooks] = useState<BookCardType[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
 
   const qc = useQueryClient();
   const run = useApiAction();
@@ -42,27 +37,30 @@ export function BookListPage() {
       library_id: activeLibraryId,
       category: category || undefined,
       limit: PAGE_SIZE,
-      offset: 0,
     }),
     [sort, activeLibraryId, category],
   );
 
-  const { data, isLoading } = useListBooks(listParams, {
-    query: { enabled: !!activeLibraryId },
+  const [selectionScope, setSelectionScope] = useState(listParams);
+  if (selectionScope !== listParams) {
+    setSelectionScope(listParams);
+    setSelectedIds(new Set());
+  }
+
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: [...getListBooksQueryKey(listParams), "infinite"],
+    queryFn: ({ pageParam, signal }) =>
+      listBooks({ ...listParams, offset: pageParam }, undefined, signal),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
+    enabled: !!activeLibraryId,
   });
 
-  useEffect(() => {
-    setExtraBooks([]);
-    setSelectedIds(new Set());
-  }, [listParams]);
-
-  useEffect(() => {
-    setHasMore((data?.length ?? 0) === PAGE_SIZE);
-  }, [data]);
-
+  // 分页期间若有图书增删，offset 会错位产生重复项
   const books = useMemo(
-    () => [...(data ?? []), ...extraBooks],
-    [data, extraBooks],
+    () => [...new Map((data?.pages.flat() ?? []).map((b) => [b.id, b])).values()],
+    [data],
   );
 
   const baseTitle =
@@ -101,24 +99,6 @@ export function BookListPage() {
   const selectAllVisible = () => {
     if (!books.length) return;
     setSelectedIds(new Set(books.map((b) => b.id)));
-  };
-
-  const loadMore = async () => {
-    if (!activeLibraryId || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const more = await listBooks({
-        ...listParams,
-        offset: books.length,
-      });
-      setExtraBooks((prev) => {
-        const seen = new Set([...(data ?? []), ...prev].map((b) => b.id));
-        return [...prev, ...more.filter((b) => !seen.has(b.id))];
-      });
-      setHasMore(more.length === PAGE_SIZE);
-    } finally {
-      setLoadingMore(false);
-    }
   };
 
   const handleBatchMove = async () => {
@@ -251,15 +231,15 @@ export function BookListPage() {
           />
         ))}
       </div>
-      {hasMore && !isLoading && (
+      {hasNextPage && !isLoading && (
         <div className={styles.loadMore}>
           <button
             type="button"
             className="btn btn-ghost"
-            disabled={loadingMore}
-            onClick={() => void loadMore()}
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
           >
-            {loadingMore ? "加载中…" : "加载更多"}
+            {isFetchingNextPage ? "加载中…" : "加载更多"}
           </button>
         </div>
       )}

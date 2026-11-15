@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { Suspense, useCallback, useRef, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { useLibrary } from "@/context/LibraryContext";
 import { Header } from "@/components/Header";
@@ -80,7 +80,15 @@ export function AppLayout() {
         hidden
         onChange={handleFileInputChange}
       />
-      <Outlet />
+      <Suspense
+        fallback={
+          <div className="app-shell">
+            <p>加载中…</p>
+          </div>
+        }
+      >
+        <Outlet />
+      </Suspense>
       <UploadModal draft={uploadDraft} onClose={() => setUploadDraft(null)} />
     </>
   );

@@ -53,6 +53,14 @@ describe("BookCard", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
+  it("does not draw the generated cover while the server cover is loading", () => {
+    fetchCover.mockReturnValue(new Promise(() => {}));
+    renderCard();
+
+    expect(screen.queryByText("三")).toBeNull();
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
   it("renders progress bar capped at 100%", () => {
     fetchCover.mockReturnValue(new Promise(() => {}));
     const { container } = renderCard({ book: { ...book, reading_percent: 150 } });

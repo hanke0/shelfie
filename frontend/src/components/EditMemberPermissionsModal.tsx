@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUpdatePermissions } from "@/api/generated/libraries/libraries";
 import { Modal } from "@/components/ui/Modal";
@@ -9,7 +9,6 @@ import { useApiAction } from "@/hooks/useApiAction";
 import type { MemberPermState } from "@/components/LibraryMemberPermissionsEditor";
 
 interface EditMemberPermissionsModalProps {
-  open: boolean;
   onClose: () => void;
   libraryId: string;
   userId: string;
@@ -18,8 +17,8 @@ interface EditMemberPermissionsModalProps {
   member: MemberPermState;
 }
 
+/** 仅在打开时挂载，表单初值取自挂载时的 `member` */
 export function EditMemberPermissionsModal({
-  open,
   onClose,
   libraryId,
   userId,
@@ -35,15 +34,6 @@ export function EditMemberPermissionsModal({
   const [canEdit, setCanEdit] = useState(member.can_edit ?? false);
   const [canDelete, setCanDelete] = useState(member.can_delete ?? false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setRole(member.role);
-    setCanView(member.can_view ?? false);
-    setCanEdit(member.can_edit ?? false);
-    setCanDelete(member.can_delete ?? false);
-    setError(null);
-  }, [open, member]);
 
   const isLibraryAdmin = role === "admin";
 
@@ -76,7 +66,7 @@ export function EditMemberPermissionsModal({
 
   return (
     <Modal
-      open={open}
+      open
       onClose={onClose}
       title={title}
       footer={

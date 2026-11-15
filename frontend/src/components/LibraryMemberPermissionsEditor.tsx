@@ -92,9 +92,8 @@ export function LibraryMemberPermissionsEditor({
         </div>
         {error && <span className={styles.error}>{error}</span>}
       </div>
-      {canEditPermissions && username && (
+      {canEditPermissions && username && editOpen && (
         <EditMemberPermissionsModal
-          open={editOpen}
           onClose={() => setEditOpen(false)}
           libraryId={libraryId}
           userId={userId}

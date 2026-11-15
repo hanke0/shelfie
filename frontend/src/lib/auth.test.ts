@@ -44,4 +44,15 @@ describe("useStoredUser", () => {
     act(() => clearAuth());
     expect(result.current).toBeNull();
   });
+
+  it("syncs when another tab changes storage", () => {
+    const { result } = renderHook(() => useStoredUser());
+    expect(result.current).toBeNull();
+
+    act(() => {
+      localStorage.setItem("shelfie_user", JSON.stringify(user));
+      window.dispatchEvent(new StorageEvent("storage", { key: "shelfie_user" }));
+    });
+    expect(result.current).toEqual(user);
+  });
 });

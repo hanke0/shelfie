@@ -1,50 +1,29 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useChangePassword, useUpdateUsername } from "@/api/generated/users/users";
-import { getUser, setAuth, useStoredUser } from "@/lib/auth";
+import { setAuth, useStoredUser } from "@/lib/auth";
 import { Modal } from "@/components/ui/Modal";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import formStyles from "@/components/ui/Form.module.css";
 import { useApiAction } from "@/hooks/useApiAction";
 
 interface AccountSettingsModalProps {
-  open: boolean;
   onClose: () => void;
 }
 
-export function AccountSettingsModal({ open, onClose }: AccountSettingsModalProps) {
-  const storedUser = useStoredUser();
-  const user = storedUser ?? getUser();
+/** 仅在打开时挂载，关闭即卸载，每次打开都是全新状态 */
+export function AccountSettingsModal({ onClose }: AccountSettingsModalProps) {
+  const user = useStoredUser();
   const updateUsername = useUpdateUsername();
   const changePassword = useChangePassword();
   const run = useApiAction();
 
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(user?.username ?? "");
   const [usernameError, setUsernameError] = useState<string | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open && user) {
-      setUsername(user.username);
-    }
-  }, [open, user]);
-
-  const reset = () => {
-    setUsername(user?.username ?? "");
-    setUsernameError(null);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setPasswordError(null);
-  };
-
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
 
   const handleUsernameSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,17 +37,17 @@ export function AccountSettingsModal({ open, onClose }: AccountSettingsModalProp
     if (trimmed === user.username) {
       return;
     }
-    const ok = await run(
+    await run(
       async () => {
         const res = await updateUsername.mutateAsync({
           userId: user.id,
           data: { username: trimmed },
         });
         setAuth(res.token, res.user);
+        setUsername(res.user.username);
       },
       { successMessage: "用户名已更新", errorMessage: "修改用户名失败" },
     );
-    if (ok) reset();
   };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -104,11 +83,11 @@ export function AccountSettingsModal({ open, onClose }: AccountSettingsModalProp
 
   return (
     <Modal
-      open={open}
-      onClose={handleClose}
+      open
+      onClose={onClose}
       title="账号设置"
       footer={
-        <button type="button" className="btn btn-ghost" onClick={handleClose}>
+        <button type="button" className="btn btn-ghost" onClick={onClose}>
           关闭
         </button>
       }

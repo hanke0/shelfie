@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useListLibraries, useListMembers } from "@/api/generated/libraries/libraries";
 import { useListCategories } from "@/api/generated/categories/categories";
@@ -8,7 +8,7 @@ import { FieldLabel } from "@/components/ui/FieldLabel";
 import { CategorySelect } from "@/components/CategorySelect";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { useLibrary } from "@/context/LibraryContext";
-import { getUser } from "@/lib/auth";
+import { useStoredUser } from "@/lib/auth";
 import { uploadBookMultipart } from "@/lib/upload";
 import {
   metadataFormFromExtract,
@@ -25,7 +25,6 @@ import {
 import formStyles from "@/components/ui/Form.module.css";
 
 interface CalibreImportModalProps {
-  open: boolean;
   onClose: () => void;
 }
 
@@ -36,17 +35,19 @@ type ImportSummary = {
   failed: number;
   tagFallback: number;
   errors: string[];
+  cancelled: boolean;
 };
 
 const DEFAULT_CATEGORY = "未分类";
 
-export function CalibreImportModal({ open, onClose }: CalibreImportModalProps) {
+/** 仅在打开时挂载，关闭即卸载，每次打开都是全新状态 */
+export function CalibreImportModal({ onClose }: CalibreImportModalProps) {
   const qc = useQueryClient();
-  const user = getUser();
+  const user = useStoredUser();
   const { libraryId: contextLibraryId } = useLibrary();
-  const { data: libraries = [] } = useListLibraries({ query: { enabled: open } });
+  const { data: libraries } = useListLibraries();
 
-  const [targetLibraryId, setTargetLibraryId] = useState("");
+  const [targetLibraryId, setTargetLibraryId] = useState(contextLibraryId ?? "");
   const [categoryMode, setCategoryMode] = useState<CategoryMappingMode>("fixed");
   const [fixedCategory, setFixedCategory] = useState(DEFAULT_CATEGORY);
   const [fallbackCategory, setFallbackCategory] = useState(DEFAULT_CATEGORY);
@@ -57,10 +58,10 @@ export function CalibreImportModal({ open, onClose }: CalibreImportModalProps) {
   const abortRef = useRef(false);
 
   const { data: members } = useListMembers(targetLibraryId, {
-    query: { enabled: open && !!targetLibraryId },
+    query: { enabled: !!targetLibraryId },
   });
   const { data: categories } = useListCategories(targetLibraryId, {
-    query: { enabled: open && !!targetLibraryId },
+    query: { enabled: !!targetLibraryId },
   });
 
   const categorySet = useMemo(
@@ -78,22 +79,9 @@ export function CalibreImportModal({ open, onClose }: CalibreImportModalProps) {
   const supported = isCalibreImportSupported();
 
   const libraryOptions = useMemo(
-    () => libraries.map((l) => ({ value: l.id, label: l.name })),
+    () => (libraries ?? []).map((l) => ({ value: l.id, label: l.name })),
     [libraries],
   );
-
-  useEffect(() => {
-    if (!open) return;
-    setPhase("config");
-    setProgress({ current: 0, total: 0, title: "" });
-    setSummary(null);
-    setError(null);
-    abortRef.current = false;
-    setTargetLibraryId(contextLibraryId ?? libraries[0]?.id ?? "");
-    setCategoryMode("fixed");
-    setFixedCategory(DEFAULT_CATEGORY);
-    setFallbackCategory(DEFAULT_CATEGORY);
-  }, [open, contextLibraryId, libraries]);
 
   const handleClose = () => {
     if (phase === "importing") return;
@@ -132,10 +120,19 @@ export function CalibreImportModal({ open, onClose }: CalibreImportModalProps) {
 
     setPhase("importing");
     abortRef.current = false;
-    const result: ImportSummary = { success: 0, failed: 0, tagFallback: 0, errors: [] };
+    const result: ImportSummary = {
+      success: 0,
+      failed: 0,
+      tagFallback: 0,
+      errors: [],
+      cancelled: false,
+    };
 
     for (let i = 0; i < rows.length; i++) {
-      if (abortRef.current) break;
+      if (abortRef.current) {
+        result.cancelled = true;
+        break;
+      }
       const row = rows[i];
       setProgress({ current: i + 1, total: rows.length, title: row.title });
 
@@ -213,7 +210,7 @@ export function CalibreImportModal({ open, onClose }: CalibreImportModalProps) {
     );
 
   return (
-    <Modal open={open} onClose={handleClose} title="从 Calibre 导入" wide footer={footer}>
+    <Modal open onClose={handleClose} title="从 Calibre 导入" wide footer={footer}>
       {!supported && (
         <p className={formStyles.error}>
           当前浏览器不支持目录选择，请使用 Chrome 或 Edge 访问本页。
@@ -309,7 +306,7 @@ export function CalibreImportModal({ open, onClose }: CalibreImportModalProps) {
             {categoryMode === "first_tag" && summary.tagFallback > 0
               ? `，标签回退默认分类 ${summary.tagFallback} 本`
               : ""}
-            {abortRef.current ? "（已取消，剩余书目未处理）" : ""}
+            {summary.cancelled ? "（已取消，剩余书目未处理）" : ""}
           </p>
           {summary.errors.length > 0 && (
             <ul className={formStyles.error} style={{ paddingLeft: "1.25rem" }}>

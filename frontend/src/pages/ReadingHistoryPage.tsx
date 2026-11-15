@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import {
+  getListMyReadingHistoryQueryKey,
   listMyReadingHistory,
-  useListMyReadingHistory,
 } from "@/api/generated/users/users";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
 import type { ReadingHistoryEntry } from "@/api/generated/models";
@@ -10,7 +11,7 @@ import { BackLink } from "@/components/BackLink";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
 import { useLibrary } from "@/context/LibraryContext";
-import { fetchCoverBlob } from "@/lib/custom-fetch";
+import { useBookCover } from "@/hooks/useBookCover";
 import adminStyles from "./AdminPage.module.css";
 import styles from "./ReadingHistoryPage.module.css";
 
@@ -37,32 +38,15 @@ function formatTime(iso: string) {
 }
 
 function HistoryCover({ bookId, title, author }: { bookId: string; title: string; author: string }) {
-  const [coverSrc, setCoverSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    let url: string | null = null;
-    let cancelled = false;
-    fetchCoverBlob(bookId, { thumbnail: true })
-      .then((blobUrl) => {
-        if (!cancelled) {
-          url = blobUrl;
-          setCoverSrc(blobUrl);
-        }
-      })
-      .catch(() => setCoverSrc(null));
-    return () => {
-      cancelled = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [bookId]);
+  const cover = useBookCover(bookId, { thumbnail: true });
 
   return (
     <div className={styles.cover}>
-      {coverSrc ? (
-        <img src={coverSrc} alt={title} />
-      ) : (
+      {cover.src ? (
+        <img src={cover.src} alt={title} />
+      ) : cover.missing ? (
         <TitleCoverImage title={title} author={author} className={styles.generatedCover} />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -100,44 +84,23 @@ export function ReadingHistoryPage() {
   const { libraryId: contextLibraryId, setLibraryId } = useLibrary();
   const { data: libraries } = useListLibraries();
   const [libraryFilter, setLibraryFilter] = useState(contextLibraryId ?? "");
-  const [extraRows, setExtraRows] = useState<ReadingHistoryEntry[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
 
-  const libParam = libraryFilter || undefined;
+  const params = { library_id: libraryFilter || undefined, limit: PAGE_SIZE };
+  const { data, isLoading, isError, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: [...getListMyReadingHistoryQueryKey(params), "infinite"],
+      queryFn: ({ pageParam, signal }) =>
+        listMyReadingHistory({ ...params, offset: pageParam }, undefined, signal),
+      initialPageParam: 0,
+      getNextPageParam: (lastPage, allPages) =>
+        lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
+    });
 
-  const { data, isLoading, isError } = useListMyReadingHistory(
-    { library_id: libParam, limit: PAGE_SIZE, offset: 0 },
-    { query: { enabled: true } },
+  // 分页期间若有新记录写入，offset 会错位产生重复项
+  const rows = useMemo(
+    () => [...new Map((data?.pages.flat() ?? []).map((r) => [r.id, r])).values()],
+    [data],
   );
-
-  useEffect(() => {
-    setExtraRows([]);
-  }, [libParam]);
-
-  useEffect(() => {
-    setHasMore((data?.length ?? 0) === PAGE_SIZE);
-  }, [data]);
-
-  const rows = [...(data ?? []), ...extraRows];
-
-  const loadMore = async () => {
-    setLoadingMore(true);
-    try {
-      const more = await listMyReadingHistory({
-        library_id: libParam,
-        limit: PAGE_SIZE,
-        offset: rows.length,
-      });
-      setExtraRows((prev) => {
-        const seen = new Set([...(data ?? []), ...prev].map((r) => r.id));
-        return [...prev, ...more.filter((r) => !seen.has(r.id))];
-      });
-      setHasMore(more.length === PAGE_SIZE);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
 
   const libraryOptions = [
     { value: "", label: "全部图书馆" },
@@ -181,14 +144,14 @@ export function ReadingHistoryPage() {
           ))}
         </ul>
 
-        {hasMore && rows.length > 0 && (
+        {hasNextPage && rows.length > 0 && (
           <button
             type="button"
             className="btn btn-ghost"
-            disabled={loadingMore}
-            onClick={() => void loadMore()}
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
           >
-            {loadingMore ? "加载中…" : "加载更多"}
+            {isFetchingNextPage ? "加载中…" : "加载更多"}
           </button>
         )}
       </main>

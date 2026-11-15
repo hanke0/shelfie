@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState, type MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import type { BookCard as BookCardType } from "@/api/generated/models";
-import { fetchCoverBlob } from "@/lib/custom-fetch";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
+import { useBookCover } from "@/hooks/useBookCover";
 import styles from "./BookCard.module.css";
 
 interface BookCardProps {
@@ -21,24 +21,7 @@ export function BookCard({
   selected,
   onSelectToggle,
 }: BookCardProps) {
-  const [coverSrc, setCoverSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    let url: string | null = null;
-    let cancelled = false;
-    fetchCoverBlob(book.id, { thumbnail: true })
-      .then((blobUrl) => {
-        if (!cancelled) {
-          url = blobUrl;
-          setCoverSrc(blobUrl);
-        }
-      })
-      .catch(() => setCoverSrc(null));
-    return () => {
-      cancelled = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [book.id]);
+  const cover = useBookCover(book.id, { thumbnail: true });
 
   const percent = book.reading_percent ?? 0;
 
@@ -58,15 +41,15 @@ export function BookCard({
         />
       )}
       <div className={styles.cover}>
-        {coverSrc ? (
-          <img src={coverSrc} alt={book.title} />
-        ) : (
+        {cover.src ? (
+          <img src={cover.src} alt={book.title} />
+        ) : cover.missing ? (
           <TitleCoverImage
             title={book.title}
             author={book.author}
             className={styles.generatedCover}
           />
-        )}
+        ) : null}
       </div>
       <div className={styles.meta}>
         <h3 title={book.title}>{book.title}</h3>

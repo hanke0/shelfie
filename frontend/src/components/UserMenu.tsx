@@ -153,8 +153,8 @@ export function UserMenu({ className }: UserMenuProps) {
         )}
       </div>
 
-      <AccountSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <CalibreImportModal open={calibreOpen} onClose={() => setCalibreOpen(false)} />
+      {settingsOpen && <AccountSettingsModal onClose={() => setSettingsOpen(false)} />}
+      {calibreOpen && <CalibreImportModal onClose={() => setCalibreOpen(false)} />}
     </>
   );
 }

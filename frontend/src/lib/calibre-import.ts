@@ -1,4 +1,4 @@
-import initSqlJs, { type Database } from "sql.js";
+import type { Database, SqlJsStatic } from "sql.js";
 import type { BookMetadata } from "@/api/generated/models";
 import {
   coverMimeFromPath,
@@ -30,11 +30,13 @@ export type PreparedCalibreBook = {
   firstTag: string | null;
 };
 
-let sqlJsInit: ReturnType<typeof initSqlJs> | null = null;
+let sqlJsInit: Promise<SqlJsStatic> | null = null;
 
 async function getSqlJs() {
   if (!sqlJsInit) {
-    sqlJsInit = initSqlJs({ locateFile: () => "/sql-wasm.wasm" });
+    sqlJsInit = import("sql.js").then(({ default: initSqlJs }) =>
+      initSqlJs({ locateFile: () => "/sql-wasm.wasm" }),
+    );
   }
   return sqlJsInit;
 }

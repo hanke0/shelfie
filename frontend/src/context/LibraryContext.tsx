@@ -13,6 +13,7 @@ import { useIsAuthenticated } from "@/lib/auth";
 import type { LibraryDto } from "@/api/generated/models";
 
 const STORAGE_KEY = "shelfie_current_library_id";
+const NO_LIBRARIES: LibraryDto[] = [];
 
 interface LibraryContextValue {
   libraries: LibraryDto[];
@@ -30,7 +31,7 @@ const LibraryContext = createContext<LibraryContextValue | null>(null);
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const authed = useIsAuthenticated();
   const qc = useQueryClient();
-  const { data: libraries = [], isLoading } = useListLibraries({
+  const { data: libraries = NO_LIBRARIES, isLoading } = useListLibraries({
     query: { enabled: authed },
   });
 

@@ -1,14 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
-import { useGetHome, getGetHomeQueryKey } from "@/api/generated/home/home";
+import { useGetHome } from "@/api/generated/home/home";
 import { useLibrary } from "@/context/LibraryContext";
 import { BookSection } from "@/components/BookSection";
 
 export function HomePage() {
   const [ahaSeed, setAhaSeed] = useState<number | undefined>();
-  const qc = useQueryClient();
-
   const { libraryId, libraries } = useLibrary();
   const { data, isLoading, error } = useGetHome(
     { library_id: libraryId ?? undefined, limit: 12, seed: ahaSeed },
@@ -17,9 +14,6 @@ export function HomePage() {
 
   const refreshAha = () => {
     setAhaSeed(Date.now());
-    qc.invalidateQueries({
-      queryKey: getGetHomeQueryKey({ library_id: libraryId ?? undefined, limit: 12, seed: ahaSeed }),
-    });
   };
 
   return (

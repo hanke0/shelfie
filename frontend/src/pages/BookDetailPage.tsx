@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,8 +13,8 @@ import {
 import { BackLink } from "@/components/BackLink";
 import { BookAnnotations } from "@/components/BookAnnotations";
 import { BookReadingSummary } from "@/components/BookReadingSummary";
-import { fetchCoverBlob } from "@/lib/custom-fetch";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
+import { useBookCover } from "@/hooks/useBookCover";
 import { FileInput } from "@/components/ui/FileInput";
 import { updateCoverMultipart } from "@/lib/upload";
 import { useConfirmTwice } from "@/context/ConfirmContext";
@@ -76,32 +76,26 @@ export function BookDetailPage() {
   const confirmTwice = useConfirmTwice();
   const run = useApiAction();
 
-  const [coverSrc, setCoverSrc] = useState<string | null>(null);
-  const [metaForm, setMetaForm] = useState(book?.metadata);
-  const [currentPage, setCurrentPage] = useState("");
-  const [percent, setPercent] = useState("");
+  const [coverVersion, setCoverVersion] = useState(0);
+  const cover = useBookCover(id, { version: coverVersion });
   const [actionBusy, setActionBusy] = useState<ActionKind>(null);
 
-  useEffect(() => {
-    if (!book) return;
-    setMetaForm(book.metadata);
-    setCurrentPage(String(book.metadata.reading_progress?.current_page ?? ""));
-    setPercent(String(book.metadata.reading_progress?.percent ?? ""));
-  }, [book]);
+  // 草稿为 null 表示未编辑，直接展示服务端数据；后台刷新不会覆盖进行中的编辑
+  const [metaDraft, setMetaForm] = useState<BookMetadata | null>(null);
+  const [pageDraft, setCurrentPage] = useState<string | null>(null);
+  const [percentDraft, setPercent] = useState<string | null>(null);
+  const [draftBookId, setDraftBookId] = useState(id);
+  if (draftBookId !== id) {
+    setDraftBookId(id);
+    setMetaForm(null);
+    setCurrentPage(null);
+    setPercent(null);
+  }
 
-  useEffect(() => {
-    if (!id) return;
-    let url: string | null = null;
-    fetchCoverBlob(id)
-      .then((u) => {
-        url = u;
-        setCoverSrc(u);
-      })
-      .catch(() => setCoverSrc(null));
-    return () => {
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [id]);
+  const metaForm = metaDraft ?? book?.metadata;
+  const serverProgress = book?.metadata.reading_progress;
+  const currentPage = pageDraft ?? String(serverProgress?.current_page ?? "");
+  const percent = percentDraft ?? String(serverProgress?.percent ?? "");
 
   const saveMetadata = useCallback(async () => {
     if (!book || !metaForm) return;
@@ -112,7 +106,7 @@ export function BookDetailPage() {
         await updateBook.mutateAsync({ id, data: { metadata } });
         await qc.invalidateQueries({ queryKey: getGetBookQueryKey(id) });
         await qc.invalidateQueries({ queryKey: ["/home"] });
-        setMetaForm(metadata);
+        setMetaForm(null);
       },
       { successMessage: "元数据已保存", errorMessage: "保存失败" },
     );
@@ -135,6 +129,8 @@ export function BookDetailPage() {
         });
         await qc.invalidateQueries({ queryKey: getGetBookQueryKey(id) });
         await qc.invalidateQueries({ queryKey: ["/home"] });
+        setCurrentPage(null);
+        setPercent(null);
       },
       { successMessage: "阅读进度已更新", errorMessage: "更新失败" },
     );
@@ -172,11 +168,7 @@ export function BookDetailPage() {
         async () => {
           await updateCoverMultipart(id, file);
           await qc.invalidateQueries({ queryKey: getGetBookQueryKey(id) });
-          const u = await fetchCoverBlob(id);
-          setCoverSrc((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return u;
-          });
+          setCoverVersion((v) => v + 1);
         },
         { successMessage: "封面已更新", errorMessage: "更换封面失败" },
       );
@@ -238,15 +230,15 @@ export function BookDetailPage() {
       <div className={styles.layout}>
         <aside className={styles.coverCol}>
           <div className={styles.coverBox}>
-            {coverSrc ? (
-              <img src={coverSrc} alt={metaForm.title} />
-            ) : (
+            {cover.src ? (
+              <img src={cover.src} alt={metaForm.title} />
+            ) : cover.missing ? (
               <TitleCoverImage
                 title={metaForm.title}
                 author={metaForm.author}
                 className={styles.coverPh}
               />
-            )}
+            ) : null}
             {canEdit && (
               <FileInput
                 variant="link"
@@ -445,17 +437,17 @@ export function BookDetailPage() {
           <div className={styles.fileGrid}>
             <FieldRow label="MD5" wide>
               <ReadonlyValue>
-                <code className={styles.hashCell}>{metaForm.file_md5 ?? "—"}</code>
+                <code className={styles.hashCell}>{book.metadata.file_md5 ?? "—"}</code>
               </ReadonlyValue>
             </FieldRow>
             <FieldRow label="Partial MD5" wide>
               <ReadonlyValue>
-                <code className={styles.hashCell}>{metaForm.partial_md5 ?? "—"}</code>
+                <code className={styles.hashCell}>{book.metadata.partial_md5 ?? "—"}</code>
               </ReadonlyValue>
             </FieldRow>
             <FieldRow label="SHA-256" wide>
               <ReadonlyValue>
-                <code className={styles.hashCell}>{metaForm.file_sha256 ?? "—"}</code>
+                <code className={styles.hashCell}>{book.metadata.file_sha256 ?? "—"}</code>
               </ReadonlyValue>
             </FieldRow>
           </div>

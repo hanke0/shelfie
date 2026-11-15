@@ -12,7 +12,7 @@
 
 .sectionTitle h2 {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: var(--text-xl);
   font-weight: 700;
   margin: 0;
 }
@@ -25,8 +25,8 @@
 }
 
 .sectionActions a {
-  font-size: 0.85rem;
-  color: var(--accent);
+  font-size: var(--text-sm);
+  color: var(--accent-strong);
   white-space: nowrap;
 }
 
@@ -64,7 +64,7 @@
 
 .rowScroll::-webkit-scrollbar-thumb {
   background: var(--accent-soft);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .rowScroll > a,

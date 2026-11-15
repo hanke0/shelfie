@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AppLayout } from "@/components/AppLayout";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { BookDetailPage } from "@/pages/BookDetailPage";
@@ -19,93 +20,24 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
-          path="/"
           element={
             <ProtectedRoute>
-              <HomePage />
+              <AppLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/books/:id"
-          element={
-            <ProtectedRoute>
-              <BookDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/books"
-          element={
-            <ProtectedRoute>
-              <BookListPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/search"
-          element={
-            <ProtectedRoute>
-              <SearchPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/libraries"
-          element={
-            <ProtectedRoute>
-              <AdminLibrariesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute>
-              <AdminUsersPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/koreader"
-          element={
-            <ProtectedRoute>
-              <AdminKoreaderPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/bookorbit"
-          element={
-            <ProtectedRoute>
-              <AdminBookOrbitPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/maintenance"
-          element={
-            <ProtectedRoute>
-              <AdminMaintenancePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reading-history"
-          element={
-            <ProtectedRoute>
-              <ReadingHistoryPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/duplicates"
-          element={
-            <ProtectedRoute>
-              <DuplicatesPage />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route path="/" element={<HomePage />} />
+          <Route path="/books/:id" element={<BookDetailPage />} />
+          <Route path="/books" element={<BookListPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/admin/libraries" element={<AdminLibrariesPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/admin/koreader" element={<AdminKoreaderPage />} />
+          <Route path="/admin/bookorbit" element={<AdminBookOrbitPage />} />
+          <Route path="/admin/maintenance" element={<AdminMaintenancePage />} />
+          <Route path="/reading-history" element={<ReadingHistoryPage />} />
+          <Route path="/duplicates" element={<DuplicatesPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

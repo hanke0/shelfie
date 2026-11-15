@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
 import { useFindDuplicateBooks } from "@/api/generated/libraries/libraries";
 import { DuplicateMatchKind } from "@/api/generated/models";
+import { BackLink } from "@/components/BackLink";
 import { BookCard } from "@/components/BookCard";
 import { useLibrary } from "@/context/LibraryContext";
 import styles from "./DuplicatesPage.module.css";
@@ -24,9 +24,7 @@ export function DuplicatesPage() {
 
   return (
     <div className="app-shell">
-      <Link to="/books" className={styles.back}>
-        ← 返回图书列表
-      </Link>
+      <BackLink to="/books">返回图书列表</BackLink>
       <h1 className={styles.heading}>重复图书</h1>
       <p className={styles.hint}>
         在当前图书馆中，按相同 ISBN、书名、文件 MD5 或 SHA-256 分组展示可能重复的图书。

@@ -7,8 +7,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
-import { isAuthenticated } from "@/lib/auth";
+import { useIsAuthenticated } from "@/lib/auth";
 import type { LibraryDto } from "@/api/generated/models";
 
 const STORAGE_KEY = "shelfie_current_library_id";
@@ -27,9 +28,16 @@ interface LibraryContextValue {
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
+  const authed = useIsAuthenticated();
+  const qc = useQueryClient();
   const { data: libraries = [], isLoading } = useListLibraries({
-    query: { enabled: isAuthenticated() },
+    query: { enabled: authed },
   });
+
+  // 登出后清掉上一个用户的缓存，避免换账号登录时先看到旧的图书馆列表
+  useEffect(() => {
+    if (!authed) qc.clear();
+  }, [authed, qc]);
   const [libraryId, setLibraryIdState] = useState<string | null>(() =>
     localStorage.getItem(STORAGE_KEY),
   );

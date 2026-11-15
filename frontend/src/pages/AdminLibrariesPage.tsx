@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useDeleteLibrary,
   useListLibraries,
   useListMembers,
 } from "@/api/generated/libraries/libraries";
+import { BackLink } from "@/components/BackLink";
 import { CreateLibraryModal } from "@/components/CreateLibraryModal";
 import { AddMemberModal } from "@/components/AddMemberModal";
 import { LibraryCategoryManager } from "@/components/LibraryCategoryManager";
@@ -93,9 +93,7 @@ export function AdminLibrariesPage() {
   };
   return (
     <div className={`app-shell ${styles.page}`}>
-      <Link to="/" className={styles.back}>
-        ← 返回首页
-      </Link>
+      <BackLink />
       <h1>图书馆管理</h1>
       {library && (
         <p className={styles.muted}>
@@ -137,7 +135,7 @@ export function AdminLibrariesPage() {
             {deleteError && <p className={styles.deleteError}>{deleteError}</p>}
             <button
               type="button"
-              className={`btn ${styles.deleteBtn}`}
+              className="btn btn-danger"
               disabled={deleteLibrary.isPending}
               onClick={() => void handleDeleteLibrary()}
             >
@@ -173,7 +171,7 @@ export function AdminLibrariesPage() {
             <div className={styles.cardHeader}>
               <h2>{canManageMembers ? "成员管理" : "我的权限"}</h2>
               {canManageMembers && (
-                <button type="button" className="btn" onClick={() => setAddMemberOpen(true)}>
+                <button type="button" className="btn btn-ghost" onClick={() => setAddMemberOpen(true)}>
                   添加成员
                 </button>
               )}

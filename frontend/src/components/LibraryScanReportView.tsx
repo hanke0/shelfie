@@ -53,7 +53,7 @@ function SelectableSection<T>({
               <button
                 key={a.tool}
                 type="button"
-                className={a.danger ? `btn ${styles.dangerBtn}` : "btn"}
+                className={a.danger ? "btn btn-danger" : "btn"}
                 disabled={disabled || selected.size === 0}
                 onClick={() => onRun(a.tool, [...selected])}
               >

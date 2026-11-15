@@ -2,12 +2,6 @@
   font-family: var(--font-display);
 }
 
-.back {
-  display: inline-block;
-  margin: 1rem 0;
-  color: var(--accent);
-}
-
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -27,13 +21,13 @@
 
 .cardHeader h2 {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   margin: 0;
 }
 
 .card h2 {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   margin: 0 0 0.75rem;
 }
 
@@ -53,7 +47,7 @@
   flex-direction: column;
   gap: 0.35rem;
   margin-bottom: 0.85rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-muted);
 }
 
@@ -96,8 +90,8 @@
   padding: 0.5rem 0.65rem;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   word-break: break-all;
 }
 
@@ -106,23 +100,9 @@
 }
 
 .deleteError {
-  color: #a33;
-  font-size: 0.85rem;
+  color: var(--danger);
+  font-size: var(--text-sm);
   margin: 0 0 0.5rem;
-}
-
-.deleteBtn {
-  background: #a33;
-  color: #fff;
-}
-
-.deleteBtn:hover:not(:disabled) {
-  background: #8b2a2a;
-}
-
-.deleteBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .categoryList {
@@ -162,12 +142,12 @@
 }
 
 .list button.active {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .muted {
   color: var(--ink-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .inlineForm {
@@ -213,7 +193,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .permForm label {
@@ -226,7 +206,7 @@
 
 .permFieldset {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.75rem 1rem;
   margin: 0;
   display: flex;
@@ -236,7 +216,7 @@
 
 .permFieldset legend {
   padding: 0 0.25rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-muted);
 }
 
@@ -246,22 +226,22 @@
   gap: 0.35rem;
   margin: 0;
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .error {
-  color: #a33;
+  color: var(--danger);
   margin: 0 0 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .req {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .subheading {
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: var(--text-base);
   margin: 1.25rem 0 0.65rem;
   font-weight: 600;
 }

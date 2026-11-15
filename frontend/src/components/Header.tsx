@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LibrarySelector } from "@/components/LibrarySelector";
 import { UserMenu } from "@/components/UserMenu";
@@ -5,15 +6,14 @@ import { useLibrary } from "@/context/LibraryContext";
 import styles from "./Header.module.css";
 
 interface HeaderProps {
-  search: string;
-  onSearchChange: (v: string) => void;
   onUploadClick: () => void;
   onUploadDrop?: (file: File) => void;
 }
 
-export function Header({ search, onSearchChange, onUploadClick, onUploadDrop }: HeaderProps) {
+export function Header({ onUploadClick, onUploadDrop }: HeaderProps) {
   const navigate = useNavigate();
   const { libraryId } = useLibrary();
+  const [search, setSearch] = useState("");
 
   return (
     <header className={styles.header}>
@@ -35,7 +35,7 @@ export function Header({ search, onSearchChange, onUploadClick, onUploadDrop }: 
           className={styles.searchInput}
           placeholder="搜索书名、作者、ISBN…"
           value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && search.trim()) {
               const lib = libraryId ? `&library_id=${libraryId}` : "";

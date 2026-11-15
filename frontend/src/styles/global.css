@@ -1,13 +1,48 @@
 :root {
   --bg: #f6f1e8;
   --bg-card: #fffdf8;
+  --bg-muted: #efe7db;
   --ink: #1f1a14;
   --ink-muted: #6b5f52;
+  /* 填充色用 --accent；文字/链接用 --accent-strong（--accent 在 --bg 上仅 4.0:1） */
   --accent: #b85c38;
+  --accent-strong: #a3492c;
+  --accent-deep: #8e361f;
   --accent-soft: #e8c4b0;
+  --accent-wash: rgba(232, 196, 176, 0.45);
+  --accent-tint: rgba(184, 92, 56, 0.08);
   --border: #e2d6c6;
-  --shadow: 0 8px 24px rgba(31, 26, 20, 0.08);
+  --border-subtle: rgba(226, 214, 198, 0.6);
+  --danger: #aa3333;
+  --danger-strong: #861e1e;
+  --danger-border: rgba(170, 51, 51, 0.35);
+  --danger-tint: rgba(170, 51, 51, 0.08);
+  --danger-surface: #fff8f6;
+  --success: #2f7a3e;
+  --success-border: #6a8f5c;
+  --success-surface: #f6faf4;
+  --overlay: rgba(31, 26, 20, 0.45);
+  --ring: 0 0 0 3px rgba(184, 92, 56, 0.18);
+
+  --shadow-sm: 0 1px 3px rgba(31, 26, 20, 0.08), 0 1px 2px rgba(31, 26, 20, 0.04);
+  --shadow-md: 0 4px 14px rgba(31, 26, 20, 0.08), 0 1px 3px rgba(31, 26, 20, 0.05);
+  --shadow-lg: 0 10px 28px rgba(31, 26, 20, 0.12), 0 2px 6px rgba(31, 26, 20, 0.04);
+  --shadow-xl: 0 20px 48px rgba(31, 26, 20, 0.18);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
   --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "DM Sans", system-ui, sans-serif;
 }
@@ -53,10 +88,10 @@ input:where(
 textarea {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-card);
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   line-height: 1.4;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -82,7 +117,7 @@ input:where(
 textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.12);
+  box-shadow: var(--ring);
 }
 
 input::placeholder,
@@ -91,15 +126,29 @@ textarea::placeholder {
   opacity: 0.85;
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
 textarea {
   resize: vertical;
   min-height: 2.75rem;
 }
 
 .muted-hint {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--ink-muted);
-  line-height: 1.35;
+  line-height: 1.5;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0.25rem 0 0.75rem;
 }
 
 .app-shell {
@@ -115,18 +164,21 @@ textarea {
   gap: 0.4rem;
   box-sizing: border-box;
   padding: 0.55rem 1rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid transparent;
   background: var(--accent);
   color: #fff;
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    background-color 0.15s;
 }
 
 button.btn {
@@ -135,8 +187,26 @@ button.btn {
 }
 
 .btn:hover {
+  background: var(--accent-strong);
   transform: translateY(-1px);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-ghost {
@@ -147,6 +217,18 @@ button.btn {
 
 .btn-ghost:hover {
   background: var(--bg-card);
+  border-color: var(--accent-soft);
+}
+
+/* 破坏性操作按层级而非严重度着色：次级描边样式，确认弹窗里才用实心 */
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.btn-danger:hover {
+  background: var(--danger-tint);
 }
 
 .section-title {
@@ -158,14 +240,14 @@ button.btn {
 
 .section-title h2 {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: var(--text-xl);
   font-weight: 700;
   margin: 0;
 }
 
 .section-title a {
-  font-size: 0.85rem;
-  color: var(--accent);
+  font-size: var(--text-sm);
+  color: var(--accent-strong);
 }
 
 .book-scroll {

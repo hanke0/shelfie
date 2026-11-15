@@ -13,24 +13,24 @@
 .toast {
   pointer-events: auto;
   padding: 0.65rem 0.85rem;
-  border-radius: 10px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg-card);
   color: var(--ink);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   line-height: 1.4;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
   animation: toastIn 0.2s ease-out;
 }
 
 .toastError {
-  border-color: #c45c4a;
-  background: #fff8f6;
+  border-color: var(--danger-border);
+  background: var(--danger-surface);
 }
 
 .toastSuccess {
-  border-color: #6a8f5c;
-  background: #f6faf4;
+  border-color: var(--success-border);
+  background: var(--success-surface);
 }
 
 @keyframes toastIn {

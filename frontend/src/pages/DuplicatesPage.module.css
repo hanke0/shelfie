@@ -1,16 +1,10 @@
-.back {
-  display: inline-block;
-  margin: 1rem 0;
-  color: var(--accent);
-}
-
 .heading {
   font-family: var(--font-display);
   margin: 0.5rem 0 0.35rem;
 }
 
 .hint {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   color: var(--ink-muted);
   margin: 0 0 1.25rem;
 }
@@ -30,11 +24,11 @@
 .badge {
   display: inline-block;
   padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
   font-weight: 600;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .badgeTitle {
@@ -49,13 +43,13 @@
 
 .groupKeyHash {
   font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   word-break: break-all;
 }
 
 .groupCount {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-muted);
 }
 

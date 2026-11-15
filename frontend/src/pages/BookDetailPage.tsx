@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetBook,
@@ -10,6 +10,7 @@ import {
   useGetReadingSummary,
   getGetBookQueryKey,
 } from "@/api/generated/books/books";
+import { BackLink } from "@/components/BackLink";
 import { BookAnnotations } from "@/components/BookAnnotations";
 import { BookReadingSummary } from "@/components/BookReadingSummary";
 import { fetchCoverBlob } from "@/lib/custom-fetch";
@@ -232,37 +233,32 @@ export function BookDetailPage() {
 
   return (
     <div className={`app-shell ${styles.page}`}>
-      <nav className={styles.topBar}>
-        <Link to="/" className={styles.back}>
-          <span className={styles.backArrow} aria-hidden>
-            ←
-          </span>
-          返回首页
-        </Link>
-      </nav>
+      <BackLink />
 
       <div className={styles.layout}>
         <aside className={styles.coverCol}>
-          {coverSrc ? (
-            <img src={coverSrc} alt={metaForm.title} />
-          ) : (
-            <TitleCoverImage
-              title={metaForm.title}
-              author={metaForm.author}
-              className={styles.coverPh}
-            />
-          )}
-          {canEdit && (
-            <FileInput
-              variant="link"
-              accept=".jpg,.jpeg,.png"
-              onChange={(f) => {
-                if (f) void handleCoverChange(f);
-              }}
-              placeholder="更换封面"
-              className={styles.coverUpload}
-            />
-          )}
+          <div className={styles.coverBox}>
+            {coverSrc ? (
+              <img src={coverSrc} alt={metaForm.title} />
+            ) : (
+              <TitleCoverImage
+                title={metaForm.title}
+                author={metaForm.author}
+                className={styles.coverPh}
+              />
+            )}
+            {canEdit && (
+              <FileInput
+                variant="link"
+                accept=".jpg,.jpeg,.png"
+                onChange={(f) => {
+                  if (f) void handleCoverChange(f);
+                }}
+                placeholder="更换封面"
+                className={styles.coverUpload}
+              />
+            )}
+          </div>
 
           <div className={styles.sideBlock}>
             <p className={styles.sideLabel}>阅读进度</p>
@@ -289,7 +285,7 @@ export function BookDetailPage() {
               {canEdit && (
                 <button
                   type="button"
-                  className="btn"
+                  className="btn btn-ghost"
                   disabled={isBusy}
                   onClick={() => void saveProgress()}
                 >
@@ -307,7 +303,7 @@ export function BookDetailPage() {
           {canDelete && (
             <button
               type="button"
-              className={`btn ${styles.deleteBtn}`}
+              className={`btn btn-danger ${styles.deleteBtn}`}
               disabled={isBusy}
               onClick={() => void handleDelete()}
             >

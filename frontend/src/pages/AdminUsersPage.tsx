@@ -1,6 +1,7 @@
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useState } from "react";
 import { useListUsers, useListUserMemberships } from "@/api/generated/users/users";
+import { BackLink } from "@/components/BackLink";
 import { CreateUserModal } from "@/components/CreateUserModal";
 import { UserAccountModal } from "@/components/UserAccountModal";
 import { LibraryMemberPermissionsEditor } from "@/components/LibraryMemberPermissionsEditor";
@@ -33,9 +34,7 @@ export function AdminUsersPage() {
 
   return (
     <div className={`app-shell ${styles.page}`}>
-      <Link to="/" className={styles.back}>
-        ← 返回首页
-      </Link>
+      <BackLink />
       <h1>管理用户</h1>
       <p className={styles.muted}>
         创建用户、管理账号，以及配置各图书馆内的成员角色与权限。

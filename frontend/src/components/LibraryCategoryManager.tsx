@@ -120,7 +120,7 @@ export function LibraryCategoryManager({ libraryId, canEdit }: LibraryCategoryMa
             placeholder="新分类名称"
             maxLength={64}
           />
-          <button type="submit" className="btn" disabled={createCategory.isPending || !newName.trim()}>
+          <button type="submit" className="btn btn-ghost" disabled={createCategory.isPending || !newName.trim()}>
             {createCategory.isPending ? "添加中…" : "添加分类"}
           </button>
         </form>

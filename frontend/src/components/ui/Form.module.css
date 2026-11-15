@@ -6,7 +6,7 @@
 
 .sectionTitle {
   margin: 0 0 0.65rem;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--ink);
 }
@@ -26,32 +26,32 @@
 
 .labelLine {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-muted);
   line-height: 1.35;
 }
 
 .req {
-  color: var(--accent);
+  color: var(--accent-strong);
   font-weight: 600;
 }
 
 .hint {
   margin: 0 0 0.85rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-muted);
   line-height: 1.45;
 }
 
 .error {
-  color: #a33;
+  color: var(--danger);
   margin: 0 0 0.75rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .permFieldset {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.75rem 1rem;
   margin: 0 0 0.85rem;
   display: flex;
@@ -61,7 +61,7 @@
 
 .permFieldset legend {
   padding: 0 0.25rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-muted);
 }
 
@@ -70,6 +70,6 @@
   align-items: center;
   gap: 0.35rem;
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }

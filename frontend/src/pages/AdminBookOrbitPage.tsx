@@ -8,6 +8,7 @@ import {
   useResetBookorbitDevice,
 } from "@/api/generated/book-orbit/book-orbit";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
+import { BackLink } from "@/components/BackLink";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { formatDuration, READING_STATUS_LABELS } from "@/components/BookReadingSummary";
 import { useConfirmTwice } from "@/context/ConfirmContext";
@@ -66,9 +67,7 @@ export function AdminBookOrbitPage() {
 
   return (
     <div className={`app-shell ${styles.page}`}>
-      <Link to="/" className={styles.back}>
-        ← 返回首页
-      </Link>
+      <BackLink />
       <h1>BookOrbit 同步</h1>
       <p className={styles.muted}>
         Readest 等 BookOrbit 客户端可同步阅读进度、标注/笔记、书签、阅读状态与阅读统计。

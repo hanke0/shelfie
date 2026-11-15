@@ -53,3 +53,13 @@ export function useStoredUser(): StoredUser | null {
 export function isAuthenticated(): boolean {
   return !!getToken();
 }
+
+export function useIsAuthenticated(): boolean {
+  const [authed, setAuthed] = useState(() => isAuthenticated());
+  useEffect(() => {
+    const sync = () => setAuthed(isAuthenticated());
+    window.addEventListener(AUTH_CHANGED, sync);
+    return () => window.removeEventListener(AUTH_CHANGED, sync);
+  }, []);
+  return authed;
+}

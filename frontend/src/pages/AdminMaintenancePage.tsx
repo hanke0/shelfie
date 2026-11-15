@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
 import {
@@ -15,6 +14,7 @@ import type {
   MaintenanceTool,
   TaskDto,
 } from "@/api/generated/models";
+import { BackLink } from "@/components/BackLink";
 import { LibraryScanReportView } from "@/components/LibraryScanReportView";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { useConfirmTwice } from "@/context/ConfirmContext";
@@ -161,9 +161,7 @@ export function AdminMaintenancePage() {
 
   return (
     <div className={`app-shell ${adminStyles.page}`}>
-      <Link to="/" className={adminStyles.back}>
-        ← 返回首页
-      </Link>
+      <BackLink />
       <h1>维护工具</h1>
       <p className={adminStyles.muted}>
         维护工具在后台运行，可离开本页；同一图书馆同一时间只能运行一个维护任务。
@@ -200,7 +198,7 @@ export function AdminMaintenancePage() {
               </div>
               <button
                 type="button"
-                className={tool.destructive ? `btn ${styles.dangerBtn}` : "btn"}
+                className={tool.destructive ? "btn btn-danger" : "btn btn-ghost"}
                 disabled={!libraryId || busyLibraries.has(libraryId)}
                 onClick={() => void launch(tool.id, libraryId)}
               >

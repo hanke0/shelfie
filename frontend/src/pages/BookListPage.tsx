@@ -9,6 +9,7 @@ import {
 } from "@/api/generated/books/books";
 import type { BookCard as BookCardType } from "@/api/generated/models";
 import { useLibrary } from "@/context/LibraryContext";
+import { BackLink } from "@/components/BackLink";
 import { BookCard } from "@/components/BookCard";
 import { CategorySelect } from "@/components/CategorySelect";
 import { useApiAction } from "@/hooks/useApiAction";
@@ -161,9 +162,7 @@ export function BookListPage() {
 
   return (
     <div className="app-shell">
-      <Link to="/" className={styles.back}>
-        ← 返回首页
-      </Link>
+      <BackLink />
       <h1 className={styles.title}>{title}</h1>
 
       {!activeLibraryId && <p>请先在顶栏选择图书馆</p>}

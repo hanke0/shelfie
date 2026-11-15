@@ -18,8 +18,8 @@
 
 .icon {
   flex-shrink: 0;
-  color: var(--accent);
-  font-size: 0.72rem;
+  color: var(--accent-strong);
+  font-size: var(--text-xs);
   line-height: 1;
 }
 
@@ -28,11 +28,11 @@
   width: 4.5rem;
   height: 0.55rem;
   margin: 0 0.35rem 0 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(
     90deg,
     var(--border) 0%,
-    #f0e8dc 50%,
+    var(--bg-muted) 50%,
     var(--border) 100%
   );
   background-size: 200% 100%;
@@ -53,9 +53,9 @@
   align-items: center;
   height: 100%;
   padding: 0 0.35rem 0 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-strong);
   white-space: nowrap;
 }
 

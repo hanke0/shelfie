@@ -1,0 +1,33 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  margin: 0.5rem 0 1rem;
+  padding: 0 0.9rem 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.arrow {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.back:hover {
+  color: var(--accent-strong);
+  border-color: var(--accent-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.back:hover .arrow {
+  transform: translateX(-2px);
+}

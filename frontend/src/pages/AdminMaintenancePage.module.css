@@ -1,6 +1,6 @@
 .muted {
   color: var(--ink-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .rowActions {
@@ -42,39 +42,22 @@
 
 .tag,
 .tagDanger {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   padding: 0.05rem 0.45rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   color: var(--ink-muted);
 }
 
 .tagDanger {
-  border-color: #c66;
-  color: #a33;
-}
-
-:global(.btn).dangerBtn {
-  background: #a33;
-  color: #fff;
-}
-
-:global(.btn).dangerBtn:hover:not(:disabled) {
-  background: #8b2a2a;
-}
-
-.rowActions :global(.btn):disabled,
-.toolItem :global(.btn):disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+  border-color: var(--danger-border);
+  color: var(--danger);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .table th,
@@ -108,22 +91,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--ink-muted);
 }
 
 .status_running {
-  color: var(--accent);
+  color: var(--accent-strong);
   font-weight: 600;
 }
 
 .status_completed {
-  color: #2f7a3e;
+  color: var(--success);
 }
 
 .status_failed,
 .status_interrupted {
-  color: #a33;
+  color: var(--danger);
 }
 
 .status_cancelled {
@@ -132,7 +115,7 @@
 
 .progressBar {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--border);
   overflow: hidden;
   margin: 0.5rem 0 0.25rem;
@@ -180,7 +163,7 @@
 }
 
 .reportHead h3 {
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   margin: 0;
 }
 
@@ -190,7 +173,7 @@
   margin: 0.5rem 0 0;
   max-height: 360px;
   overflow-y: auto;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .itemList li {
@@ -215,12 +198,12 @@
 
 .path {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--ink-muted);
   word-break: break-all;
 }
 
 .errorList {
-  color: #a33;
-  font-size: 0.85rem;
+  color: var(--danger);
+  font-size: var(--text-sm);
 }

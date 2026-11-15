@@ -6,7 +6,7 @@ import {
 } from "@/api/generated/users/users";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
 import type { ReadingHistoryEntry } from "@/api/generated/models";
-import { Header } from "@/components/Header";
+import { BackLink } from "@/components/BackLink";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { TitleCoverImage } from "@/components/TitleCoverImage";
 import { useLibrary } from "@/context/LibraryContext";
@@ -97,7 +97,6 @@ function HistoryRow({ entry }: { entry: ReadingHistoryEntry }) {
 }
 
 export function ReadingHistoryPage() {
-  const [search, setSearch] = useState("");
   const { libraryId: contextLibraryId, setLibraryId } = useLibrary();
   const { data: libraries } = useListLibraries();
   const [libraryFilter, setLibraryFilter] = useState(contextLibraryId ?? "");
@@ -147,15 +146,8 @@ export function ReadingHistoryPage() {
 
   return (
     <div className="app-shell">
-      <Header
-        search={search}
-        onSearchChange={setSearch}
-        onUploadClick={() => {}}
-      />
       <main className={styles.main}>
-        <Link to="/" className={adminStyles.back}>
-          ← 返回首页
-        </Link>
+        <BackLink />
         <h1 className={styles.heading}>阅读记录</h1>
 
         <label className={styles.filter}>

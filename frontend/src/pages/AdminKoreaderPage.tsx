@@ -7,6 +7,7 @@ import {
   useDeleteKoreaderLink,
 } from "@/api/generated/koreader/koreader";
 import { useListLibraries } from "@/api/generated/libraries/libraries";
+import { BackLink } from "@/components/BackLink";
 import { KoreaderLinkModal } from "@/components/KoreaderLinkModal";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { useLibrary } from "@/context/LibraryContext";
@@ -57,9 +58,7 @@ export function AdminKoreaderPage() {
 
   return (
     <div className={`app-shell ${styles.page}`}>
-      <Link to="/" className={styles.back}>
-        ← 返回首页
-      </Link>
+      <BackLink />
       <h1>KOReader 同步</h1>
       <p className={styles.muted}>
         设备端将同步服务器设为 <code>http://你的域名/api/v1</code>，用户名/密码与 Shelfie

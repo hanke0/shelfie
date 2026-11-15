@@ -1,6 +1,6 @@
 .message {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   line-height: 1.55;
   color: var(--ink);
   white-space: pre-line;
@@ -8,15 +8,15 @@
 
 .warn {
   margin: 0.75rem 0 0;
-  font-size: 0.85rem;
-  color: #a33;
+  font-size: var(--text-sm);
+  color: var(--danger);
 }
 
 .dangerBtn {
-  background: #a33;
+  background: var(--danger);
   color: #fff;
 }
 
 .dangerBtn:hover {
-  background: #8b2a2a;
+  background: var(--danger-strong);
 }

@@ -25,6 +25,59 @@ describe("extractFrontMatter", () => {
     });
   });
 
+  it("parses copyright-page style Chinese front matter", () => {
+    const text = `
+书名：一如既往：不变的人性与致富心态
+作者：【美】摩根·豪泽尔
+译者：宋红波；符李桃
+出版社：中信出版集团
+出版时间：2024年4月
+ISBN：9787521764222
+字数：91千字
+    `;
+    expect(extractFrontMatter(text)).toMatchObject({
+      title: "一如既往：不变的人性与致富心态",
+      author: "【美】摩根·豪泽尔",
+      translator: "宋红波, 符李桃",
+      publisher: "中信出版集团",
+      publish_date: "2024-04",
+      isbn: "9787521764222",
+    });
+  });
+
+  it("parses CIP and colophon copyright page", () => {
+    const text = `
+图书代号SK12N0115
+
+图书在版编目（CIP）数据
+
+恐惧／（奥）茨威格（Zweig，S.）著；韩耀成，沈锡良译．—西安：陕西师范大学出版总社有限公司，2013.3
+ISBN 978-7-5613-6018-7
+
+Ⅰ．①恐…　Ⅱ．①茨…　②韩…　③沈…　Ⅲ．①中篇小说—小说集—奥地利—现代　Ⅳ．①I521.45
+
+中国版本图书馆CIP数据核字（2012）第047332号
+
+恐　惧
+
+［奥］斯蒂芬·茨威格　著　韩耀成　沈锡良　译
+
+出版发行　陕西师范大学出版总社有限公司
+　　　　　　　　　（西安市长安南路199号　邮编　710062）
+
+版　　次　2013年3月第1版
+印　　次　2013年3月第1次印刷
+    `;
+    expect(extractFrontMatter(text)).toMatchObject({
+      title: "恐惧",
+      author: "［奥］斯蒂芬·茨威格",
+      translator: "韩耀成, 沈锡良",
+      publisher: "陕西师范大学出版总社有限公司",
+      publish_date: "2013-03",
+      isbn: "978-7-5613-6018-7",
+    });
+  });
+
   it("ignores 编译-like false positives", () => {
     expect(extractFrontMatter("本书由某某编译完成").translator).toBeFalsy();
   });

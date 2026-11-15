@@ -124,7 +124,13 @@ async function extractMobi(file: File): Promise<LocalExtractedBook> {
 }
 
 function needsFrontMatter(meta: Partial<BookMetadata>): boolean {
-  return !(meta.translator?.trim()) || !(meta.author?.trim()) || !(meta.publisher?.trim()) || !(meta.isbn?.trim());
+  return (
+    !meta.translator?.trim() ||
+    !meta.author?.trim() ||
+    !meta.publisher?.trim() ||
+    !meta.isbn?.trim() ||
+    !meta.publish_date?.trim()
+  );
 }
 
 async function readEpubFrontText(

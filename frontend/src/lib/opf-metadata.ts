@@ -140,6 +140,13 @@ export function normalizePublishDate(raw: string): string {
   if (!value) return "";
   if (/^\d{4}-\d{2}/.test(value)) return value.slice(0, 7);
   if (/^\d{4}$/.test(value)) return `${value}-01`;
+
+  const cn = value.match(/^(\d{4})\s*年\s*(\d{1,2})\s*月/);
+  if (cn) return `${cn[1]}-${cn[2]!.padStart(2, "0")}`;
+
+  const dotted = value.match(/^(\d{4})[./／](\d{1,2})(?:[./／]\d{1,2})?$/);
+  if (dotted) return `${dotted[1]}-${dotted[2]!.padStart(2, "0")}`;
+
   const pdfMatch = value.match(/^D:(\d{4})(\d{2})?/);
   if (pdfMatch) {
     const month = pdfMatch[2] ?? "01";
